@@ -89,6 +89,12 @@ mjx-container:not([display="true"]){display:inline-block;max-width:100%;overflow
 }
 nav.toc li.opt>a::before{content:"⚙ ";color:var(--accent)}
 main svg{max-width:100%;height:auto;display:block;margin:0 auto}
+.related{margin-top:14px;font-size:14px;color:var(--muted)}
+.lite-btn{position:fixed;right:16px;bottom:56px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:20px;padding:6px 14px;font:inherit;font-size:13px;cursor:pointer}
+html.lite .lite-btn{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.lite-banner{display:none}
+html.lite .lite-banner{display:block}
+html.lite main mjx-container[display="true"],html.lite main table.symtab,html.lite main .deriv{display:none}
 </style>
 </head>
 <body>
@@ -279,6 +285,8 @@ main svg{max-width:100%;height:auto;display:block;margin:0 auto}
 <p class="lead">Các lab train một frontier model hàng tỉ (thậm chí hàng nghìn tỉ) tham số như thế nào? Bài gốc tổng hợp kinh nghiệm từ bảy open-weight model: <b>SmolLM3</b> (Hugging Face), <b>Intellect-3</b> (Prime Intellect), <b>Hermes 4</b> (Nous Research), <b>gpt-oss-120b</b> (OpenAI), <b>Kimi K2</b> (Moonshot), <b>DeepSeek-R1</b> (DeepSeek) và dòng <b>Trinity</b> (Arcee). Trọng tâm là <i>training methodology</i> (kiến trúc, data, optimizer, post-training...) hơn là infrastructure.</p>
 <p>Bài gốc chủ yếu đi theo cấu trúc report SmolLM3 của Hugging Face (vì nó rất đầy đủ), bổ sung thêm ghi chú từ các report Intellect-3, gpt-oss-120b, Hermes 4, DeepSeek và Kimi. Một vài ý tưởng infra cũng được nhắc tới (in-flight weight updates, multi-client orchestrator), còn những thứ như expert parallelism hay quantization thì không đi sâu.</p>
 <div class="callout note"><div class="callout-title">Cách đọc bản này</div>Mỗi mục được viết lại chi tiết hơn bản gốc: giải thích trực giác, cơ chế từng bước, ý nghĩa từng ký hiệu trong công thức, ví dụ số, và kiến thức nền cần biết. Các hộp <b>Giải thích thêm</b> là phần bổ sung không có trong bài gốc; hộp <b>Ý chính</b> tóm tắt điều cần nhớ. Cuối bài có <b>bảng thuật ngữ</b>.</div>
+<div class="related">Bộ tài liệu: <b>LLM training</b> · <a href="vlm-training-vi.html">VLM training</a> · <a href="inference-deploy-vi.html">Inference, nén model &amp; deploy</a></div>
+<div class="callout warn lite-banner"><div class="callout-title">Đang bật chế độ đọc nhẹ</div>Đã ẩn công thức đứng riêng dòng, bảng giải thích ký hiệu và các đoạn suy dẫn; công thức nhỏ trong câu vẫn giữ. Mỗi chương mở đầu bằng hộp <b>Đọc nhanh</b>, và hộp <b>Ý chính</b> tóm tắt điều cần nhớ. Bấm nút <b>Đọc nhẹ</b> ở góc phải dưới để hiện lại đầy đủ.</div>
 </header>
 <section id="a-tldr">
 <h2 id="a-tldr-h">tl;dr — Tóm tắt nhanh toàn bài</h2>
@@ -301,6 +309,7 @@ main svg{max-width:100%;height:auto;display:block;margin:0 auto}
 
 <section id="a-playbook">
 <h2 id="a-playbook-h">A minimal training playbook — Quy trình train tối thiểu</h2>
+<div class="callout tip quick"><div class="callout-title">Đọc nhanh</div><ul><li>Đây là <b>checklist theo thứ tự thời gian</b> để train một model từ lúc lên ý tưởng tới lúc release.</li><li>Chốt mục tiêu và bộ eval <b>trước</b> khi train, để mọi thí nghiệm sau đều được đo bằng cùng một thước.</li><li>Ưu tiên lựa chọn "nhàm chán nhưng đã được kiểm chứng": kiến trúc dense quen thuộc, tokenizer chốt sớm, data đã lọc trùng và lọc rác.</li><li>Để data tốt nhất về cuối quá trình train, và tăng độ dài context từng nấc chứ không nhảy một lần.</li><li>Hình dung như đi đường dài: chuẩn bị kỹ, có "rào chắn" chống sự cố, và theo dõi liên tục trong suốt chuyến đi.</li></ul></div>
 <p>Đây là "checklist" theo thứ tự thời gian để train một model từ đầu tới lúc release. Mỗi bước là kinh nghiệm xương máu của các lab:</p>
 <ol>
 <li><b>Xác định mục tiêu sản phẩm và chốt eval sớm.</b> Trước khi train, phải biết model dùng để làm gì (chatbot đa ngôn ngữ? coding agent? model nhỏ chạy on-device?). Từ đó chọn bộ eval bao phủ: knowledge, math, code, long-context, instruction following. Chốt eval sớm để mọi ablation sau này được đo bằng cùng một "thước", và tránh tình trạng train xong mới cuống cuồng viết eval.</li>
@@ -320,11 +329,12 @@ main svg{max-width:100%;height:auto;display:block;margin:0 auto}
 
 <section id="t-foundations">
 <h2 id="t-foundations-h">Nền tảng lý thuyết — toán, compute và phần cứng của LLM training</h2>
+<div class="callout tip quick"><div class="callout-title">Đọc nhanh</div><ul><li>Chương này giải thích <b>model thực sự học gì</b>: đoán token tiếp theo. Đoán càng giỏi thì model càng "nén" được kiến thức.</li><li>Có thể ước lượng nhanh chi phí train từ hai con số: số tham số và số token. Từ đó suy ra cần bao nhiêu GPU và bao nhiêu ngày.</li><li>Bộ nhớ GPU khi train không chỉ chứa model. Optimizer và các giá trị trung gian (activations) thường còn tốn hơn bản thân model nhiều lần.</li><li>GPU tính rất nhanh nhưng chuyển dữ liệu chậm hơn nhiều. Phần lớn kỹ thuật tối ưu là để GPU <b>bớt chờ dữ liệu</b>.</li><li>MFU là "điểm hiệu suất" của việc dùng phần cứng. Đạt khoảng 35–45% đã được coi là tốt.</li><li>Có thể bỏ qua các công thức: chỉ cần nắm "tham số × token → compute" và "bộ nhớ = model + optimizer + activations".</li></ul></div>
 
 <p>Bài gốc giả định người đọc đã quen với Transformer, FLOPs, MFU, memory-bound… Chương này bổ sung phần "nền móng" đó, để các chương sau (kiến trúc, optimizer, scaling laws, parallelism) có chỗ dựa. Mục tiêu: sau chương này bạn có thể <b>tự ước lượng</b> một model có bao nhiêu tham số, train tốn bao nhiêu FLOPs, cần bao nhiêu GPU-ngày, tốn bao nhiêu memory, và vì sao một phép toán chạy nhanh hay chậm trên GPU.</p>
 
 <div class="callout note"><div class="callout-title">Ký hiệu dùng xuyên suốt chương</div>
-<table>
+<table class="symtab">
 <thead><tr><th>Ký hiệu</th><th>Ý nghĩa</th><th>Ví dụ (Llama-3-8B)</th></tr></thead>
 <tbody>
 <tr><td>\(B\)</td><td>batch size (số sequence trong một micro-batch)</td><td>—</td></tr>
@@ -452,7 +462,7 @@ M_{ts} = \begin{cases} 0 &amp; s \le t \\ -\infty &amp; s &gt; t \end{cases}
 <p>Sau layer cuối: \(z = \mathrm{RMSNorm}_f(x^{(L)})\, W_{\text{out}}\), \(W_{\text{out}} \in \mathbb{R}^{d\times V}\). Nếu <a href="#a-embedding-sharing">tied embeddings</a> thì \(W_{\text{out}} = E^\top\). Tensor logits có shape \([B, T, V]\) — với \(T = 8192\), \(V = 128\text{k}\), ở fp32 đã là 4.2 GB <i>cho một sequence</i>, vì vậy các kernel như fused/chunked cross-entropy (xem <a href="#t-tok-vocab-math">phần tokenizer</a>) rất quan trọng.</p>
 
 <h4>Bảng shape tổng hợp</h4>
-<table>
+<table class="symtab">
 <thead><tr><th>Bước</th><th>Phép tính</th><th>Shape output</th><th>Tham số</th></tr></thead>
 <tbody>
 <tr><td>Embedding</td><td>\(E[x]\)</td><td>\([B,T,d]\)</td><td>\(Vd\)</td></tr>
@@ -761,6 +771,7 @@ C_{\text{token}} \approx 6N + 12\,L\,T\,d
 
 <section id="a-general-practices">
 <h2 id="a-general-practices-h">General practices — Nguyên tắc làm việc chung</h2>
+<div class="callout tip quick"><div class="callout-title">Đọc nhanh</div><ul><li>Kỹ năng quan trọng nhất là <b>chọn đúng thứ để thử nghiệm</b>, chứ không phải chạy thật nhiều thử nghiệm.</li><li>Thí nghiệm nhỏ (ablation) phải vừa nhanh vừa đáng tin. Nếu chênh lệch giữa hai lựa chọn nhỏ hơn dao động do random seed thì đó chỉ là nhiễu.</li><li>Bắt đầu từ một baseline đã được nhiều người dùng (Llama, Qwen, OLMo…) và mỗi lần chỉ đổi <b>một</b> thứ.</li><li>Chọn eval có khả năng phân biệt được các lựa chọn ngay từ khi model còn nhỏ và train ít.</li></ul></div>
 <blockquote>"Learn to identify what's worth testing, not just how to run tests. Perfect ablations on irrelevant choices waste as much compute as sloppy ablations on important ones."</blockquote>
 <p>Ý là: kỹ năng quan trọng nhất không phải là chạy thí nghiệm giỏi, mà là <b>chọn đúng thứ để thí nghiệm</b>. Một ablation hoàn hảo cho một lựa chọn chẳng ảnh hưởng gì (VD đổi epsilon của Adam từ 1e-8 sang 1e-9) cũng lãng phí compute y như một ablation cẩu thả cho một lựa chọn quan trọng.</p>
 
@@ -796,6 +807,7 @@ C_{\text{token}} \approx 6N + 12\,L\,T\,d
 
 <section id="a-architecture">
 <h2 id="a-architecture-h">Architecture &amp; set-up — Kiến trúc và thiết lập</h2>
+<div class="callout tip quick"><div class="callout-title">Đọc nhanh</div><ul><li>Chương này bàn về cách chọn "khung xương" của model: dense hay MoE, loại attention, mã hoá vị trí, xử lý context dài.</li><li>Lựa chọn mặc định an toàn là model <b>dense + GQA + RoPE</b>. Chỉ chuyển sang MoE khi thật sự cần và có đủ hạ tầng.</li><li>Phần lớn các thay đổi kiến trúc hiện đại nhằm làm <b>inference rẻ hơn</b>, đặc biệt là thu nhỏ KV cache (GQA, MLA, sliding window).</li><li>FlashAttention không thay đổi kết quả tính toán mà chỉ sắp xếp lại cách tính để giảm việc đọc/ghi bộ nhớ, nên nhanh hơn và tiết kiệm bộ nhớ hơn nhiều.</li><li>MoE giống một công ty nhiều chuyên gia: mỗi token chỉ "hỏi" vài chuyên gia, nên model rất lớn mà mỗi bước tính vẫn rẻ. Cái khó là chia việc đều cho các chuyên gia.</li><li>Kiến trúc hybrid (trộn attention với kiểu RNN) rất hứa hẹn cho context dài nhưng còn khó debug và khó deploy.</li></ul></div>
 <p>Quyết định kiến trúc quyết định gần như mọi thứ: hiệu quả (tốn bao nhiêu FLOPs/bộ nhớ), năng lực (context dài tới đâu, giỏi gì) và training dynamics (dễ hay khó train ổn định). Các họ model như DeepSeek, gpt-oss-120b, Kimi, SmolLM khác nhau rất nhiều ở:</p>
 <ul>
 <li><b>Dense vs MoE</b>: dense dùng toàn bộ tham số cho mỗi token; MoE (mixture of experts) chỉ kích hoạt một phần nhỏ "expert" cho mỗi token.</li>
@@ -1206,7 +1218,7 @@ S = \frac{QK^\top}{\sqrt{d_h}} + M, \qquad P = \mathrm{softmax}_{\text{row}}(S),
 
 <h4>MHA → GQA → MQA: tổng quát hoá bằng số KV head</h4>
 <p>Gọi \(n_h\) là số query head, \(n_{kv}\) là số KV head (\(n_{kv}\) chia hết \(n_h\)), \(g = n_h / n_{kv}\) là số query head dùng chung một KV head.</p>
-<table>
+<table class="symtab">
 <thead><tr><th>Đại lượng (mỗi layer)</th><th>Công thức</th><th>MHA (\(n_{kv}=n_h\))</th><th>GQA</th><th>MQA (\(n_{kv}=1\))</th></tr></thead>
 <tbody>
 <tr><td>Tham số \(W_Q\)</td><td>\(d \cdot n_h d_h\)</td><td>\(d^2\)</td><td>\(d^2\)</td><td>\(d^2\)</td></tr>
@@ -1696,7 +1708,7 @@ S_t = S_{t-1} - \beta_t \nabla_S \mathcal{L}_t(S_{t-1}) = S_{t-1} - \beta_t (S_{
 <p><b>Gated DeltaNet</b> thêm hệ số quên toàn cục \(\alpha_t\): \(S_t = \alpha_t S_{t-1}(I - \beta_t k_t k_t^\top) + \beta_t v_t k_t^\top\) — gate để xoá nhanh khi chuyển ngữ cảnh, delta rule để sửa chính xác từng "ô nhớ". Hai cơ chế bổ sung nhau. Tích các ma trận \((I - \beta k k^\top)\) có cấu trúc Householder, cho phép tính chunkwise hiệu quả (paper DeltaNet song song hoá bằng biểu diễn WY).</p>
 
 <h4>So sánh độ phức tạp</h4>
-<table>
+<table class="symtab">
 <thead><tr><th>Cơ chế</th><th>Train (mỗi layer, sequence \(N\))</th><th>Decode mỗi token</th><th>Bộ nhớ khi decode</th><th>Truy xuất chính xác thông tin xa</th></tr></thead>
 <tbody>
 <tr><td>Softmax attention (full)</td><td>\(O(N^2 d)\)</td><td>\(O(N d)\)</td><td>KV cache \(O(N d)\)</td><td>Tốt nhất</td></tr>
@@ -1749,6 +1761,7 @@ S_t = S_{t-1} - \beta_t \nabla_S \mathcal{L}_t(S_{t-1}) = S_{t-1} - \beta_t (S_{
 
 <section id="b-stability">
 <h2 id="b-stability-h">Stability — giữ cho training không "nổ"</h2>
+<div class="callout tip quick"><div class="callout-title">Đọc nhanh</div><ul><li>Chương này nói về cách giữ cho training <b>không "nổ"</b>, tức loss không tăng vọt (spike) giữa chừng.</li><li>Nguyên nhân thường gặp là các con số bên trong model (logits, attention) lớn dần tới mức mất kiểm soát.</li><li>Các "rào chắn" phổ biến: logit softcapping, z-loss, QK-norm, gradient clipping, không áp weight decay lên embedding.</li><li>Khởi tạo đúng cách và μP giúp tìm hyperparameter ở model nhỏ rồi dùng lại cho model lớn, đỡ tốn tiền dò tìm.</li><li>Khi gặp spike: quay lại checkpoint trước đó, bỏ qua batch dữ liệu xấu, giảm learning rate. Nhiều spike thực chất do lỗi config hoặc lỗi data.</li><li>Theo dõi hằng ngày: grad norm, logit lớn nhất, loss. Phát hiện sớm thì rẻ hơn sửa muộn rất nhiều.</li></ul></div>
 
 <p>Một lần training lớn kéo dài hàng tuần đến hàng tháng trên hàng nghìn GPU. Chỉ một <b>loss spike</b> (loss đột ngột tăng vọt) hay <b>divergence</b> (loss tăng mãi không về) có thể làm mất nhiều ngày compute, phải rollback về checkpoint cũ. Vì vậy <b>training stability</b> cực kỳ quan trọng. Có ba nhóm công cụ chính: regularization, initialization cẩn thận, và các lựa chọn kiến trúc. Các mục dưới đây đi qua từng cơ chế.</p>
 
@@ -1918,7 +1931,7 @@ S_t = S_{t-1} - \beta_t \nabla_S \mathcal{L}_t(S_{t-1}) = S_{t-1} - \beta_t (S_{
 
 <h4>Bảng μP cho Adam (theo Tensor Programs V, Table 3)</h4>
 <p>"fan_in" là chiều input của ma trận; ta phân loại tham số theo số chiều tỉ lệ với width:</p>
-<table>
+<table class="symtab">
 <thead><tr><th>Loại tham số</th><th>Ví dụ</th><th>Init variance</th><th>Adam learning rate</th></tr></thead>
 <tbody>
 <tr><td>Input weights &amp; mọi bias</td><td>embedding (fan_in = vocab, cố định)</td><td>\(1/\text{fan\_in}\)</td><td>\(\eta\) (không scale theo width)</td></tr>
@@ -2091,6 +2104,7 @@ g \leftarrow g \cdot \min\!\left(1, \frac{c}{\lVert g \rVert}\right)
 
 <section id="b-tokenizer">
 <h2 id="b-tokenizer-h">Tokenizer — cắt text thành token</h2>
+<div class="callout tip quick"><div class="callout-title">Đọc nhanh</div><ul><li>Tokenizer cắt text thành các mảnh (token). Đây là quyết định gần như <b>không thể đổi</b> sau khi đã bắt đầu train.</li><li>BPE hoạt động bằng cách gộp dần những cặp ký tự hoặc mảnh hay đi cùng nhau thành token mới.</li><li>Vocab lớn thì text được nén tốt hơn (ít token hơn) nhưng tốn thêm tham số. Model nhỏ nên cân nhắc kỹ điểm này.</li><li>Tiếng Việt có dấu thường bị tách thành nhiều token hơn tiếng Anh ("thuế token"), nên chi phí cao hơn và context bị ngắn đi.</li><li>Nên tokenize sẵn dữ liệu và lưu thành file nhị phân để lúc train không phải chờ tokenize.</li></ul></div>
 
 <p>Tokenizer quyết định model "nhìn thấy" text như thế nào. Nó ảnh hưởng tới số token mỗi tài liệu (⇒ chi phí training/inference và độ dài context thực tế), kích thước embedding, và cả khả năng của model ở các domain như toán hay đa ngôn ngữ. Một số cân nhắc chính khi thiết kế:</p>
 <ul>
@@ -2351,6 +2365,7 @@ y = data[i + 1 : i + seq_len + 1].astype(np.int64) # target (dịch 1)
 
 <section id="c-optimizers">
 <h2 id="c-optimizers-h">Optimizers và training hyperparameters — chọn "cách đi xuống dốc" và các núm vặn</h2>
+<div class="callout tip quick"><div class="callout-title">Đọc nhanh</div><ul><li>Optimizer quyết định <b>cách model đi xuống dốc</b> của hàm loss. AdamW vẫn là lựa chọn mặc định; Muon là ứng viên mới đang lên.</li><li>Thứ cần tune kỹ nhất là <b>learning rate</b> và lịch thay đổi của nó (warmup, cosine, WSD). Các tham số khác thường để mặc định.</li><li>WSD (giữ learning rate cố định rồi giảm ở cuối) tiện vì có thể train tiếp hoặc lấy checkpoint giữa chừng; loss tụt mạnh ở giai đoạn giảm cuối.</li><li>Batch size có một ngưỡng "tới hạn": vượt qua ngưỡng đó thì tăng batch chỉ tốn thêm compute mà không học nhanh hơn.</li><li>Scaling laws cho biết với một ngân sách cố định nên chia bao nhiêu cho kích thước model và bao nhiêu cho số token. Chinchilla gợi ý khoảng 20 token cho mỗi tham số.</li><li>Trong thực tế các lab cố ý train model nhỏ trên rất nhiều token (overtrain), vì model nhỏ rẻ hơn khi phục vụ người dùng.</li></ul></div>
 
 <p>Sau khi chốt kiến trúc, câu hỏi tiếp theo là: <b>cập nhật weights như thế nào</b> (optimizer) và <b>với tốc độ/kích thước bước bao nhiêu</b> (learning rate, batch size, schedule...). Việc chọn optimizer và tune hyperparameters nổi tiếng là tốn thời gian, nhưng nó ảnh hưởng trực tiếp tới hai thứ quan trọng nhất của một training run:</p>
 <ul>
@@ -2385,7 +2400,7 @@ v_t &= \beta_2 v_{t-1} + (1-\beta_2)\, g_t^2, & \hat v_t &= \frac{v_t}{1-\beta_2
 \]
 
 <p>Giải thích từng ký hiệu:</p>
-<table>
+<table class="symtab">
 <thead><tr><th>Ký hiệu</th><th>Ý nghĩa</th><th>Giá trị thường dùng cho LLM</th></tr></thead>
 <tbody>
 <tr><td>\( \theta \)</td><td>tham số model</td><td>—</td></tr>
@@ -3117,7 +3132,7 @@ L(N) = \left(\frac{N_c}{N}\right)^{\alpha_N},\quad
 L(D) = \left(\frac{D_c}{D}\right)^{\alpha_D},\quad
 L(C_{\min}) = \left(\frac{C_c}{C_{\min}}\right)^{\alpha_C}
 \]
-<table>
+<table class="symtab">
 <thead><tr><th>Law</th><th>Điều kiện</th><th>Exponent</th><th>Hằng số</th></tr></thead>
 <tbody>
 <tr><td>\( L(N) \)</td><td>train tới hội tụ, data đủ lớn</td><td>\( \alpha_N \approx 0.076 \)</td><td>\( N_c \approx 8.8\times10^{13} \) tham số (non-embedding)</td></tr>
@@ -3331,6 +3346,7 @@ def fit_isoflop(results):
 
 <section id="d-data">
 <h2 id="d-data-h">Data curation and pre-training — chọn và trộn dữ liệu</h2>
+<div class="callout tip quick"><div class="callout-title">Đọc nhanh</div><ul><li>Với cùng ngân sách compute, <b>chất lượng và tỉ lệ trộn data</b> thường quan trọng hơn tinh chỉnh kiến trúc.</li><li>Quy trình xử lý web data gồm: lấy dữ liệu crawl, trích xuất text, lọc ngôn ngữ, lọc rác, loại trùng lặp, lọc theo chất lượng bằng model, rồi tokenize.</li><li>Loại trùng lặp (dedup) giúp model không học thuộc lòng. Kiểm tra contamination để benchmark không lọt vào data train (nếu lọt, điểm eval sẽ bị ảo).</li><li>Train theo nhiều giai đoạn: data tốt nhất (math, code, reasoning) để về cuối để định hình hành vi cuối cùng của model.</li><li>Tỉ lệ trộn data có thể dò tìm bằng các thí nghiệm nhỏ, nhưng nên kiểm chứng lại ở quy mô thật.</li></ul></div>
 
 <p>Ở các phần trước mình nói nhiều về architecture, optimizer, stability. Nhưng tác giả nhấn mạnh một điều mà gần như mọi lab đều đồng ý: <b>dù architecture có hoàn hảo đến đâu, chất lượng model vẫn phụ thuộc rất nặng vào training data</b>. Không có lượng compute hay kỹ thuật optimization nào bù lại được việc train trên dữ liệu sai. Nói cách khác: "garbage in, garbage out" — chỉ là ở quy mô hàng nghìn tỷ token.</p>
 
@@ -3908,6 +3924,7 @@ D' = U + U R^{*}\left(1 - e^{-R/R^{*}}\right)
 
 <section id="d-midtraining">
 <h2 id="d-midtraining-h">Mid-training — cầu nối giữa pre-training và post-training</h2>
+<div class="callout tip quick"><div class="callout-title">Đọc nhanh</div><ul><li>Mid-training là giai đoạn giữa pre-training và post-training: train thêm trên <b>data chuyên biệt</b> và <b>context dài</b>.</li><li>Muốn model đọc được context dài thì không chỉ cần data dài. Phải "kéo giãn" cách model hiểu vị trí (RoPE) bằng các kỹ thuật như ABF hay YaRN.</li><li>Tăng độ dài context từng nấc (ví dụ 4k → 32k → 128k) rẻ và ổn định hơn nhảy thẳng lên.</li><li>Context dài làm bộ nhớ tăng vọt, nên phải chia sequence ra nhiều GPU (context parallelism, ring attention).</li><li>Bài test "mò kim đáy bể" (NIAH) dễ qua nhưng chưa đủ. Nên dùng thêm RULER hoặc HELMET để đo khả năng dùng context thật sự.</li></ul></div>
 
 <p><b>Mid-training</b> là bước trung gian giữa pre-training và post-training. Ở bước này, base model được train tiếp trên <b>một lượng lớn token chuyên biệt theo domain</b> — đặc biệt để định hình model tập trung vào các kỹ năng cốt lõi như <b>coding</b> hay <b>reasoning</b>.</p>
 
@@ -3978,7 +3995,7 @@ R(\phi) = \begin{pmatrix} \cos\phi &amp; -\sin\phi \\ \sin\phi &amp; \cos\phi \e
 \tilde q_m = R_m\, q_m, \quad \tilde k_n = R_n\, k_n
 \]
 
-<h4>2. Chứng minh: attention score chỉ phụ thuộc \(m - n\)</h4>
+<div class="deriv"><h4>2. Chứng minh: attention score chỉ phụ thuộc \(m - n\)</h4>
 <p>Phép quay có hai tính chất: \(R(\alpha)^\top = R(-\alpha)\) và \(R(\alpha)R(\beta) = R(\alpha + \beta)\). Do đó:</p>
 \[
 \tilde q_m^\top \tilde k_n = q_m^\top R_m^\top R_n\, k_n = q_m^\top R_{n-m}\, k_n
@@ -3989,7 +4006,7 @@ R(\phi) = \begin{pmatrix} \cos\phi &amp; -\sin\phi \\ \sin\phi &amp; \cos\phi \e
 \]
 <p>Mỗi cặp đóng góp một "sóng" với tần số \(\theta_i\) theo khoảng cách \(m - n\). Score là tổng của \(d/2\) sóng có tần số trải theo cấp số nhân — giống một bộ "đồng hồ" có kim giây, kim phút, kim giờ… cho phép model đọc khoảng cách ở nhiều thang khác nhau.</p>
 
-<h4>3. Wavelength — mỗi cặp "nhìn" được khoảng cách bao xa</h4>
+</div><h4>3. Wavelength — mỗi cặp "nhìn" được khoảng cách bao xa</h4>
 \[
 \lambda_i = \frac{2\pi}{\theta_i} = 2\pi\, b^{2i/d}
 \]
@@ -4309,6 +4326,7 @@ Kết quả cuối <b>chính xác</b> (exact), không phải xấp xỉ.</li>
 
 <section id="d-posttraining">
 <h2 id="d-posttraining-h">Post-training — biến base model thành assistant</h2>
+<div class="callout tip quick"><div class="callout-title">Đọc nhanh</div><ul><li>Post-training biến base model (chỉ biết viết tiếp text) thành <b>assistant</b> biết làm theo chỉ dẫn, suy luận và dùng tool.</li><li>Thứ tự thường gặp: SFT (học từ ví dụ mẫu) → preference optimization (học "A tốt hơn B", ví dụ DPO) → RL (học từ phần thưởng).</li><li>SFT là baseline rẻ và ổn định. RL với phần thưởng kiểm chứng được (math, code) là thứ giúp tăng khả năng suy luận rõ rệt nhất.</li><li>GRPO là phiên bản RL gọn hơn PPO: so sánh các câu trả lời trong cùng một nhóm thay vì cần thêm một model chấm điểm riêng.</li><li>Phần lớn thời gian chạy RL là thời gian <b>sinh câu trả lời</b>, nên tối ưu hệ thống inference là chìa khoá.</li><li>Nhiều phương pháp "xịn" thất bại trong thực tế. Ghi lại cả những gì không hiệu quả.</li></ul></div>
 
 <p>Base model sau pre-training (và mid-training) chỉ biết "đoán token tiếp theo" — nó chưa biết hội thoại, chưa biết làm theo chỉ dẫn, chưa biết gọi tool. <b>Post-training</b> là toàn bộ các bước biến nó thành một assistant hữu ích: SFT, preference optimization, RL, distillation... Trước khi đi vào thuật toán, phần này nói về ba thứ nền móng: <b>evals</b> (đo cái gì), <b>post-training data</b> (train bằng gì) và <b>chat template</b> (định dạng hội thoại).</p>
 
@@ -5634,6 +5652,7 @@ r_t = \log\pi_T(y_t\mid s_t) - \log\pi_\theta(y_t\mid s_t), \qquad y\sim\pi_\the
 
 <section id="f-behaviors-safety">
 <h2 id="f-behaviors-safety-h">Behaviors and safety — hành vi và an toàn của model</h2>
+<div class="callout tip quick"><div class="callout-title">Đọc nhanh</div><ul><li>Chương này nói về cách các lab kiểm tra và giảm rủi ro của model trước khi release.</li><li>Model open-weight có thể bị người khác fine-tune để gỡ bỏ lớp từ chối, nên phải test cả <b>kịch bản xấu nhất</b>.</li><li>OpenAI thử tự fine-tune gpt-oss theo hướng gây hại để kiểm tra model có vượt ngưỡng nguy hiểm hay không.</li><li>Hành vi của model (tính cách, mức độ chiều theo người dùng, năng lực tiềm ẩn) cũng cần được đo, không chỉ điểm benchmark.</li></ul></div>
 
 <h3 id="f-safety-testing">Safety testing and mitigation — kiểm thử và giảm thiểu rủi ro (gpt-oss-120b)</h3>
 
@@ -5713,6 +5732,7 @@ r_t = \log\pi_T(y_t\mid s_t) - \log\pi_\theta(y_t\mid s_t), \qquad y\sim\pi_\the
 
 <section id="s-systems">
 <h2 id="s-systems-h">Training systems optimization — tối ưu hoá hiệu năng và bộ nhớ khi train</h2>
+<div class="callout tip quick"><div class="callout-title">Đọc nhanh</div><ul><li>Chương này trả lời câu hỏi: làm sao train một model không vừa một GPU, và làm sao để GPU <b>không phải ngồi chờ</b>.</li><li>Một tham số tốn khoảng 16 byte khi train bằng AdamW, chưa tính activations. Đó là lý do model 7B đã không vừa một GPU 80GB nếu không chia nhỏ.</li><li>Có 5 cách chia việc cho nhiều GPU: chia dữ liệu (DP/FSDP), chia ma trận (TP), chia tầng (PP), chia chuỗi (CP), chia chuyên gia (EP). Thực tế thường kết hợp nhiều cách.</li><li>Các "núm" rẻ nhất để vừa bộ nhớ: dùng bf16/FP8, tính lại activations thay vì lưu, và gradient accumulation.</li><li>Ở quy mô lớn, GPU hỏng là chuyện hằng ngày. Cần checkpoint thường xuyên và tự động thay node lỗi.</li><li>Đo MFU liên tục, và profile trước khi tối ưu. Đừng đoán điểm nghẽn.</li></ul></div>
 
 <p>Các chương trước nói về <i>cái gì</i> cần train (kiến trúc, data, optimizer, recipe post-training). Chương này nói về <i>làm sao chạy nó nhanh và vừa bộ nhớ</i> trên hàng trăm đến hàng chục nghìn GPU. Đây là phần "hệ thống" (systems) mà các technical report thường chỉ nhắc qua một bảng cấu hình, nhưng lại quyết định trực tiếp chi phí: cùng một model, MFU 25% hay 45% nghĩa là tiền điện và tiền thuê GPU chênh nhau gần gấp đôi.</p>
 
@@ -5778,7 +5798,7 @@ M_{\text{states}} \approx 16\,\Psi \ \text{byte}
 M_{\text{act/layer}} = s\,b\,h\left(34 + \frac{5\,a\,s}{h}\right) \ \text{byte}
 \]
 
-<table>
+<table class="symtab">
 <thead><tr><th>Ký hiệu</th><th>Ý nghĩa</th></tr></thead>
 <tbody>
 <tr><td>\(s\)</td><td>sequence length</td></tr>
@@ -6362,6 +6382,7 @@ F_{\text{token}} \approx 6N + 12\,L\,h\,s
 
 <section id="f-marathon">
 <h2 id="f-marathon-h">The training marathon — vận hành đợt training chính</h2>
+<div class="callout tip quick"><div class="callout-title">Đọc nhanh</div><ul><li>Chương này kể chuyện thực tế khi chạy đợt train chính kéo dài hàng tuần: những gì có thể hỏng và cách bắt lỗi.</li><li>Throughput tụt dần thường do pipeline dữ liệu hoặc storage, không phải do code model.</li><li>Một chi tiết nhỏ như random seed sai giữa các GPU đã khiến SmolLM3 mất khoảng 1T token train.</li><li>Coi eval và logging là công việc chính chứ không phải phụ: đó là cách duy nhất để phát hiện sự cố sớm.</li></ul></div>
 
 <p>Training một model lớn giống chạy marathon: kéo dài hàng tuần đến hàng tháng, và phần lớn sự cố đến từ <b>hạ tầng và pipeline dữ liệu</b>, không phải từ kiến trúc model. Phần này tổng hợp kinh nghiệm thực chiến, chủ yếu từ SmolLM3 (Hugging Face) và Intellect-3 (Prime Intellect).</p>
 
@@ -6672,6 +6693,7 @@ F_{\text{token}} \approx 6N + 12\,L\,h\,s
 
 </main>
 </div>
+<button class="lite-btn" id="liteBtn" title="Ẩn/hiện công thức lớn và phần suy dẫn">Đọc nhẹ</button>
 <button class="theme-btn" id="themeBtn">Sáng / Tối</button>
 <script>
 (function(){
@@ -6689,6 +6711,16 @@ F_{\text{token}} \approx 6N + 12\,L\,h\,s
     var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){links.forEach(function(l){l.classList.remove('active')}); var a=map[e.target.id]; if(a){a.classList.add('active'); a.scrollIntoView({block:'nearest'});}}});},{rootMargin:'0px 0px -75% 0px'});
     heads.forEach(function(h){io.observe(h)});
   }
+})();
+</script>
+<script>
+(function(){
+  var root=document.documentElement, b=document.getElementById('liteBtn');
+  try{if(localStorage.getItem('lite')==='1') root.classList.add('lite');}catch(e){}
+  b.addEventListener('click',function(){
+    var on=root.classList.toggle('lite');
+    try{localStorage.setItem('lite',on?'1':'0');}catch(e){}
+  });
 })();
 </script>
 </body>

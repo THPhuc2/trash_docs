@@ -1,0 +1,1946 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VLM Training (VI)</title>
+<script>
+window.MathJax = { tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']] }, chtml: { scale: 1.0 } };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-chtml.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbfaf7; --surface:#ffffff; --text:#1f2328; --muted:#5b636e; --border:#e4e1da;
+  --accent:#b4532a; --accent-soft:#f6e8e0; --link:#9a4220;
+  --note:#2f6fb0; --note-bg:#eef4fb; --tip:#2e7d4f; --tip-bg:#ecf6f0;
+  --warn:#a86b00; --warn-bg:#fdf5e4; --ex:#6c4fb0; --ex-bg:#f3f0fb;
+  --code-bg:#f2f0ea;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#16181c; --surface:#1d2025; --text:#e6e6e3; --muted:#a2a8b1; --border:#2e333a;
+    --accent:#e48a5f; --accent-soft:#3a2a22; --link:#f0a27c;
+    --note:#7fb2ea; --note-bg:#1c2633; --tip:#77c99a; --tip-bg:#1a2a21;
+    --warn:#e2b24f; --warn-bg:#2d2615; --ex:#b7a2ef; --ex-bg:#251f36;
+    --code-bg:#24272d;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16181c; --surface:#1d2025; --text:#e6e6e3; --muted:#a2a8b1; --border:#2e333a;
+  --accent:#e48a5f; --accent-soft:#3a2a22; --link:#f0a27c;
+  --note:#7fb2ea; --note-bg:#1c2633; --tip:#77c99a; --tip-bg:#1a2a21;
+  --warn:#e2b24f; --warn-bg:#2d2615; --ex:#b7a2ef; --ex-bg:#251f36;
+  --code-bg:#24272d;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:16px}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Be Vietnam Pro",system-ui,sans-serif;font-size:16.5px;line-height:1.75}
+a{color:var(--link)}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);max-width:1240px;margin:0 auto;gap:40px;padding:0 24px}
+nav.toc{position:sticky;top:0;height:100vh;overflow-y:auto;padding:28px 6px 40px 0;font-size:13.5px;line-height:1.5;border-right:1px solid var(--border)}
+nav.toc .toc-title{font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:12px;color:var(--muted);margin-bottom:10px}
+nav.toc ol{list-style:none;margin:0;padding:0}
+nav.toc li.l2{margin-top:10px}
+nav.toc li.l2>a{font-weight:600;color:var(--text)}
+nav.toc li.l3{padding-left:14px}
+nav.toc li.l3>a{color:var(--muted)}
+nav.toc a{text-decoration:none;display:block;padding:2px 6px;border-radius:5px}
+nav.toc a:hover,nav.toc a.active{background:var(--accent-soft);color:var(--accent)}
+main{padding:40px 0 120px;min-width:0;max-width:820px}
+header.hero h1{font-size:2.1rem;line-height:1.25;margin:0 0 8px}
+header.hero .meta{color:var(--muted);font-size:14px}
+header.hero .lead{font-size:1.06rem;margin-top:18px}
+h2{font-size:1.6rem;margin:64px 0 12px;padding-top:12px;border-top:2px solid var(--border);line-height:1.3}
+h3{font-size:1.22rem;margin:40px 0 8px;color:var(--accent);line-height:1.35}
+h4{font-size:1.04rem;margin:26px 0 6px}
+p{margin:12px 0}
+ul,ol{padding-left:24px}
+li{margin:5px 0}
+code{font-family:"JetBrains Mono",monospace;font-size:.86em;background:var(--code-bg);padding:1px 5px;border-radius:4px}
+pre{background:var(--code-bg);padding:14px 16px;border-radius:8px;overflow-x:auto;line-height:1.5;border:1px solid var(--border)}
+pre code{background:none;padding:0;font-size:13.5px}
+blockquote{margin:16px 0;padding:8px 18px;border-left:3px solid var(--accent);background:var(--surface);color:var(--muted);font-style:italic}
+table{border-collapse:collapse;width:100%;margin:16px 0;font-size:14.5px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}
+thead th{background:var(--accent-soft)}
+tbody tr:nth-child(even){background:var(--surface)}
+figure{margin:24px 0;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}
+figure img{max-width:100%;height:auto;display:block;margin:0 auto;border-radius:6px;background:#fff}
+figcaption{font-size:14px;color:var(--muted);margin-top:10px}
+.callout{border-left:4px solid;border-radius:8px;padding:10px 16px;margin:18px 0}
+.callout-title{font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.callout.note{border-color:var(--note);background:var(--note-bg)} .callout.note .callout-title{color:var(--note)}
+.callout.tip{border-color:var(--tip);background:var(--tip-bg)} .callout.tip .callout-title{color:var(--tip)}
+.callout.warn{border-color:var(--warn);background:var(--warn-bg)} .callout.warn .callout-title{color:var(--warn)}
+.callout.example{border-color:var(--ex);background:var(--ex-bg)} .callout.example .callout-title{color:var(--ex)}
+mjx-container[display="true"]{overflow-x:auto;overflow-y:hidden;max-width:100%}
+mjx-container:not([display="true"]){display:inline-block;max-width:100%;overflow-x:auto;overflow-y:hidden;vertical-align:middle}
+.theme-btn{position:fixed;right:16px;bottom:16px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:20px;padding:6px 14px;font:inherit;font-size:13px;cursor:pointer}
+.toc-toggle{display:none}
+@media (max-width:900px){
+  .layout{grid-template-columns:1fr;padding:0 16px;gap:0}
+  nav.toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border);padding:16px 0;display:none}
+  nav.toc.open{display:block}
+  .toc-toggle{display:block;margin:16px 0 0;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;padding:8px 12px;font:inherit;width:100%;text-align:left}
+  main{padding-top:20px}
+  header.hero h1{font-size:1.6rem}
+}
+nav.toc li.opt>a::before{content:"⚙ ";color:var(--accent)}
+main svg{max-width:100%;height:auto;display:block;margin:0 auto}
+.related{margin-top:14px;font-size:14px;color:var(--muted)}
+.lite-btn{position:fixed;right:16px;bottom:56px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:20px;padding:6px 14px;font:inherit;font-size:13px;cursor:pointer}
+html.lite .lite-btn{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.lite-banner{display:none}
+html.lite .lite-banner{display:block}
+html.lite main mjx-container[display="true"],html.lite main table.symtab,html.lite main .deriv{display:none}
+</style>
+</head>
+<body>
+<div class="layout">
+<div>
+<button class="toc-toggle" onclick="document.querySelector('nav.toc').classList.toggle('open')">Mục lục</button>
+<nav class="toc"><div class="toc-title">Mục lục</div>
+<ol>
+<li class="l2"><a href="#v-overview-h">Tổng quan — VLM là gì và khác LLM ở đâu</a></li>
+<li class="l3"><a href="#v-three-blocks">Kiến trúc 3 khối: vision encoder + connector + LLM</a></li>
+<li class="l3"><a href="#v-families">Bốn họ kiến trúc VLM</a></li>
+<li class="l3"><a href="#v-vs-llm">Thêm ảnh làm thay đổi bài toán training thế nào?</a></li>
+<li class="l3"><a href="#v-doc-map">Bản đồ tài liệu</a></li>
+<li class="l2"><a href="#v-encoders-h">Vision encoder — biến ảnh thành vector</a></li>
+<li class="l3"><a href="#v-vit-math">ViT từ đầu đến cuối — toàn bộ phép tính</a></li>
+<li class="l3"><a href="#v-clip">CLIP — học thị giác từ caption bằng contrastive loss</a></li>
+<li class="l3"><a href="#v-siglip">SigLIP — thay softmax bằng sigmoid</a></li>
+<li class="l3"><a href="#v-other-encoders">Các encoder khác và trường phái pre-train</a></li>
+<li class="l3"><a href="#v-2d-rope">2D RoPE và M-RoPE — để ViT và LLM hiểu vị trí 2D</a></li>
+<li class="l3"><a href="#v-choose-encoder">Chọn vision encoder thế nào</a></li>
+<li class="l2"><a href="#v-connectors-h">Connector và xử lý độ phân giải</a></li>
+<li class="l3"><a href="#v-mlp-projector">MLP projector — đơn giản mà hiệu quả (LLaVA)</a></li>
+<li class="l3"><a href="#v-resampler">Q-Former và Perceiver resampler — nén về số token cố định</a></li>
+<li class="l3"><a href="#v-xattn">Cross-attention layers — kiểu Flamingo và Llama 3-V</a></li>
+<li class="l3"><a href="#v-pixel-shuffle">Pixel shuffle — nén token mà không mất thông tin</a></li>
+<li class="l3"><a href="#v-high-res">Ảnh độ phân giải cao: tiling và native resolution</a></li>
+<li class="l3"><a href="#v-video">Video — ngân sách token theo thời gian</a></li>
+<li class="l3 opt"><a href="#v-token-reduction">Optimization — giảm số visual token</a></li>
+<li class="l2"><a href="#v-stages-h">Các giai đoạn train VLM</a></li>
+<li class="l3"><a href="#v2-stage-overview">Bức tranh tổng thể — pipeline nhiều giai đoạn</a></li>
+<li class="l3"><a href="#v2-stage1">Stage 1 — Alignment: dạy projector "dịch" ảnh sang ngôn ngữ</a></li>
+<li class="l3"><a href="#v2-stage2">Stage 2 — Multimodal pre-training: nạp kiến thức thị giác quy mô lớn</a></li>
+<li class="l3"><a href="#v2-stage3">Stage 3 — Instruction tuning (SFT)</a></li>
+<li class="l3"><a href="#v2-loss-masking">Loss masking — chỉ học trên phần text model phải sinh</a></li>
+<li class="l3"><a href="#v2-freeze">Freeze hay unfreeze — và differential learning rates</a></li>
+<li class="l3"><a href="#v2-text-retention">Giữ năng lực text — chống catastrophic forgetting</a></li>
+<li class="l3"><a href="#v2-longctx-video">Stage long-context, multi-image và video</a></li>
+<li class="l3"><a href="#v2-case-studies">Case studies — công thức của các VLM tiêu biểu</a></li>
+<li class="l2"><a href="#v-data-h">Data cho VLM</a></li>
+<li class="l3"><a href="#v2-caption-data">Caption data — từ alt-text nhiễu tới recaptioning</a></li>
+<li class="l3"><a href="#v2-interleaved">Interleaved web documents — ảnh xen giữa văn bản</a></li>
+<li class="l3"><a href="#v2-ocr-doc">OCR, document, chart và table data</a></li>
+<li class="l3"><a href="#v2-grounding">Grounding và pointing — dạy model "chỉ" vào ảnh</a></li>
+<li class="l3"><a href="#v2-video-data">Video data</a></li>
+<li class="l3"><a href="#v2-instruction-data">Instruction data cho VLM</a></li>
+<li class="l3"><a href="#v2-filtering">Lọc dữ liệu: CLIP score, dedup ảnh, an toàn</a></li>
+<li class="l3"><a href="#v2-mixture">Data mixture — trộn bao nhiêu mỗi loại?</a></li>
+<li class="l3"><a href="#v2-contamination">Contamination với benchmark ảnh</a></li>
+<li class="l3 opt"><a href="#v2-data-pipeline-opt">Optimization — data pipeline cho ảnh</a></li>
+<li class="l2"><a href="#v-post-h">Post-training VLM — alignment, giảm hallucination, reasoning</a></li>
+<li class="l3"><a href="#v2-hallucination">Object hallucination — vì sao VLM "bịa"?</a></li>
+<li class="l3"><a href="#v2-vlm-po">Preference optimization cho VLM</a></li>
+<li class="l3"><a href="#v2-vlm-rl">RL với reward kiểm chứng được cho VLM</a></li>
+<li class="l3"><a href="#v2-thinking-images">Thinking with images — suy nghĩ bằng thao tác trên ảnh</a></li>
+<li class="l3"><a href="#v2-gui-agent">GUI agent và screen grounding</a></li>
+<li class="l2"><a href="#v-systems-h">Training systems optimization cho VLM</a></li>
+<li class="l3"><a href="#v3-accounting">FLOPs và memory accounting khi có vision encoder</a></li>
+<li class="l3 opt"><a href="#v3-imbalance">Optimization — dữ liệu dị thể và load imbalance</a></li>
+<li class="l3 opt"><a href="#v3-packing">Optimization — sequence packing cho sample đa phương thức</a></li>
+<li class="l3 opt"><a href="#v3-sharding">Optimization — chiến lược song song cho encoder và LLM</a></li>
+<li class="l3 opt"><a href="#v3-freezing">Optimization — freeze từng phần: tiết kiệm memory thế nào</a></li>
+<li class="l3 opt"><a href="#v3-recompute">Optimization — activation checkpointing trong ViT</a></li>
+<li class="l3 opt"><a href="#v3-precision">Optimization — mixed precision cho vision encoder</a></li>
+<li class="l3 opt"><a href="#v3-feature-cache">Optimization — cache feature ảnh khi encoder bị freeze</a></li>
+<li class="l3 opt"><a href="#v3-preprocess">Optimization — tiền xử lý ảnh: CPU worker hay GPU</a></li>
+<li class="l3 opt"><a href="#v3-dataloader-debug">Optimization — chẩn đoán nghẽn dataloader</a></li>
+<li class="l2"><a href="#v-eval-h">Evaluation và inference cho VLM</a></li>
+<li class="l3"><a href="#v3-bench-families">Các nhóm benchmark và mỗi cái đo gì</a></li>
+<li class="l3"><a href="#v3-eval-pitfalls">Những cái bẫy khi đánh giá VLM</a></li>
+<li class="l3"><a href="#v3-eval-tooling">Công cụ đánh giá</a></li>
+<li class="l3"><a href="#v3-inference-cost">Inference VLM: visual token làm prefill phình to</a></li>
+<li class="l3 opt"><a href="#v3-infer-opt">Optimization — tăng tốc inference cho VLM</a></li>
+<li class="l2"><a href="#v-takeaways-h">Tổng kết, lộ trình học và tài liệu VLM</a></li>
+<li class="l3"><a href="#v3-recipe">Recipe thực hành: xây một VLM nhỏ</a></li>
+<li class="l3"><a href="#v3-mistakes">Những lỗi hay gặp</a></li>
+<li class="l3"><a href="#v3-roadmap">Lộ trình học gợi ý</a></li>
+<li class="l3"><a href="#v3-reading-list">Danh sách tài liệu chọn lọc</a></li>
+<li class="l2"><a href="#v-glossary-h">Bảng thuật ngữ</a></li>
+</ol>
+</nav>
+</div>
+<main>
+<header class="hero">
+<h1>Vision-Language Models — train VLM từ lý thuyết đến thực hành</h1>
+<div class="meta">Tài liệu tiếng Việt, giữ nguyên thuật ngữ tiếng Anh · Tổng hợp từ các paper/technical report lớn (LLaVA, Idefics2/3, SmolVLM, Qwen-VL, InternVL, Molmo, CLIP/SigLIP…) · 23/10/2026</div>
+<p class="lead">VLM (vision-language model) là LLM được "gắn mắt": một vision encoder biến ảnh thành vector, một connector chiếu các vector đó vào không gian embedding của LLM, rồi LLM xử lý ảnh như một chuỗi token đặc biệt. Tài liệu này đi từ kiến trúc, cách train từng giai đoạn, data, post-training, đến tối ưu hệ thống và evaluation. Nó là phần nối tiếp của tài liệu LLM training: những gì đã giải thích ở đó (attention, optimizer, parallelism…) sẽ được link lại thay vì viết lại.</p>
+<div class="callout note"><div class="callout-title">Cách đọc bản này</div>Mỗi chương mở đầu bằng hộp <b>Đọc nhanh</b> (không có toán), sau đó mới đi vào trực giác, công thức, ví dụ số; các mục có dấu ⚙ trong mục lục là phần <b>Optimization</b>. Thấy toán nặng thì bật nút <b>Đọc nhẹ</b> ở góc phải dưới. Cuối mỗi mục có <b>Nguồn tham khảo</b>, cuối bài có bảng thuật ngữ.</div>
+<div class="related">Bộ tài liệu: <a href="frontier-model-training-vi.html">LLM training</a> · <b>VLM training</b> · <a href="inference-deploy-vi.html">Inference, nén model &amp; deploy</a></div>
+<div class="callout warn lite-banner"><div class="callout-title">Đang bật chế độ đọc nhẹ</div>Đã ẩn công thức đứng riêng dòng, bảng giải thích ký hiệu và các đoạn suy dẫn; công thức nhỏ trong câu vẫn giữ. Mỗi chương mở đầu bằng hộp <b>Đọc nhanh</b>, và hộp <b>Ý chính</b> tóm tắt điều cần nhớ. Bấm nút <b>Đọc nhẹ</b> ở góc phải dưới để hiện lại đầy đủ.</div>
+</header>
+<section id="v-overview">
+<h2 id="v-overview-h">Tổng quan — VLM là gì và khác LLM ở đâu</h2>
+
+<div class="callout tip"><div class="callout-title">Đọc nhanh</div>
+<ul>
+<li>VLM (Vision-Language Model) là một LLM được "gắn thêm mắt": nó nhận cả ảnh (hoặc video) lẫn text, rồi trả lời bằng text.</li>
+<li>Gần như mọi VLM mở hiện nay đều có 3 khối: <b>vision encoder</b> biến ảnh thành vector, <b>connector</b> chuyển các vector đó sang "ngôn ngữ" mà LLM hiểu, và <b>LLM</b> làm phần suy luận và sinh chữ.</li>
+<li>Khác biệt lớn nhất so với train LLM thuần text: ảnh tốn rất nhiều token, data ảnh–text khó kiếm và nhiễu hơn, và phải train theo nhiều giai đoạn để các khối "khớp" với nhau mà LLM không bị quên kỹ năng text.</li>
+<li>Có 4 họ kiến trúc: ghép ảnh vào chuỗi token (kiểu LLaVA, phổ biến nhất), cross-attention (kiểu Flamingo, Llama 3-V), early-fusion (ảnh cũng là token rời rạc, kiểu Chameleon) và encoder-free (bỏ hẳn vision encoder).</li>
+</ul>
+</div>
+
+<p>Tài liệu <a href="frontier-model-training-vi.html">Frontier model training</a> đã đi hết vòng đời train một LLM chỉ xử lý text. VLM <b>kế thừa gần như toàn bộ</b> kiến thức đó (optimizer, scaling, parallelism, SFT, RL...), nhưng thêm một "giác quan" mới. Phần này trả lời ba câu hỏi: VLM gồm những khối gì, có những trường phái kiến trúc nào, và việc thêm ảnh làm thay đổi bài toán training ra sao.</p>
+
+<h3 id="v-three-blocks">Kiến trúc 3 khối: vision encoder + connector + LLM</h3>
+
+<p>Hình dung LLM như một người chỉ đọc được chữ. Muốn người đó "xem" được ảnh, ta cần:</p>
+<ol>
+<li><b>Một con mắt</b> — <b>vision encoder</b> (thường là ViT đã pre-train sẵn như CLIP hay SigLIP): nhận ảnh pixel, trả về một dãy vector, mỗi vector mô tả một vùng nhỏ (patch) của ảnh.</li>
+<li><b>Một người phiên dịch</b> — <b>connector</b> (còn gọi là projector/adapter): các vector của vision encoder sống trong một "không gian" khác với embedding của LLM (khác số chiều, khác phân phối). Connector biến chúng thành các vector có cùng số chiều với token embedding của LLM, và thường <b>nén bớt</b> số lượng.</li>
+<li><b>Bộ não</b> — <b>LLM</b>: nhận chuỗi gồm "token ảnh" xen với token text, xử lý như một chuỗi bình thường, rồi sinh câu trả lời.</li>
+</ol>
+
+<svg viewBox="0 0 720 200" width="100%" role="img" aria-label="Kiến trúc VLM ba khối: ảnh đi qua vision encoder, connector, rồi ghép với token text vào LLM">
+  <g font-family="sans-serif" font-size="13" style="fill:currentColor">
+    <rect x="10" y="60" width="90" height="70" rx="8" style="fill:none;stroke:var(--muted);stroke-width:1.5"/>
+    <text x="55" y="92" text-anchor="middle">Ảnh</text>
+    <text x="55" y="110" text-anchor="middle" font-size="11" style="fill:var(--muted)">H×W×3 pixel</text>
+    <line x1="100" y1="95" x2="135" y2="95" style="stroke:var(--muted);stroke-width:1.5"/>
+    <polygon points="135,90 145,95 135,100" style="fill:var(--muted)"/>
+    <rect x="145" y="50" width="140" height="90" rx="8" style="fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5"/>
+    <text x="215" y="85" text-anchor="middle" font-weight="600">Vision encoder</text>
+    <text x="215" y="103" text-anchor="middle" font-size="11">ViT (CLIP / SigLIP)</text>
+    <text x="215" y="120" text-anchor="middle" font-size="11" style="fill:var(--muted)">N patch × d_v</text>
+    <line x1="285" y1="95" x2="320" y2="95" style="stroke:var(--muted);stroke-width:1.5"/>
+    <polygon points="320,90 330,95 320,100" style="fill:var(--muted)"/>
+    <rect x="330" y="50" width="130" height="90" rx="8" style="fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5"/>
+    <text x="395" y="85" text-anchor="middle" font-weight="600">Connector</text>
+    <text x="395" y="103" text-anchor="middle" font-size="11">MLP / resampler</text>
+    <text x="395" y="120" text-anchor="middle" font-size="11" style="fill:var(--muted)">M token × d_LLM</text>
+    <line x1="460" y1="95" x2="510" y2="95" style="stroke:var(--muted);stroke-width:1.5"/>
+    <polygon points="510,90 520,95 510,100" style="fill:var(--muted)"/>
+    <rect x="360" y="160" width="160" height="30" rx="6" style="fill:none;stroke:var(--muted);stroke-width:1.2"/>
+    <text x="440" y="180" text-anchor="middle" font-size="12">Token text (prompt)</text>
+    <line x1="520" y1="160" x2="560" y2="140" style="stroke:var(--muted);stroke-width:1.5"/>
+    <rect x="520" y="40" width="190" height="100" rx="8" style="fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5"/>
+    <text x="615" y="80" text-anchor="middle" font-weight="600">LLM (decoder)</text>
+    <text x="615" y="98" text-anchor="middle" font-size="11">[img][img]…[img] + text</text>
+    <text x="615" y="116" text-anchor="middle" font-size="11" style="fill:var(--muted)">→ sinh câu trả lời</text>
+  </g>
+</svg>
+
+<p>Về kích thước, ba khối rất chênh lệch. Ví dụ LLaVA-1.5-7B: vision encoder là CLIP ViT-L/14 ở 336px (~0.3B tham số), connector là MLP 2 lớp (~20M tham số), còn LLM là Vicuna-7B. Tức <b>&gt;95% tham số nằm ở LLM</b>. Nhưng số <i>token</i> thì ngược lại: một ảnh 336×336 sinh ra 576 token, nhiều hơn hẳn một câu hỏi text thông thường (vài chục token).</p>
+
+<table>
+<thead><tr><th>Khối</th><th>Vai trò</th><th>Lựa chọn phổ biến</th><th>Thường được train ở giai đoạn nào</th></tr></thead>
+<tbody>
+<tr><td>Vision encoder</td><td>Trích đặc trưng thị giác (hình dạng, chữ trong ảnh, vật thể...)</td><td>CLIP ViT-L/14, SigLIP-So400m, InternViT, ViT tự train (Qwen-VL)</td><td>Thường đóng băng (freeze) lúc đầu, mở ra (unfreeze) ở các giai đoạn sau, đôi khi với learning rate nhỏ hơn</td></tr>
+<tr><td>Connector</td><td>Đổi số chiều, căn chỉnh phân phối, nén số token</td><td>MLP 2 lớp, Perceiver resampler, Q-Former, pixel shuffle + MLP</td><td>Luôn được train, kể cả ở giai đoạn alignment đầu tiên</td></tr>
+<tr><td>LLM</td><td>Suy luận, sinh text</td><td>Llama, Qwen, Vicuna, SmolLM...</td><td>Thường freeze ở giai đoạn alignment, unfreeze khi instruction tuning</td></tr>
+</tbody>
+</table>
+
+<h3 id="v-families">Bốn họ kiến trúc VLM</h3>
+
+<h4>1. "Ghép vào chuỗi" (adapter / fully-autoregressive / late fusion) — kiểu LLaVA</h4>
+<p>Đây là trường phái thống trị trong các VLM mở. Ảnh được encode thành các vector, qua connector, rồi <b>chèn thẳng vào chuỗi input</b> của LLM như thể chúng là token bình thường. LLM xử lý tất cả bằng self-attention như với text. Ví dụ: LLaVA, Idefics2/3, SmolVLM, InternVL, Qwen2-VL/Qwen2.5-VL, Molmo, MM1.</p>
+<ul>
+<li><b>Ưu điểm:</b> đơn giản, không đổi kiến trúc LLM; mọi kỹ thuật của LLM (FlashAttention, KV cache, RL...) dùng được ngay; ảnh và text tương tác qua mọi layer.</li>
+<li><b>Nhược điểm:</b> token ảnh chiếm chỗ trong context. Ảnh độ phân giải cao hoặc video có thể sinh ra hàng nghìn tới hàng chục nghìn token → tốn compute (attention bậc hai theo độ dài chuỗi) và KV cache.</li>
+</ul>
+
+<h4>2. Cross-attention — kiểu Flamingo, Llama 3-V</h4>
+<p>Ảnh <b>không</b> đi vào chuỗi token. Thay vào đó, ta <b>chèn thêm các layer cross-attention</b> vào giữa các layer của LLM: query lấy từ hidden state của text, key/value lấy từ đặc trưng ảnh. LLM gốc có thể giữ nguyên (freeze) — Llama 3 dùng cách này để giữ trọn khả năng text của model.</p>
+<ul>
+<li><b>Ưu điểm:</b> chuỗi text không dài thêm; dễ giữ nguyên năng lực text; số token ảnh lớn không làm attention của LLM chậm theo bậc hai.</li>
+<li><b>Nhược điểm:</b> thêm nhiều tham số mới (mỗi layer cross-attn); kiến trúc phức tạp hơn, khó tận dụng tooling chuẩn của LLM.</li>
+</ul>
+<p>Paper Idefics2 ("What matters when building vision-language models?", Hugging Face 2024) so sánh trực tiếp hai trường phái: khi <b>freeze</b> backbone, cross-attention tốt hơn; nhưng khi cho phép <b>train cả backbone</b> (dùng LoRA để ổn định), kiến trúc fully-autoregressive (ghép vào chuỗi) lại tốt hơn. Đây là một lý do khiến đa số VLM mở theo hướng ghép chuỗi.</p>
+
+<h4>3. Early fusion / native multimodal — kiểu Chameleon</h4>
+<p>Ảnh được biến thành <b>token rời rạc</b> bằng một image tokenizer (VQ-VAE/VQGAN: mỗi patch được ánh xạ tới một "từ" trong codebook), rồi trộn chung vào vocab với token text. Một Transformer duy nhất được train <b>từ đầu</b> trên chuỗi xen lẫn hai loại token. Chameleon (Meta, 2024) là ví dụ tiêu biểu.</p>
+<ul>
+<li><b>Ưu điểm:</b> một model thống nhất; có thể <b>sinh cả ảnh</b> (vì ảnh cũng là token để predict), không chỉ hiểu ảnh.</li>
+<li><b>Nhược điểm:</b> train từ đầu rất đắt; Chameleon báo cáo phải xử lý vấn đề ổn định đáng kể (họ dùng QK-norm và đổi vị trí norm — xem <a href="frontier-model-training-vi.html#b-qknorm">QK-norm</a>); token rời rạc làm mất chi tiết ảnh (ví dụ chữ nhỏ), nên khả năng hiểu ảnh thường kém các model dùng vision encoder liên tục.</li>
+</ul>
+
+<h4>4. Encoder-free — kiểu Fuyu, EVE</h4>
+<p>Bỏ hẳn vision encoder: patch pixel được <b>chiếu tuyến tính</b> (một ma trận) thẳng vào không gian embedding của decoder. Fuyu-8B (Adept, 2023) là ví dụ sớm. Ưu điểm là đơn giản và nhận ảnh ở bất kỳ độ phân giải nào; nhược điểm là LLM phải tự học thị giác từ đầu, cần rất nhiều data, và tới nay các model này nhìn chung vẫn thua các model có encoder pre-train ở cùng quy mô.</p>
+
+<table>
+<thead><tr><th>Họ</th><th>Ảnh vào LLM ở đâu</th><th>Ví dụ</th><th>Khi nào chọn</th></tr></thead>
+<tbody>
+<tr><td>Ghép chuỗi (adapter)</td><td>Như token trong chuỗi input</td><td>LLaVA, Qwen2.5-VL, InternVL, SmolVLM, Idefics3</td><td>Mặc định cho hầu hết dự án; tận dụng LLM có sẵn</td></tr>
+<tr><td>Cross-attention</td><td>Qua layer cross-attn chèn thêm</td><td>Flamingo, Llama 3-V</td><td>Muốn giữ nguyên tuyệt đối LLM text, hoặc input có rất nhiều ảnh</td></tr>
+<tr><td>Early fusion</td><td>Token rời rạc trong vocab chung</td><td>Chameleon</td><td>Cần cả hiểu và sinh ảnh, có ngân sách train từ đầu</td></tr>
+<tr><td>Encoder-free</td><td>Patch pixel chiếu tuyến tính</td><td>Fuyu-8B, EVE</td><td>Nghiên cứu; muốn kiến trúc tối giản</td></tr>
+</tbody>
+</table>
+
+<h3 id="v-vs-llm">Thêm ảnh làm thay đổi bài toán training thế nào?</h3>
+
+<p>Phần lớn những gì đã học ở tài liệu LLM vẫn đúng. Nhưng có sáu điểm khác biệt quan trọng:</p>
+
+<ol>
+<li><b>Loss vẫn là next-token prediction, nhưng chỉ trên token text.</b> Trong kiến trúc ghép chuỗi, model không dự đoán token ảnh (chúng là vector liên tục, không có "đáp án" trong vocab). Loss được mask: chỉ tính cross-entropy trên các token text cần sinh, giống cách SFT mask phần prompt (xem <a href="frontier-model-training-vi.html#pt-sft-theory">SFT theory</a>).
+\[
+\mathcal{L} = -\sum_{t \in \mathcal{T}_{\text{text}}} \log p_\theta\big(x_t \mid x_{&lt;t},\, \text{img}\big)
+\]
+Ở đây \(\mathcal{T}_{\text{text}}\) là tập vị trí token text được tính loss; token ảnh chỉ đóng vai trò "ngữ cảnh".</li>
+
+<li><b>Token ảnh rất tốn.</b> Một ảnh có thể ngốn từ 64 tới vài nghìn token tuỳ độ phân giải và connector. Ngân sách compute, độ dài context và chi phí inference vì thế bị chi phối bởi ảnh. Đây là lý do có hẳn một nhánh nghiên cứu về nén token ảnh (xem <a href="#v-token-reduction">Optimization — giảm số visual token</a>).</li>
+
+<li><b>Train nhiều giai đoạn, với các khối được freeze/unfreeze khác nhau.</b> Công thức phổ biến: (1) <i>alignment</i> — chỉ train connector trên cặp ảnh–caption; (2) <i>pre-training đa phương thức</i> — mở thêm LLM (và có thể cả encoder) trên data lớn, xen kẽ ảnh–text; (3) <i>instruction tuning</i> — data hội thoại có ảnh; (4) tuỳ chọn: preference optimization/RL.</li>
+
+<li><b>Data rất khác.</b> Data ảnh–text trên web (alt-text) nhiễu và ngắn; cần caption tổng hợp (synthetic) chi tiết, data OCR, biểu đồ, tài liệu, toán có hình, grounding (chỉ vị trí vật thể)... Chất lượng và độ đa dạng của data instruction ảnh hưởng mạnh tới kết quả.</li>
+
+<li><b>Phải bảo vệ năng lực text.</b> Train nhiều trên data ảnh dễ làm LLM "quên" kỹ năng text thuần (catastrophic forgetting). Cách phổ biến: trộn một tỉ lệ data text-only vào mọi giai đoạn, dùng learning rate nhỏ cho LLM, hoặc (kiểu Llama 3-V) freeze hẳn LLM.</li>
+
+<li><b>Hệ thống train khó cân bằng hơn.</b> Mỗi sample có số ảnh và độ phân giải khác nhau → số token và compute của vision encoder dao động mạnh giữa các GPU, gây mất cân bằng tải. Vision encoder và LLM có kích thước rất khác nhau nên chiến lược parallelism tối ưu cho từng khối cũng khác.</li>
+</ol>
+
+<div class="callout note"><div class="callout-title">Giải thích thêm: vì sao không train VLM từ đầu cho xong?</div>
+<p>Về nguyên tắc có thể (đó là hướng early-fusion/native multimodal). Nhưng ghép một vision encoder đã pre-train với một LLM đã pre-train <b>rẻ hơn rất nhiều</b>: encoder đã học thị giác từ hàng tỉ cặp ảnh–text, LLM đã học ngôn ngữ từ hàng nghìn tỉ token. Ta chỉ cần dạy chúng "nói chuyện" với nhau. LLaVA gốc chỉ cần vài trăm nghìn mẫu cho giai đoạn alignment và instruction tuning để có một VLM dùng được — so với hàng nghìn tỉ token khi pre-train LLM.</p>
+</div>
+
+<div class="callout tip"><div class="callout-title">Ý chính</div>
+<p>Kết luận thực nghiệm nhất quán từ nhiều paper lớn (MM1 của Apple, Idefics2, Cambrian-1): <b>chất lượng LLM backbone, độ phân giải ảnh / số token ảnh, và data</b> ảnh hưởng tới chất lượng VLM nhiều hơn so với thiết kế chi tiết của connector. MM1 ghi rõ: độ phân giải ảnh và số token ảnh quan trọng nhất, còn kiểu connector chỉ ảnh hưởng không đáng kể.</p>
+</div>
+
+<h3 id="v-doc-map">Bản đồ tài liệu</h3>
+<p>Tài liệu VLM này đi theo đúng dòng chảy của một ảnh khi vào model, rồi tới cách train và tối ưu:</p>
+<ul>
+<li><a href="#v-encoders">Vision encoder</a>: ViT hoạt động thế nào, CLIP và SigLIP được pre-train ra sao, chọn encoder nào.</li>
+<li><a href="#v-connectors">Connector và độ phân giải</a>: các kiểu connector, cách xử lý ảnh độ phân giải cao, video, và cách giảm số token ảnh.</li>
+<li>Các chương tiếp theo: công thức train nhiều giai đoạn, data, post-training cho VLM, tối ưu hệ thống và đánh giá (benchmark).</li>
+</ul>
+<p>Những chủ đề dùng chung với LLM (optimizer, scaling laws, parallelism, RL...) không nhắc lại; tài liệu sẽ trỏ về <a href="frontier-model-training-vi.html">bản LLM</a> khi cần, ví dụ <a href="frontier-model-training-vi.html#t-transformer-math">toán Transformer block</a>, <a href="frontier-model-training-vi.html#ar-flashattention">FlashAttention</a>, <a href="frontier-model-training-vi.html#dt-rope-theory">RoPE</a> và <a href="frontier-model-training-vi.html#s-systems">training systems optimization</a>.</p>
+
+<div class="callout note"><div class="callout-title">Nguồn tham khảo</div>
+<ul>
+<li>Liu et al., <i>Visual Instruction Tuning</i> (LLaVA), 2023 — arXiv:2304.08485.</li>
+<li>Liu et al., <i>Improved Baselines with Visual Instruction Tuning</i> (LLaVA-1.5), 2023 — arXiv:2310.03744.</li>
+<li>Alayrac et al., <i>Flamingo: a Visual Language Model for Few-Shot Learning</i>, DeepMind 2022 — arXiv:2204.14198.</li>
+<li>Laurençon et al., <i>What matters when building vision-language models?</i> (Idefics2), Hugging Face 2024 — arXiv:2405.02246.</li>
+<li>McKinzie et al., <i>MM1: Methods, Analysis &amp; Insights from Multimodal LLM Pre-training</i>, Apple 2024 — arXiv:2403.09611.</li>
+<li>Chameleon Team, <i>Chameleon: Mixed-Modal Early-Fusion Foundation Models</i>, Meta 2024 — arXiv:2405.09818.</li>
+<li>Llama Team, <i>The Llama 3 Herd of Models</i>, Meta 2024 — arXiv:2407.21783 (phần vision dùng cross-attention adapter).</li>
+<li>Tong et al., <i>Cambrian-1: A Fully Open, Vision-Centric Exploration of Multimodal LLMs</i>, 2024 — arXiv:2406.16860.</li>
+<li>Adept, <i>Fuyu-8B: A Multimodal Architecture for AI Agents</i> (blog), 2023.</li>
+</ul>
+</div>
+</section>
+
+<section id="v-encoders">
+<h2 id="v-encoders-h">Vision encoder — biến ảnh thành vector</h2>
+
+<div class="callout tip"><div class="callout-title">Đọc nhanh</div>
+<ul>
+<li>Vision encoder gần như luôn là một <b>ViT</b>: cắt ảnh thành các ô vuông nhỏ (patch), mỗi ô thành một vector, rồi cho qua Transformer như một câu gồm nhiều "từ".</li>
+<li>Số token ảnh tăng theo <b>bình phương</b> độ phân giải: ảnh 448px sinh gấp 4 lần token so với ảnh 224px.</li>
+<li>Encoder tốt cho VLM thường được pre-train bằng cách "ghép đôi" ảnh với caption: <b>CLIP</b> (dùng softmax) và <b>SigLIP</b> (dùng sigmoid, rẻ hơn khi train lớn). SigLIP-So400m hiện là lựa chọn phổ biến nhất trong VLM mở.</li>
+<li>Khi chọn encoder, độ phân giải và khả năng nhận ảnh ở tỉ lệ khung hình gốc thường quan trọng hơn kích thước encoder.</li>
+</ul>
+</div>
+
+<h3 id="v-vit-math">ViT từ đầu đến cuối — toàn bộ phép tính</h3>
+
+<p>Vision Transformer (ViT, Dosovitskiy et al. 2020, "An Image is Worth 16x16 Words") áp dụng nguyên xi Transformer encoder cho ảnh. Ý tưởng: Transformer xử lý <i>chuỗi</i> vector, vậy ta biến ảnh thành chuỗi bằng cách cắt nó thành các ô.</p>
+
+<h4>Bước 1 — Patchify: cắt ảnh thành patch</h4>
+<p>Ảnh đầu vào \(x \in \mathbb{R}^{H \times W \times C}\) (C = 3 kênh màu RGB). Chọn kích thước patch \(P\) (thường 14 hoặc 16). Cắt ảnh thành lưới các ô \(P \times P\) không chồng lên nhau, rồi duỗi mỗi ô thành một vector:</p>
+\[
+x_p^{(i)} \in \mathbb{R}^{P^2 \cdot C}, \qquad i = 1, \dots, N, \qquad N = \frac{H}{P} \cdot \frac{W}{P}
+\]
+<p>Ví dụ \(P = 14\), \(C = 3\): mỗi patch là vector \(14 \cdot 14 \cdot 3 = 588\) chiều.</p>
+
+<h4>Bước 2 — Patch embedding: chiếu tuyến tính</h4>
+<p>Mỗi patch được nhân với một ma trận học được \(E \in \mathbb{R}^{(P^2 C) \times D}\) để ra vector \(D\) chiều (D là hidden size của ViT, ví dụ 1024 với ViT-L). Trong code, bước 1 + 2 được cài đặt gọn bằng <b>một lớp Conv2d</b> với <code>kernel_size = stride = P</code> và <code>out_channels = D</code> — kernel trượt đúng từng ô không chồng nhau, nên tương đương "duỗi patch rồi nhân ma trận".</p>
+
+<h4>Bước 3 — Position embedding</h4>
+<p>Self-attention không biết thứ tự (permutation-invariant), nên phải cộng thông tin vị trí. ViT gốc dùng <b>learned absolute position embedding</b>: một bảng \(E_{pos} \in \mathbb{R}^{(N+1) \times D}\) học được (thêm 1 cho token [CLS]).</p>
+\[
+z_0 = \big[\, x_{\text{cls}};\; x_p^{(1)} E;\; x_p^{(2)} E;\; \dots;\; x_p^{(N)} E \,\big] + E_{pos}
+\]
+
+<h4>Bước 4 — Transformer encoder</h4>
+<p>Đi qua \(L\) block giống hệt LLM (xem <a href="frontier-model-training-vi.html#t-transformer-math">Transformer block</a>), với hai khác biệt: <b>không có causal mask</b> (mọi patch nhìn thấy mọi patch — bidirectional), và ViT cổ điển dùng LayerNorm + MLP GELU thay vì RMSNorm + SwiGLU.</p>
+\[
+z'_\ell = z_{\ell-1} + \text{MSA}(\text{LN}(z_{\ell-1})), \qquad z_\ell = z'_\ell + \text{MLP}(\text{LN}(z'_\ell))
+\]
+
+<h4>Bước 5 — Lấy output</h4>
+<p>Có hai cách gom thông tin cả ảnh thành một vector (dùng khi pre-train/phân loại):</p>
+<ul>
+<li><b>[CLS] token:</b> một token đặc biệt học được, đứng đầu chuỗi; sau L layer, vector của nó đại diện cho cả ảnh (giống BERT).</li>
+<li><b>Mean pooling (GAP)</b> hoặc <b>attention pooling (MAP head)</b>: lấy trung bình mọi patch, hoặc dùng một query học được attend lên các patch. SigLIP dùng MAP head.</li>
+</ul>
+<p><b>Nhưng VLM không dùng vector gộp này.</b> VLM lấy <b>toàn bộ chuỗi patch</b> (thường ở layer áp chót hoặc layer cuối, bỏ [CLS]) — vì LLM cần biết chi tiết từng vùng ảnh, không chỉ "ý chính" của ảnh. LLaVA-1.5 lấy feature ở layer áp chót (penultimate) của CLIP, vì layer cuối bị "chuyên môn hoá" quá mức cho mục tiêu contrastive.</p>
+
+<h4>Số token theo độ phân giải — bảng tính</h4>
+<p>Số patch \(N = (H/P)\cdot(W/P)\) tăng theo <b>bình phương</b> cạnh ảnh. Khi \(H\) không chia hết cho \(P\), conv bỏ phần dư (lấy phần nguyên).</p>
+<table>
+<thead><tr><th>Độ phân giải</th><th>Patch 14</th><th>Patch 16</th><th>Ví dụ encoder</th></tr></thead>
+<tbody>
+<tr><td>224×224</td><td>16×16 = 256</td><td>14×14 = 196</td><td>CLIP ViT-L/14 gốc, ViT-B/16</td></tr>
+<tr><td>336×336</td><td>24×24 = 576</td><td>21×21 = 441</td><td>CLIP ViT-L/14-336 (LLaVA-1.5: 576 token)</td></tr>
+<tr><td>384×384</td><td>27×27 = 729 (bỏ 6px dư)</td><td>24×24 = 576</td><td>SigLIP-So400m/14-384: 729 token</td></tr>
+<tr><td>448×448</td><td>32×32 = 1024</td><td>28×28 = 784</td><td>InternViT-448 (1024 patch/tile)</td></tr>
+</tbody>
+</table>
+
+<div class="callout example"><div class="callout-title">Ví dụ số: chi phí self-attention trong ViT</div>
+<p>Attention có chi phí bậc hai theo số token. Từ 224px lên 448px (patch 14): token tăng 256 → 1024 (×4), nên phần ma trận attention \(N \times N\) tăng ×16 (65.536 → 1.048.576 phần tử mỗi head). Phần MLP và projection tăng tuyến tính (×4). Đây là lý do không thể cứ thế tăng độ phân giải: cả ViT lẫn LLM phía sau đều đắt lên nhanh. Các VLM giải quyết bằng <i>tiling</i> (cắt ảnh lớn thành nhiều ô nhỏ) và nén token — xem <a href="#v-connectors">chương connector</a>.</p>
+</div>
+
+<h4>Đổi độ phân giải: nội suy position embedding</h4>
+<p>Learned position embedding có đúng \(N\) vị trí theo độ phân giải lúc pre-train. Muốn dùng ảnh lớn hơn, ta xếp bảng \(E_{pos}\) lại thành lưới 2D \(\sqrt{N} \times \sqrt{N} \times D\), <b>nội suy bicubic</b> lên lưới mới \(\frac{H'}{P} \times \frac{W'}{P}\), rồi fine-tune thêm một chút. Cách này đã có từ paper ViT gốc. Nó chạy được nhưng không lý tưởng: nội suy quá xa độ phân giải gốc làm suy giảm chất lượng, và chỉ hỗ trợ một số kích thước cố định. Đó là động lực của 2D RoPE (xem <a href="#v-2d-rope">bên dưới</a>).</p>
+
+<h3 id="v-clip">CLIP — học thị giác từ caption bằng contrastive loss</h3>
+
+<p>Một ViT cần được pre-train để biết "nhìn". Có nhiều cách (phân loại ảnh có nhãn, self-supervised...), nhưng encoder tốt nhất cho VLM thường được học bằng <b>contrastive language-image pre-training</b>, tiêu biểu là <b>CLIP</b> (OpenAI 2021). Lý do: encoder này đã học cách đặt ảnh vào một không gian <i>gần với ngôn ngữ</i>, nên việc nối với LLM dễ hơn nhiều.</p>
+
+<h4>Ý tưởng</h4>
+<p>CLIP có hai encoder: image encoder \(f\) (ViT) và text encoder \(g\) (Transformer). Lấy một batch \(B\) cặp (ảnh, caption) từ web. Mục tiêu: embedding của ảnh \(i\) phải <b>gần</b> caption \(i\) của nó và <b>xa</b> mọi caption khác trong batch. Nói cách khác, với mỗi ảnh, model làm một bài "trắc nghiệm" chọn đúng caption trong \(B\) lựa chọn, và ngược lại.</p>
+
+<h4>Công thức InfoNCE đối xứng</h4>
+<p>Chuẩn hoá L2 các embedding: \(x_i = f(\text{img}_i)/\lVert f(\text{img}_i)\rVert\), \(y_j = g(\text{txt}_j)/\lVert g(\text{txt}_j)\rVert\). Ma trận độ tương đồng (logits) \(B \times B\):</p>
+\[
+s_{ij} = \frac{x_i^\top y_j}{\tau}
+\]
+<p>Loss là trung bình của hai cross-entropy — theo hàng (ảnh → text) và theo cột (text → ảnh):</p>
+\[
+\mathcal{L}_{\text{CLIP}} = -\frac{1}{2B} \sum_{i=1}^{B} \left[ \log \frac{e^{s_{ii}}}{\sum_{j=1}^{B} e^{s_{ij}}} + \log \frac{e^{s_{ii}}}{\sum_{j=1}^{B} e^{s_{ji}}} \right]
+\]
+<table class="symtab">
+<thead><tr><th>Ký hiệu</th><th>Ý nghĩa</th></tr></thead>
+<tbody>
+<tr><td>\(B\)</td><td>batch size — số cặp ảnh–text; cũng là số "lựa chọn" trong mỗi bài trắc nghiệm</td></tr>
+<tr><td>\(x_i, y_j\)</td><td>embedding ảnh \(i\), text \(j\), đã chuẩn hoá về độ dài 1 → \(x_i^\top y_j\) là cosine similarity, nằm trong \([-1, 1]\)</td></tr>
+<tr><td>\(\tau\)</td><td>temperature, học được. CLIP khởi tạo \(\tau = 0.07\) và giới hạn \(1/\tau \le 100\) để tránh bất ổn</td></tr>
+<tr><td>\(s_{ii}\)</td><td>điểm của cặp đúng (đường chéo ma trận)</td></tr>
+<tr><td>\(s_{ij}, i \ne j\)</td><td>điểm của các cặp sai — gọi là "negatives" trong batch</td></tr>
+</tbody>
+</table>
+
+<div class="callout note"><div class="callout-title">Giải thích thêm: vì sao cần temperature \(\tau\)?</div>
+<p>Cosine chỉ nằm trong \([-1, 1]\). Nếu đưa thẳng vào softmax với \(B = 32768\) lựa chọn, chênh lệch tối đa giữa logit đúng và sai chỉ là 2 → xác suất cho đáp án đúng không bao giờ đủ cao, gradient yếu. Chia cho \(\tau = 0.07\) (tức nhân với ~14.3) "kéo giãn" khoảng logit thành \([-14.3, 14.3]\), cho phép softmax trở nên sắc nét. \(\tau\) được học, và trong thực tế thường giảm dần tới mức chặn (\(1/\tau = 100\)).</p>
+</div>
+
+<div class="callout example"><div class="callout-title">Ví dụ số nhỏ</div>
+<p>Batch \(B = 3\), \(\tau = 0.1\). Ảnh 1 có cosine với 3 caption lần lượt là 0.30 (đúng), 0.10, 0.05. Logits = 3.0, 1.0, 0.5. Softmax: \(e^{3}/(e^{3}+e^{1}+e^{0.5}) = 20.09/(20.09+2.72+1.65) \approx 0.82\). Loss hàng 1 \(= -\log 0.82 \approx 0.20\). Nếu \(\tau = 1\): logits 0.30, 0.10, 0.05 → softmax ≈ 0.38 → loss ≈ 0.97. Cùng embedding nhưng temperature nhỏ cho tín hiệu "tự tin" hơn nhiều.</p>
+</div>
+
+<h4>Vì sao batch size cực lớn lại quan trọng?</h4>
+<p>Mỗi ảnh chỉ được so với \(B-1\) negatives <i>trong cùng batch</i>. Batch nhỏ → bài trắc nghiệm quá dễ (ít đáp án gây nhiễu, đa số khác hẳn chủ đề) → model không học được phân biệt tinh vi ("chó Corgi" vs "chó Shiba"). CLIP train với batch 32.768 trên ~400 triệu cặp ảnh–text. Nhưng softmax đòi hỏi tính <b>toàn bộ ma trận \(B \times B\)</b> và chuẩn hoá theo cả hàng lẫn cột: khi phân tán trên nhiều GPU, mỗi GPU phải all-gather embedding của <i>mọi</i> GPU khác. Bộ nhớ và giao tiếp tăng theo \(B^2\). Đây chính là điểm SigLIP giải quyết.</p>
+
+<h3 id="v-siglip">SigLIP — thay softmax bằng sigmoid</h3>
+
+<p>SigLIP (Zhai et al., Google 2023, "Sigmoid Loss for Language Image Pre-Training") đổi bài toán từ "chọn 1 trong B" sang <b>B² bài toán nhị phân độc lập</b>: mỗi cặp \((i, j)\) là "khớp" hay "không khớp"?</p>
+\[
+\mathcal{L}_{\text{SigLIP}} = -\frac{1}{B} \sum_{i=1}^{B} \sum_{j=1}^{B} \log \sigma\!\Big( z_{ij} \big( t\, x_i^\top y_j + b \big) \Big), \qquad z_{ij} = \begin{cases} +1 &amp; i = j \\ -1 &amp; i \ne j \end{cases}
+\]
+<ul>
+<li>\(\sigma(u) = 1/(1+e^{-u})\) là hàm sigmoid. \(z_{ij}\) là nhãn: +1 cho cặp đúng, −1 cho cặp sai.</li>
+<li>\(t\) là temperature (dạng nhân, học được; SigLIP khởi tạo \(t = 10\) thông qua \(\log t\)), \(b\) là <b>bias</b> học được, khởi tạo \(b = -10\).</li>
+</ul>
+
+<div class="callout note"><div class="callout-title">Giải thích thêm: vì sao cần bias \(b = -10\)?</div>
+<p>Trong \(B^2\) cặp, chỉ \(B\) cặp là dương, còn \(B^2 - B\) là âm — mất cân bằng cực độ (với \(B = 32\text{k}\), cứ một cặp dương có ~32 nghìn cặp âm). Nếu bắt đầu với bias 0, model mất rất nhiều bước đầu chỉ để học rằng "hầu hết các cặp không khớp", và gradient từ các negative áp đảo. Khởi tạo \(b = -10\) nghĩa là mặc định \(\sigma(-10) \approx 4.5 \times 10^{-5}\): model "giả định" mọi cặp là không khớp ngay từ đầu, tức đã đúng với tiên nghiệm, và chỉ cần học cách nâng điểm cặp đúng lên.</p>
+</div>
+
+<h4>Vì sao SigLIP scale tốt hơn</h4>
+<ul>
+<li><b>Không cần chuẩn hoá toàn cục.</b> Softmax cần mẫu số tổng trên cả hàng/cột → phải có toàn bộ ma trận. Sigmoid tính loss từng cặp độc lập → có thể tính theo <b>từng khối</b> (chunked): mỗi GPU giữ ảnh của mình, lần lượt nhận text từ GPU hàng xóm (kiểu vòng), tính loss khối đó rồi bỏ. Không cần all-gather toàn bộ, bộ nhớ không tăng theo \(B^2\) trên một thiết bị.</li>
+<li><b>Tốt hơn ở batch nhỏ</b> và đạt bão hoà sớm: paper báo cáo sigmoid loss vượt softmax rõ ràng khi batch nhỏ hơn 16k, và tăng batch quá ~32k gần như không còn lợi ích.</li>
+<li>Kết quả: train được encoder mạnh với ít tài nguyên hơn. <b>SigLIP-So400m</b> (ViT "shape-optimized" ~400M tham số, patch 14, 384px → 729 token) trở thành vision encoder phổ biến nhất của VLM mở: dùng trong Idefics2/3, PaliGemma, LLaVA-OneVision...</li>
+</ul>
+
+<h4>SigLIP 2</h4>
+<p>SigLIP 2 (Google, 2025) giữ sigmoid loss và thêm nhiều mục tiêu phụ: một decoder sinh caption/grounding (học định vị vật thể), self-distillation và masked prediction (cải thiện đặc trưng cục bộ — quan trọng cho VLM vì VLM dùng từng patch), cùng data đa ngôn ngữ. Đặc biệt có biến thể <b>NaFlex</b>: nhận ảnh ở <b>tỉ lệ khung hình gốc</b> với số patch linh hoạt, thay vì ép mọi ảnh về hình vuông — có lợi cho tài liệu, OCR, ảnh chụp màn hình dạng dài.</p>
+
+<h3 id="v-other-encoders">Các encoder khác và trường phái pre-train</h3>
+<table>
+<thead><tr><th>Encoder</th><th>Cách pre-train</th><th>Điểm đáng chú ý</th></tr></thead>
+<tbody>
+<tr><td>CLIP (OpenAI)</td><td>Contrastive softmax, ~400M cặp</td><td>ViT-L/14 và L/14-336 là "chuẩn" của thế hệ LLaVA đầu</td></tr>
+<tr><td>OpenCLIP</td><td>Tái hiện CLIP trên LAION</td><td>Mở hoàn toàn cả data lẫn code</td></tr>
+<tr><td>EVA-CLIP</td><td>Khởi tạo từ EVA (masked image modeling), rồi contrastive</td><td>Có bản rất lớn (tới hàng tỉ tham số)</td></tr>
+<tr><td>SigLIP / SigLIP 2</td><td>Contrastive sigmoid (+ các loss phụ ở v2)</td><td>Lựa chọn mặc định hiện nay; So400m-384 phổ biến</td></tr>
+<tr><td>InternViT (InternVL)</td><td>Contrastive rồi tiếp tục train cùng LLM</td><td>InternViT-6B — một trong những vision encoder mở lớn nhất</td></tr>
+<tr><td>DINOv2 (Meta)</td><td>Self-supervised, <b>không dùng text</b></td><td>Đặc trưng không gian/hình học rất tốt; yếu về ngữ nghĩa và chữ</td></tr>
+<tr><td>AIMv2 (Apple)</td><td>Autoregressive đa phương thức: dự đoán patch ảnh và token text</td><td>Mục tiêu pre-train gần với cách VLM dùng encoder</td></tr>
+</tbody>
+</table>
+
+<div class="callout note"><div class="callout-title">Giải thích thêm: CLIP "biết chữ", DINOv2 "biết hình"</div>
+<p>Contrastive với caption dạy encoder những gì được <i>mô tả bằng lời</i>: vật thể, hành động, phong cách, cả chữ in trong ảnh. Nhưng caption hiếm khi nói "cái cốc nằm bên trái cái đĩa", nên CLIP yếu về quan hệ không gian và đếm. Self-supervised như DINOv2 học từ chính cấu trúc ảnh, nên giỏi hình học, độ sâu, phân vùng. Nhiều nghiên cứu (Prismatic VLMs 2024, Cambrian-1 2024) thấy <b>ghép đặc trưng SigLIP + DINOv2</b> giúp các tác vụ cần định vị/không gian. Cambrian-1 còn đề xuất bộ benchmark "vision-centric" để đo đúng loại năng lực này.</p>
+</div>
+
+<h3 id="v-2d-rope">2D RoPE và M-RoPE — để ViT và LLM hiểu vị trí 2D</h3>
+
+<h4>2D RoPE trong ViT</h4>
+<p>Nhắc lại: RoPE xoay từng cặp chiều của query/key một góc tỉ lệ với vị trí, khiến tích \(q_m^\top k_n\) chỉ phụ thuộc vào khoảng cách \(m - n\) (xem <a href="frontier-model-training-vi.html#dt-rope-theory">RoPE theory</a>). Ảnh có hai trục, nên <b>2D RoPE</b> chia các cặp chiều làm hai nửa: nửa đầu xoay theo toạ độ hàng \(h\), nửa sau xoay theo toạ độ cột \(w\):</p>
+\[
+q_{(h,w)} = \big[\, R(h)\, q^{[1]} \;;\; R(w)\, q^{[2]} \,\big] \;\Rightarrow\; q_{(h,w)}^\top k_{(h',w')} \text{ chỉ phụ thuộc } (h - h',\; w - w')
+\]
+<p>Lợi ích: không có bảng vị trí cố định → ViT nhận <b>ảnh ở bất kỳ kích thước và tỉ lệ nào</b> mà không cần nội suy. Đây là nền tảng của "native dynamic resolution" (Qwen2-VL), nơi ViT được train lại với 2D RoPE thay vì learned absolute position embedding.</p>
+
+<h4>M-RoPE trong LLM (Qwen2-VL)</h4>
+<p>Khi token ảnh vào LLM, LLM vẫn dùng RoPE 1D theo thứ tự chuỗi — vốn không biết hai patch nằm trên dưới nhau. Qwen2-VL đề xuất <b>Multimodal RoPE (M-RoPE)</b>: tách embedding vị trí thành ba thành phần <b>thời gian (t), cao (h), rộng (w)</b>, mỗi thành phần chiếm một phần các cặp chiều của rotary.</p>
+<ul>
+<li><b>Token text:</b> cả ba id bằng nhau (= vị trí trong chuỗi) → tương đương hoàn toàn RoPE 1D, nên không làm hỏng LLM gốc.</li>
+<li><b>Token ảnh:</b> id thời gian cố định, id h và w theo vị trí patch trong lưới.</li>
+<li><b>Token video:</b> id thời gian tăng theo frame, h và w theo lưới không gian.</li>
+<li>Token text sau ảnh tiếp tục đánh số từ (id lớn nhất trước đó + 1).</li>
+</ul>
+<p>Qwen2.5-VL tiếp tục gắn id thời gian với <b>thời gian tuyệt đối</b> (giây thực) thay vì chỉ số frame, giúp model hiểu nhịp độ video và định vị sự kiện theo thời điểm.</p>
+
+<h3 id="v-choose-encoder">Chọn vision encoder thế nào</h3>
+<ol>
+<li><b>Độ phân giải &gt; kích thước.</b> MM1 (Apple) thấy độ phân giải ảnh tác động lớn nhất, sau đó mới tới kích thước encoder và data pre-train của encoder. Một encoder vừa phải ở 384–448px với tiling thường hơn encoder khổng lồ ở 224px.</li>
+<li><b>Tác vụ mục tiêu.</b> Cần đọc tài liệu/OCR/biểu đồ → ưu tiên độ phân giải cao và giữ tỉ lệ khung hình gốc (NaFlex, native resolution). Cần không gian/định vị → cân nhắc thêm DINOv2-like hoặc encoder có loss grounding (SigLIP 2).</li>
+<li><b>Ngân sách token.</b> Encoder patch 14 sinh nhiều token hơn patch 16 cùng độ phân giải (~1.3 lần). Mọi token đó LLM phải xử lý, trừ khi connector nén lại.</li>
+<li><b>Kích thước tổng thể của VLM.</b> Với VLM rất nhỏ (vài trăm triệu tham số), encoder 400M có thể còn lớn hơn cả LLM. SmolVLM dùng SigLIP base (~93M) cho các bản nhỏ nhất để cân đối.</li>
+<li><b>Giấy phép và độ mở</b> của trọng số và data pre-train.</li>
+</ol>
+
+<div class="callout warn"><div class="callout-title">Cạm bẫy thường gặp</div>
+<ul>
+<li><b>Sai preprocessing:</b> mỗi encoder có mean/std chuẩn hoá pixel và cách resize riêng (CLIP và SigLIP khác nhau). Dùng sai không gây lỗi nhưng làm chất lượng giảm âm thầm.</li>
+<li><b>Lấy nhầm layer:</b> layer cuối của encoder contrastive thường kém hơn layer áp chót cho VLM.</li>
+<li><b>Ép ảnh dài về hình vuông</b> làm chữ bị méo/nhoè — với tài liệu và screenshot, hãy dùng tiling hoặc native resolution.</li>
+</ul>
+</div>
+
+<div class="callout tip"><div class="callout-title">Ý chính</div>
+<p>ViT = cắt patch + Transformer bidirectional. Số token tăng theo bình phương độ phân giải. CLIP/SigLIP cho encoder "gần ngôn ngữ"; SigLIP rẻ hơn khi scale nhờ sigmoid loss không cần chuẩn hoá toàn batch. 2D RoPE/M-RoPE cho phép nhận ảnh ở kích thước và tỉ lệ gốc.</p>
+</div>
+
+<div class="callout note"><div class="callout-title">Nguồn tham khảo</div>
+<ul>
+<li>Dosovitskiy et al., <i>An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale</i> (ViT), Google 2020 — arXiv:2010.11929.</li>
+<li>Radford et al., <i>Learning Transferable Visual Models From Natural Language Supervision</i> (CLIP), OpenAI 2021 — arXiv:2103.00020.</li>
+<li>Zhai et al., <i>Sigmoid Loss for Language Image Pre-Training</i> (SigLIP), Google 2023 — arXiv:2303.15343.</li>
+<li>Alabdulmohsin et al., <i>Getting ViT in Shape: Scaling Laws for Compute-Optimal Model Design</i> (So400m), Google 2023 — arXiv:2305.13035.</li>
+<li>Tschannen et al., <i>SigLIP 2: Multilingual Vision-Language Encoders with Improved Semantic Understanding, Localization, and Dense Features</i>, Google 2025 — arXiv:2502.14786.</li>
+<li>Sun et al., <i>EVA-CLIP: Improved Training Techniques for CLIP at Scale</i>, 2023 — arXiv:2303.15389.</li>
+<li>Oquab et al., <i>DINOv2: Learning Robust Visual Features without Supervision</i>, Meta 2023 — arXiv:2304.07193.</li>
+<li>Fini et al., <i>Multimodal Autoregressive Pre-training of Large Vision Encoders</i> (AIMv2), Apple 2024 — arXiv:2411.14402.</li>
+<li>Chen et al., <i>InternVL: Scaling up Vision Foundation Models and Aligning for Generic Visual-Linguistic Tasks</i>, 2023 — arXiv:2312.14238.</li>
+<li>Wang et al., <i>Qwen2-VL: Enhancing Vision-Language Model's Perception of the World at Any Resolution</i>, Alibaba 2024 — arXiv:2409.12191.</li>
+<li>Bai et al., <i>Qwen2.5-VL Technical Report</i>, Alibaba 2025 — arXiv:2502.13923.</li>
+<li>Karamcheti et al., <i>Prismatic VLMs: Investigating the Design Space of Visually-Conditioned Language Models</i>, 2024 — arXiv:2402.07865.</li>
+<li>McKinzie et al., <i>MM1</i>, Apple 2024 — arXiv:2403.09611.</li>
+</ul>
+</div>
+</section>
+
+<section id="v-connectors">
+<h2 id="v-connectors-h">Connector và xử lý độ phân giải</h2>
+
+<div class="callout tip"><div class="callout-title">Đọc nhanh</div>
+<ul>
+<li>Connector là "người phiên dịch" giữa vision encoder và LLM. Kiểu đơn giản nhất là một MLP 2 lớp, và thực tế nó chạy tốt ngang các kiểu phức tạp hơn.</li>
+<li>Vấn đề thật sự là <b>số lượng token ảnh</b>: ảnh càng nét, càng nhiều token, LLM càng chậm. Connector hiện đại vì thế thường kiêm luôn việc <b>nén</b> token (pixel shuffle, resampler).</li>
+<li>Ảnh độ phân giải cao được xử lý bằng cách <b>cắt thành nhiều ô</b> (tiling) cộng một ảnh thu nhỏ toàn cảnh, hoặc cho ViT nhận thẳng ảnh ở kích thước gốc (native resolution).</li>
+<li>Video = rất nhiều ảnh → phải lấy mẫu thưa frame và gộp token theo thời gian, nếu không sẽ vượt context ngay.</li>
+<li>Có thể cắt bớt token ảnh "ít quan trọng" lúc chạy để tăng tốc, đổi lại có rủi ro mất chi tiết nhỏ như chữ.</li>
+</ul>
+</div>
+
+<p>Gọi output của vision encoder là \(Z \in \mathbb{R}^{N \times d_v}\) (N patch, mỗi patch \(d_v\) chiều), còn LLM cần token embedding \(d_{\text{LLM}}\) chiều. Connector là hàm \(g: \mathbb{R}^{N \times d_v} \to \mathbb{R}^{M \times d_{\text{LLM}}}\). Hai câu hỏi thiết kế: (1) <b>biến đổi thế nào</b> (tuyến tính, MLP, attention)? (2) <b>giữ bao nhiêu token</b> (\(M = N\) hay \(M \ll N\))?</p>
+
+<h3 id="v-mlp-projector">MLP projector — đơn giản mà hiệu quả (LLaVA)</h3>
+<p>LLaVA gốc dùng một ma trận tuyến tính duy nhất \(H = Z W\). LLaVA-1.5 nâng lên <b>MLP 2 lớp với GELU</b> và thấy cải thiện rõ:</p>
+\[
+H = \text{GELU}(Z W_1 + b_1)\, W_2 + b_2, \qquad W_1 \in \mathbb{R}^{d_v \times d_{\text{LLM}}},\; W_2 \in \mathbb{R}^{d_{\text{LLM}} \times d_{\text{LLM}}}
+\]
+<ul>
+<li>Áp dụng <b>độc lập cho từng patch</b> → \(M = N\), không nén, giữ nguyên thứ tự không gian.</li>
+<li>Số tham số với \(d_v = 1024\) (CLIP ViT-L), \(d_{\text{LLM}} = 4096\) (LLM 7B): \(1024 \cdot 4096 + 4096 \cdot 4096 \approx 4.2\text{M} + 16.8\text{M} \approx 21\text{M}\) — nhỏ xíu so với 7B của LLM.</li>
+</ul>
+<div class="callout note"><div class="callout-title">Giải thích thêm: vì sao MLP thắng các connector "xịn" hơn?</div>
+<p>MLP không làm mất thông tin: mỗi patch được giữ nguyên, chỉ được "dịch" sang không gian của LLM. Phần "hiểu" để LLM lo, và LLM có hàng tỉ tham số để làm việc đó. Ngược lại, connector nén mạnh (ví dụ 32 query) phải tự quyết định thông tin nào bỏ đi — dễ bỏ nhầm chi tiết nhỏ như chữ. MM1 (Apple) so sánh nhiều kiểu connector và kết luận: <b>số token ảnh và độ phân giải</b> mới là yếu tố chính, còn kiểu connector ảnh hưởng không đáng kể.</p>
+</div>
+
+<h3 id="v-resampler">Q-Former và Perceiver resampler — nén về số token cố định</h3>
+<p>Ý tưởng: dùng \(M\) <b>query học được</b> (learned queries/latents) \(Q_0 \in \mathbb{R}^{M \times d}\) "hỏi" ảnh bằng cross-attention, rồi chỉ giữ \(M\) output đó. Bất kể ảnh có bao nhiêu patch, output luôn là \(M\) token.</p>
+\[
+\text{CrossAttn}(Q_0, Z) = \text{softmax}\!\left( \frac{(Q_0 W_Q)(Z W_K)^\top}{\sqrt{d_k}} \right) (Z W_V) \;\in\; \mathbb{R}^{M \times d}
+\]
+<ul>
+<li>Ma trận attention có kích thước \(M \times N\): mỗi query "chọn" các patch nó quan tâm. Chi phí \(O(MN)\), tuyến tính theo số patch.</li>
+<li><b>Perceiver resampler</b> (Flamingo): xếp vài layer cross-attn + FFN; Flamingo dùng 64 latent. Phiên bản Flamingo nối thêm chính các latent vào key/value (\(K, V\) lấy từ \([Z; Q]\)). Idefics2 cũng dùng resampler 64 token mỗi ảnh.</li>
+<li><b>Q-Former</b> (BLIP-2): một Transformer nhỏ khởi tạo từ BERT-base (~188M tham số) với 32 query; ngoài cross-attn với ảnh, query còn tương tác với text qua self-attention, và được pre-train bằng ba mục tiêu (contrastive, matching, sinh caption) trước khi nối vào LLM.</li>
+</ul>
+<div class="callout example"><div class="callout-title">Ví dụ số</div>
+<p>Ảnh SigLIP 384px → 729 patch. Resampler 64 query → 64 token: nén ~11.4 lần. Với 10 ảnh trong một hội thoại: 640 token thay vì 7.290 token. Đổi lại, 64 vector phải gói toàn bộ thông tin của ảnh; với một trang tài liệu dày chữ, đó là nút cổ chai thật sự. Idefics2 bù lại bằng cách cắt ảnh làm 4 ô + 1 ảnh gốc → 5 × 64 = 320 token khi cần độ chi tiết.</p>
+</div>
+
+<h3 id="v-xattn">Cross-attention layers — kiểu Flamingo và Llama 3-V</h3>
+<p>Ở họ kiến trúc cross-attention (xem <a href="#v-families">bốn họ kiến trúc</a>), token ảnh không vào chuỗi. Thay vào đó, giữa các layer của LLM (đã freeze), chèn thêm block:</p>
+\[
+y = x + \tanh(\alpha_{\text{attn}}) \cdot \text{CrossAttn}(x, V), \qquad y' = y + \tanh(\alpha_{\text{ff}}) \cdot \text{FFN}(y)
+\]
+<ul>
+<li>\(x\): hidden state text tại layer đó (làm query); \(V\): token ảnh (từ resampler) làm key/value.</li>
+<li>\(\alpha\): một <b>gate vô hướng học được, khởi tạo bằng 0</b>. Vì \(\tanh(0) = 0\), lúc bắt đầu train block mới là <b>hàm đồng nhất</b> → model y hệt LLM gốc, không bị "sốc" bởi các layer khởi tạo ngẫu nhiên. Gate mở dần khi model học cách dùng thông tin ảnh.</li>
+</ul>
+<p>Đây là một mẫu thiết kế đáng nhớ (zero-init residual): mọi khi muốn thêm module mới vào model đã train, hãy làm sao để lúc khởi tạo nó không thay đổi output.</p>
+
+<h3 id="v-pixel-shuffle">Pixel shuffle — nén token mà không mất thông tin</h3>
+<p><b>Pixel shuffle</b> (còn gọi space-to-depth) gộp mỗi khối \(r \times r\) patch kề nhau thành <b>một</b> token, bằng cách nối (concatenate) các vector của chúng theo chiều kênh:</p>
+\[
+\mathbb{R}^{h \times w \times d} \;\longrightarrow\; \mathbb{R}^{\frac{h}{r} \times \frac{w}{r} \times (d \cdot r^2)}
+\]
+<p>Số token giảm \(r^2\) lần, nhưng không có số nào bị vứt đi — chỉ "xếp lại". Sau đó một MLP chiếu vector \(d r^2\) chiều về \(d_{\text{LLM}}\). Đây là cách nén mà Idefics3, SmolVLM, InternVL đều dùng.</p>
+
+<svg viewBox="-36 0 596 160" width="100%" role="img" aria-label="Pixel shuffle gộp khối 2x2 patch thành 1 token có số kênh gấp 4">
+  <g font-family="sans-serif" font-size="12" style="fill:currentColor">
+    <text x="80" y="18" text-anchor="middle">4×4 patch, mỗi patch d chiều</text>
+    <g style="stroke:var(--border);stroke-width:1.5">
+      <rect x="20" y="30" width="30" height="30" style="fill:var(--accent-soft)"/><rect x="50" y="30" width="30" height="30" style="fill:var(--accent-soft)"/>
+      <rect x="20" y="60" width="30" height="30" style="fill:var(--accent-soft)"/><rect x="50" y="60" width="30" height="30" style="fill:var(--accent-soft)"/>
+      <rect x="80" y="30" width="30" height="30" style="fill:none"/><rect x="110" y="30" width="30" height="30" style="fill:none"/>
+      <rect x="80" y="60" width="30" height="30" style="fill:none"/><rect x="110" y="60" width="30" height="30" style="fill:none"/>
+      <rect x="20" y="90" width="30" height="30" style="fill:none"/><rect x="50" y="90" width="30" height="30" style="fill:none"/>
+      <rect x="20" y="120" width="30" height="30" style="fill:none"/><rect x="50" y="120" width="30" height="30" style="fill:none"/>
+      <rect x="80" y="90" width="30" height="30" style="fill:none"/><rect x="110" y="90" width="30" height="30" style="fill:none"/>
+      <rect x="80" y="120" width="30" height="30" style="fill:none"/><rect x="110" y="120" width="30" height="30" style="fill:none"/>
+    </g>
+    <line x1="160" y1="90" x2="230" y2="90" style="stroke:var(--muted);stroke-width:1.5"/>
+    <polygon points="230,85 240,90 230,95" style="fill:var(--muted)"/>
+    <text x="200" y="80" text-anchor="middle" font-size="11">r = 2</text>
+    <text x="330" y="18" text-anchor="middle">2×2 token, mỗi token 4d chiều</text>
+    <g style="stroke:var(--border);stroke-width:1.5">
+      <rect x="270" y="45" width="60" height="45" style="fill:var(--accent-soft)"/>
+      <rect x="330" y="45" width="60" height="45" style="fill:none"/>
+      <rect x="270" y="90" width="60" height="45" style="fill:none"/>
+      <rect x="330" y="90" width="60" height="45" style="fill:none"/>
+    </g>
+    <text x="300" y="72" text-anchor="middle" font-size="11">[p1;p2;p3;p4]</text>
+    <line x1="400" y1="90" x2="440" y2="90" style="stroke:var(--muted);stroke-width:1.5"/>
+    <polygon points="440,85 450,90 440,95" style="fill:var(--muted)"/>
+    <text x="505" y="85" text-anchor="middle">MLP</text>
+    <text x="505" y="102" text-anchor="middle" font-size="11" style="fill:var(--muted)">4d → d_LLM</text>
+  </g>
+</svg>
+
+<div class="callout example"><div class="callout-title">Ví dụ số: InternVL và Idefics3</div>
+<ul>
+<li><b>InternVL 1.5</b>: mỗi ô (tile) 448×448, patch 14 → 32×32 = 1024 patch. Pixel shuffle \(r = 2\) → 16×16 = <b>256 token</b> mỗi ô, kênh tăng từ \(d\) lên \(4d\).</li>
+<li><b>Idefics3</b>: ô 364×364, patch 14 → 26×26 = 676 patch → \(r = 2\) → 13×13 = <b>169 token</b> mỗi ô.</li>
+<li><b>SmolVLM</b>: paper cho biết model nhỏ hưởng lợi từ nén mạnh hơn, dùng \(r = 4\) (giảm 16 lần). Minh hoạ phép tính: lưới 32×32 = 1024 patch → 8×8 = 64 token.</li>
+</ul>
+</div>
+
+<p>Các connector khác: <b>C-Abstractor</b> (Honeybee, 2023) dùng các block convolution (ResNet) + adaptive pooling — nén số token nhưng vẫn giữ tính cục bộ không gian, khác với resampler (vốn có thể trộn thông tin từ khắp ảnh). Cambrian-1 đề xuất <b>Spatial Vision Aggregator</b> gộp đặc trưng từ nhiều encoder với query giữ cấu trúc không gian.</p>
+
+<table>
+<thead><tr><th>Connector</th><th>Số token ra</th><th>Giữ cấu trúc không gian?</th><th>Dùng trong</th></tr></thead>
+<tbody>
+<tr><td>Linear / MLP</td><td>\(N\) (không nén)</td><td>Có</td><td>LLaVA, LLaVA-1.5</td></tr>
+<tr><td>Pixel shuffle + MLP</td><td>\(N / r^2\)</td><td>Có (ở độ phân giải thô hơn)</td><td>InternVL, Idefics3, SmolVLM</td></tr>
+<tr><td>Merge 2×2 + MLP</td><td>\(N/4\)</td><td>Có</td><td>Qwen2-VL / Qwen2.5-VL</td></tr>
+<tr><td>Perceiver resampler</td><td>\(M\) cố định (vd 64)</td><td>Không rõ ràng</td><td>Flamingo, Idefics2</td></tr>
+<tr><td>Q-Former</td><td>\(M\) cố định (32)</td><td>Không rõ ràng</td><td>BLIP-2, InstructBLIP</td></tr>
+<tr><td>C-Abstractor</td><td>\(M\) tuỳ chọn</td><td>Có</td><td>Honeybee</td></tr>
+</tbody>
+</table>
+
+<h3 id="v-high-res">Ảnh độ phân giải cao: tiling và native resolution</h3>
+<p>Encoder pre-train ở 336–448px. Nhưng một trang PDF, một biểu đồ hay ảnh chụp màn hình cần độ phân giải cao hơn nhiều mới đọc được chữ. Có hai trường phái:</p>
+
+<h4>1. Dynamic tiling (AnyRes) — cắt ảnh thành ô</h4>
+<ol>
+<li>Chọn trong một tập lưới cho phép (1×1, 1×2, 2×1, 2×2, 1×3, ...) lưới có <b>tỉ lệ khung hình gần nhất</b> với ảnh gốc.</li>
+<li>Resize ảnh về lưới đó và cắt thành các ô đúng kích thước encoder (vd 336 hoặc 448).</li>
+<li>Encode <b>từng ô độc lập</b> → mỗi ô cho một khối token.</li>
+<li>Thêm một <b>ảnh thu nhỏ toàn cảnh</b> (thumbnail/global view) — vì các ô bị cắt rời nhau, model cần ảnh tổng thể để hiểu bố cục.</li>
+<li>Chèn token đặc biệt đánh dấu hàng/ô (vd ký tự xuống dòng giữa các hàng ô) để LLM biết vị trí từng ô.</li>
+</ol>
+<p><b>LLaVA-NeXT</b> (2024) dùng AnyRes với ô 336px, tăng độ phân giải tối đa lên 672×672 (hoặc 336×1344, 1344×336). <b>InternVL 1.5</b> dùng ô 448px với 1–12 ô khi train và tới 40 ô khi test (ảnh cỡ 4K), cộng thumbnail. <b>Molmo</b> dùng các ô <b>chồng lên nhau</b> (overlapping crops) để patch ở rìa ô vẫn có ngữ cảnh xung quanh.</p>
+
+<h4>2. Native dynamic resolution — ViT nhận thẳng ảnh gốc</h4>
+<p><b>Qwen2-VL</b> bỏ việc cắt ô: ảnh được giữ gần kích thước gốc (chỉ làm tròn về bội số của 28), ViT dùng 2D RoPE (xem <a href="#v-2d-rope">2D RoPE</a>) nên nhận được mọi kích thước. Sau ViT (patch 14), một MLP gộp mỗi 2×2 patch kề nhau → mỗi token ứng với một vùng 28×28 pixel. Theo báo cáo Qwen2-VL, ảnh 224×224 thành 64 token (cộng 2 token đánh dấu bắt đầu/kết thúc ảnh = 66). Người dùng đặt giới hạn số pixel tối thiểu/tối đa để kiểm soát số token. Ưu điểm: không cắt vỡ chữ/vật thể ở ranh giới ô, giữ tỉ lệ thật; nhược điểm: số token của ViT biến thiên mạnh → khó cân bằng tải khi train (xem các chương tối ưu hệ thống), và attention trên toàn ảnh lớn rất đắt — Qwen2.5-VL vì thế dùng <b>window attention</b> ở phần lớn layer của ViT, chỉ vài layer dùng full attention.</p>
+
+<h4>Bảng ngân sách token — minh hoạ</h4>
+<p>Một ảnh 1344×896 (tỉ lệ 3:2), giả định cấu hình đơn giản hoá cho từng hướng tiếp cận (chỉ để so sánh bậc độ lớn):</p>
+<table>
+<thead><tr><th>Cách xử lý</th><th>Phép tính</th><th>Số token ảnh</th></tr></thead>
+<tbody>
+<tr><td>Resize về 336, MLP (LLaVA-1.5)</td><td>24×24</td><td>576 (mất chi tiết, méo tỉ lệ)</td></tr>
+<tr><td>Ô 448 + pixel shuffle r=2 (kiểu InternVL), lưới 3×2 + thumbnail</td><td>(6 + 1) × 256</td><td>1.792</td></tr>
+<tr><td>Native resolution, mỗi token = 28×28 px (kiểu Qwen2-VL)</td><td>(1344/28)×(896/28) = 48×32</td><td>1.536</td></tr>
+<tr><td>Ô 512 + pixel shuffle r=4 (kiểu SmolVLM), lưới 3×2 + ảnh toàn cảnh</td><td>(6 + 1) × 64</td><td>448</td></tr>
+<tr><td>Resampler cố định 64 token/ảnh</td><td>64</td><td>64 (nén tối đa, rủi ro mất chữ nhỏ)</td></tr>
+</tbody>
+</table>
+<p>Cùng một ảnh, số token có thể chênh nhau tới ~28 lần tuỳ thiết kế. Đây là núm vặn quan trọng nhất giữa <b>chất lượng</b> (nhất là OCR/tài liệu) và <b>chi phí</b>.</p>
+
+<h3 id="v-video">Video — ngân sách token theo thời gian</h3>
+<p>Video là chuỗi ảnh, nên chi phí nhân lên theo số frame. Video 1 phút ở 30 fps có 1.800 frame; nếu mỗi frame tốn 256 token → 460.800 token, vượt mọi context window thực tế. Các kỹ thuật chính:</p>
+<ul>
+<li><b>Lấy mẫu frame thưa</b>: cố định số frame (vd 8, 16, 32, 64 frame trải đều) hoặc cố định tần số (vd 1–2 fps). Qwen2-VL lấy mẫu 2 frame/giây.</li>
+<li><b>Gộp theo thời gian</b>: Qwen2-VL dùng conv 3D với độ sâu thời gian 2, tức hai frame liên tiếp được gộp thành một "patch thời gian" → token giảm một nửa. Các frame liên tiếp thường rất giống nhau nên mất mát nhỏ.</li>
+<li><b>Giảm token mỗi frame</b>: pooling không gian mạnh hơn cho video so với ảnh tĩnh (vd LLaVA-OneVision dùng nội suy để giảm token mỗi frame).</li>
+<li><b>Mã hoá thời gian</b>: M-RoPE với id thời gian (Qwen2.5-VL gắn với thời gian tuyệt đối), hoặc chèn timestamp dạng text trước mỗi frame.</li>
+</ul>
+<div class="callout example"><div class="callout-title">Ví dụ số: ngân sách token mỗi giây</div>
+<p>Giả sử frame resize về 448×448, mỗi token = 28×28 pixel → (448/28)² = 256 token cho mỗi "patch thời gian". Lấy mẫu 2 fps và gộp 2 frame/patch thời gian → 1 patch thời gian mỗi giây → <b>256 token/giây</b>. Video 10 phút = 600 giây → 153.600 token. Giảm frame về 224×224 → 64 token/giây → 38.400 token cho 10 phút. Đây là lý do VLM video thường hạ độ phân giải frame và có giới hạn tổng số token video.</p>
+</div>
+
+<h3 id="v-token-reduction">Optimization — giảm số visual token</h3>
+<p>Token ảnh thường chiếm phần lớn chuỗi input, nên giảm chúng là cách trực tiếp nhất để giảm compute (prefill), bộ nhớ KV cache và độ trễ. Có ba nhóm kỹ thuật, khác nhau ở <b>chỗ</b> và <b>lúc</b> giảm.</p>
+
+<h4>1. Nén cố định trong kiến trúc (lúc train)</h4>
+<p>Pixel shuffle, merge 2×2, resampler, pooling — đã nói ở trên. Model được train với mức nén này nên tự học cách bù. Ví dụ, theo báo cáo kỹ thuật Gemma 3, ảnh vào encoder SigLIP ở 896px rồi được average-pool về 256 token. Đây là cách "an toàn" nhất.</p>
+
+<h4>2. Gộp token (token merging) — kiểu ToMe</h4>
+<p><b>ToMe</b> (Token Merging, Bolya et al. 2022) gộp các token <b>giống nhau</b> trong ViT, không cần train lại: ở mỗi layer, chia token thành hai tập xen kẽ A, B; với mỗi token trong A tìm token giống nhất trong B (cosine giữa các key); gộp \(r\) cặp giống nhau nhất bằng trung bình có trọng số. Vùng nền đồng màu (trời, tường) gộp được nhiều; vùng chi tiết thì ít. Ý tưởng này về sau được áp dụng cho token ảnh trước/trong LLM của VLM.</p>
+
+<h4>3. Cắt bỏ token trong LLM theo attention — kiểu FastV</h4>
+<p><b>FastV</b> (Chen et al. 2024, "An Image is Worth 1/2 Tokens After Layer 2") quan sát rằng ở các layer sâu của LLM, token ảnh nhận rất ít attention (attention "kém hiệu quả" so với token text). Cách làm: sau layer \(K\) (vd \(K = 2\)), xếp hạng token ảnh theo <b>tổng attention mà chúng nhận được</b>, bỏ đi \(R\%\) token ít được chú ý nhất (vd 50%) cho mọi layer sau đó. Paper báo cáo giảm khoảng 45% FLOPs trên LLaVA-1.5-13B mà điểm benchmark gần như giữ nguyên, không cần train lại.</p>
+
+<table>
+<thead><tr><th>Kỹ thuật</th><th>Cần train lại?</th><th>Giảm compute ở đâu</th><th>Rủi ro</th></tr></thead>
+<tbody>
+<tr><td>Pixel shuffle / pooling / resampler</td><td>Có (thiết kế từ đầu)</td><td>Toàn bộ LLM + KV cache</td><td>Mất chi tiết nếu nén quá mạnh, nhất là với model nhỏ thì lại cần nén mạnh</td></tr>
+<tr><td>Giảm độ phân giải / số ô</td><td>Không (núm vặn lúc chạy)</td><td>Cả ViT và LLM</td><td>Chữ nhỏ không đọc được</td></tr>
+<tr><td>ToMe-style merging</td><td>Không (tốt hơn nếu có)</td><td>ViT và/hoặc LLM</td><td>Gộp nhầm vùng chứa chi tiết nhỏ</td></tr>
+<tr><td>FastV-style pruning</td><td>Không</td><td>Các layer LLM sau layer K</td><td>Attention không phải lúc nào cũng phản ánh tầm quan trọng; không tương thích trực tiếp với FlashAttention (cần ma trận attention để xếp hạng)</td></tr>
+</tbody>
+</table>
+
+<div class="callout warn"><div class="callout-title">Lưu ý khi áp dụng</div>
+<ul>
+<li>Benchmark "tổng quát" (VQA về vật thể lớn) thường ít nhạy với việc bỏ token; benchmark OCR, tài liệu, biểu đồ, đếm và định vị nhạy hơn nhiều. Luôn đo trên đúng loại tác vụ bạn cần.</li>
+<li>Pruning dựa trên attention cần lấy giá trị attention, mà các fused kernel như FlashAttention không trả ra ma trận attention — phải tính thêm hoặc dùng proxy, làm giảm phần lợi tốc độ.</li>
+<li>Với video, gộp theo thời gian (frame kề nhau gần như trùng lặp) thường "rẻ" về chất lượng hơn so với giảm độ phân giải từng frame.</li>
+</ul>
+</div>
+
+<div class="callout tip"><div class="callout-title">Ý chính</div>
+<p>MLP projector là lựa chọn mặc định tốt; điều cần thiết kế cẩn thận là <b>số token ảnh</b>: tiling hoặc native resolution để nhìn rõ, pixel shuffle/merge để nén lại mà không vứt thông tin, lấy mẫu và gộp theo thời gian cho video, và pruning lúc inference khi cần tốc độ.</p>
+</div>
+
+<div class="callout note"><div class="callout-title">Nguồn tham khảo</div>
+<ul>
+<li>Liu et al., <i>Improved Baselines with Visual Instruction Tuning</i> (LLaVA-1.5), 2023 — arXiv:2310.03744.</li>
+<li>Liu et al., <i>LLaVA-NeXT: Improved reasoning, OCR, and world knowledge</i> (blog), 2024.</li>
+<li>Li et al., <i>BLIP-2: Bootstrapping Language-Image Pre-training with Frozen Image Encoders and Large Language Models</i>, Salesforce 2023 — arXiv:2301.12597.</li>
+<li>Alayrac et al., <i>Flamingo</i>, DeepMind 2022 — arXiv:2204.14198.</li>
+<li>Laurençon et al., <i>What matters when building vision-language models?</i> (Idefics2), 2024 — arXiv:2405.02246.</li>
+<li>Laurençon et al., <i>Building and better understanding vision-language models: insights and future directions</i> (Idefics3), 2024 — arXiv:2408.12637.</li>
+<li>Marafioti et al., <i>SmolVLM: Redefining small and efficient multimodal models</i>, Hugging Face 2025 — arXiv:2504.05299.</li>
+<li>Chen et al., <i>How Far Are We to GPT-4V? Closing the Gap to Commercial Multimodal Models with Open-Source Suites</i> (InternVL 1.5), 2024 — arXiv:2404.16821.</li>
+<li>Wang et al., <i>Qwen2-VL</i>, 2024 — arXiv:2409.12191; Bai et al., <i>Qwen2.5-VL Technical Report</i>, 2025 — arXiv:2502.13923.</li>
+<li>Cha et al., <i>Honeybee: Locality-enhanced Projector for Multimodal LLM</i>, 2023 — arXiv:2312.06742.</li>
+<li>Deitke et al., <i>Molmo and PixMo: Open Weights and Open Data for State-of-the-Art Vision-Language Models</i>, AI2 2024 — arXiv:2409.17146.</li>
+<li>Li et al., <i>LLaVA-OneVision: Easy Visual Task Transfer</i>, 2024 — arXiv:2408.03326.</li>
+<li>Gemma Team, <i>Gemma 3 Technical Report</i>, Google 2025 — arXiv:2503.19786.</li>
+<li>Bolya et al., <i>Token Merging: Your ViT But Faster</i>, 2022 — arXiv:2210.09461.</li>
+<li>Chen et al., <i>An Image is Worth 1/2 Tokens After Layer 2: Plug-and-Play Inference Acceleration for Large Vision-Language Models</i> (FastV), 2024 — arXiv:2403.06764.</li>
+<li>McKinzie et al., <i>MM1</i>, Apple 2024 — arXiv:2403.09611.</li>
+</ul>
+</div>
+</section>
+
+<section id="v-stages">
+<h2 id="v-stages-h">Các giai đoạn train VLM</h2>
+
+<div class="callout tip"><div class="callout-title">Đọc nhanh</div>
+<ul>
+<li>Một VLM thường được train qua nhiều giai đoạn: trước hết "dạy" cầu nối (projector) hiểu ảnh, sau đó train chung trên nhiều dữ liệu ảnh + chữ, cuối cùng dạy model làm theo hướng dẫn.</li>
+<li>Câu hỏi quan trọng nhất ở mỗi giai đoạn là <b>đóng băng (freeze) phần nào, mở (unfreeze) phần nào</b>: mở nhiều thì học được nhiều nhưng dễ "quên" khả năng đọc–viết chữ vốn có.</li>
+<li>Loss chỉ tính trên phần chữ model phải sinh ra, không tính trên token ảnh.</li>
+<li>Để model không "ngu đi" về text, các lab luôn trộn thêm dữ liệu chỉ có chữ.</li>
+<li>Các model nổi tiếng (LLaVA, Idefics, Qwen-VL, InternVL, Molmo, Llama 3.2 Vision) chọn công thức khác nhau — bảng so sánh ở cuối chương.</li>
+</ul>
+</div>
+
+<p>Một VLM kiểu "ViT + projector + LLM" (xem chương kiến trúc) gồm ba khối đã có sẵn trọng số ở mức độ khác nhau: <b>vision encoder</b> (thường là CLIP/SigLIP đã pre-train contrastive), <b>LLM</b> (đã pre-train trên hàng nghìn tỉ token text), và <b>connector/projector</b> (gần như luôn khởi tạo ngẫu nhiên). Bài toán train VLM vì vậy không giống train từ đầu: nó là bài toán <b>ghép</b> hai model mạnh lại với nhau qua một "cầu nối" yếu, sao cho vừa học được kỹ năng mới (hiểu ảnh) vừa không phá hỏng kỹ năng cũ (ngôn ngữ, kiến thức, reasoning).</p>
+
+<h3 id="v2-stage-overview">Bức tranh tổng thể — pipeline nhiều giai đoạn</h3>
+
+<p>Hầu hết các VLM mở đều đi theo một biến thể của pipeline sau:</p>
+
+<svg viewBox="0 0 760 170" width="100%" role="img" aria-label="Pipeline các giai đoạn train VLM">
+  <g font-family="sans-serif" font-size="12">
+    <rect x="10" y="30" width="135" height="80" rx="8" style="fill:var(--accent-soft);stroke:var(--accent)"/>
+    <text x="77" y="55" text-anchor="middle" style="fill:var(--text)" font-weight="bold">Stage 1</text>
+    <text x="77" y="73" text-anchor="middle" style="fill:var(--text)">Alignment</text>
+    <text x="77" y="90" text-anchor="middle" style="fill:var(--muted)">chỉ train projector</text>
+    <rect x="165" y="30" width="135" height="80" rx="8" style="fill:var(--accent-soft);stroke:var(--accent)"/>
+    <text x="232" y="55" text-anchor="middle" style="fill:var(--text)" font-weight="bold">Stage 2</text>
+    <text x="232" y="73" text-anchor="middle" style="fill:var(--text)">Multimodal PT</text>
+    <text x="232" y="90" text-anchor="middle" style="fill:var(--muted)">interleaved, mở dần</text>
+    <rect x="320" y="30" width="135" height="80" rx="8" style="fill:var(--accent-soft);stroke:var(--accent)"/>
+    <text x="387" y="55" text-anchor="middle" style="fill:var(--text)" font-weight="bold">Stage 3</text>
+    <text x="387" y="73" text-anchor="middle" style="fill:var(--text)">Instruction SFT</text>
+    <text x="387" y="90" text-anchor="middle" style="fill:var(--muted)">QA, OCR, chart…</text>
+    <rect x="475" y="30" width="135" height="80" rx="8" style="fill:var(--surface);stroke:var(--border)"/>
+    <text x="542" y="55" text-anchor="middle" style="fill:var(--text)" font-weight="bold">Stage 3.5</text>
+    <text x="542" y="73" text-anchor="middle" style="fill:var(--text)">Long ctx / video</text>
+    <text x="542" y="90" text-anchor="middle" style="fill:var(--muted)">multi-image</text>
+    <rect x="630" y="30" width="120" height="80" rx="8" style="fill:var(--surface);stroke:var(--border)"/>
+    <text x="690" y="55" text-anchor="middle" style="fill:var(--text)" font-weight="bold">Post-train</text>
+    <text x="690" y="73" text-anchor="middle" style="fill:var(--text)">DPO / RL</text>
+    <text x="690" y="90" text-anchor="middle" style="fill:var(--muted)">giảm hallucination</text>
+    <line x1="145" y1="70" x2="165" y2="70" style="stroke:var(--muted)"/>
+    <line x1="300" y1="70" x2="320" y2="70" style="stroke:var(--muted)"/>
+    <line x1="455" y1="70" x2="475" y2="70" style="stroke:var(--muted)"/>
+    <line x1="610" y1="70" x2="630" y2="70" style="stroke:var(--muted)"/>
+    <text x="380" y="145" text-anchor="middle" style="fill:var(--muted)">Ô viền cam = gần như mọi VLM đều có · Ô viền xám = tuỳ model</text>
+  </g>
+</svg>
+
+<table>
+<thead><tr><th>Giai đoạn</th><th>Mục tiêu</th><th>Data điển hình</th><th>Phần được train</th></tr></thead>
+<tbody>
+<tr><td><b>Stage 1 — Alignment / projector warm-up</b></td><td>Học ánh xạ từ không gian feature của ViT sang không gian embedding của LLM</td><td>Cặp ảnh–caption ngắn (vài trăm nghìn tới vài triệu)</td><td>Chỉ projector</td></tr>
+<tr><td><b>Stage 2 — Multimodal pre-training</b></td><td>Nạp kiến thức thị giác rộng: OCR, đối tượng, cảnh, tài liệu</td><td>Caption chất lượng cao (recaption), interleaved web docs, OCR, hàng chục–hàng trăm triệu mẫu</td><td>Projector + (một phần hoặc toàn bộ) LLM, đôi khi cả ViT</td></tr>
+<tr><td><b>Stage 3 — Instruction tuning (SFT)</b></td><td>Làm theo hướng dẫn, trả lời câu hỏi, hội thoại nhiều lượt</td><td>VQA, document/chart QA, grounding, hội thoại, text-only SFT</td><td>Thường toàn bộ LLM + projector; ViT tuỳ model</td></tr>
+<tr><td><b>Long-context / video</b></td><td>Nhiều ảnh, video dài, tài liệu nhiều trang</td><td>Video caption/QA, multi-image, PDF dài</td><td>Toàn bộ, context dài hơn</td></tr>
+<tr><td><b>Post-training</b></td><td>Giảm hallucination, tăng reasoning, căn chỉnh hành vi</td><td>Preference pairs, bài toán có đáp án kiểm chứng</td><td>Toàn bộ LLM (ViT thường đóng băng)</td></tr>
+</tbody>
+</table>
+
+<h3 id="v2-stage1">Stage 1 — Alignment: dạy projector "dịch" ảnh sang ngôn ngữ</h3>
+
+<p><b>Vấn đề:</b> projector khởi tạo ngẫu nhiên. Nếu ngay từ đầu ta mở toàn bộ LLM ra train, gradient đi qua một projector đang xuất ra "rác" sẽ đẩy LLM theo những hướng vô nghĩa, có thể làm hỏng LLM trước khi projector kịp học được gì. Vì vậy LLaVA (Liu et al., 2023) đề xuất bước <b>feature alignment</b>: đóng băng cả ViT lẫn LLM, chỉ train projector trên cặp ảnh–caption.</p>
+
+<p>Về mặt toán, với ảnh \( I \), caption \( y = (y_1,\dots,y_T) \), ViT cho ra các patch feature \( Z_v = f_{\text{ViT}}(I) \in \mathbb{R}^{N \times d_v} \), projector \( g_\phi \) ánh xạ thành \( H_v = g_\phi(Z_v) \in \mathbb{R}^{N \times d} \) (cùng chiều với embedding của LLM). Stage 1 tối ưu:</p>
+\[
+\min_{\phi}\; -\sum_{t=1}^{T} \log p_{\theta_{\text{LLM}}}\!\left(y_t \,\middle|\, H_v,\; y_{&lt;t}\right)
+\]
+<ul>
+<li>\( \phi \): tham số projector — <b>chỉ có \( \phi \) được cập nhật</b>.</li>
+<li>\( \theta_{\text{LLM}} \): tham số LLM, đóng băng. LLM đóng vai một "bộ giải mã cố định": projector phải học cách tạo ra những vector mà LLM <i>đã</i> hiểu được, tức là học nói "ngôn ngữ embedding" của LLM.</li>
+<li>\( H_v \) đóng vai trò như \( N \) "soft token" chèn vào trước caption.</li>
+</ul>
+
+<div class="callout example"><div class="callout-title">Ví dụ số — LLaVA-1.5</div>
+<p>LLaVA-1.5 (Liu et al., 2023, "Improved Baselines with Visual Instruction Tuning") dùng CLIP ViT-L/14 ở độ phân giải 336px → ảnh 336×336 chia thành lưới \( 24\times 24 = 576 \) patch → 576 token ảnh. Projector là <b>MLP 2 lớp</b> (thay cho linear projection ở LLaVA gốc). Stage 1 dùng khoảng <b>558K</b> cặp ảnh–caption; stage 2 (instruction tuning) dùng khoảng <b>665K</b> mẫu. Toàn bộ quá trình train bản 13B được báo cáo xong trong khoảng <b>1 ngày trên một node 8×A100</b> — đây là lý do LLaVA-1.5 trở thành baseline "học thuật" phổ biến.</p>
+<p>Số tham số projector: MLP 2 lớp từ \( d_v = 1024 \) lên \( d = 5120 \) (Vicuna-13B) có khoảng \( 1024\cdot 5120 + 5120\cdot 5120 \approx 31\text{M} \) tham số — chưa tới 0.3% của LLM 13B. Train một khối nhỏ như vậy rất rẻ và ổn định.</p>
+</div>
+
+<div class="callout note"><div class="callout-title">Giải thích thêm: Stage 1 có thật sự cần không?</div>
+<p><b>Prismatic VLMs</b> (Karamcheti et al., 2024) làm ablation có kiểm soát trên kiến trúc kiểu LLaVA và thấy rằng bỏ hẳn stage 1, train <b>một giai đoạn duy nhất</b> (projector + LLM cùng lúc ngay từ đầu) cho kết quả tương đương mà tiết kiệm compute. Ngược lại, khi connector phức tạp hơn (perceiver resampler, cross-attention) hoặc khi dùng learning rate lớn, bước warm-up projector vẫn giúp ổn định. Kết luận thực dụng: stage 1 là "bảo hiểm rẻ" — chi phí nhỏ, giảm rủi ro loss spike lúc đầu; nhưng không phải điều kiện bắt buộc với connector MLP đơn giản.</p>
+</div>
+
+<h3 id="v2-stage2">Stage 2 — Multimodal pre-training: nạp kiến thức thị giác quy mô lớn</h3>
+
+<p>Stage 1 chỉ dạy projector "dịch". Nhưng để model đọc được chữ trong ảnh (OCR), hiểu biểu đồ, nhận diện hàng nghìn khái niệm, cần lượng dữ liệu lớn hơn nhiều và cần <b>mở thêm tham số</b>. Đây là stage tốn compute nhất của VLM hiện đại (Qwen2.5-VL báo cáo mở rộng dữ liệu pre-training lên khoảng <b>4.1T token</b>).</p>
+
+<p>Các quyết định chính:</p>
+<ol>
+<li><b>Data:</b> trộn caption (đã recaption bằng VLM mạnh), interleaved web documents (OBELICS, MINT-1T), OCR/document, grounding, và <b>text-only</b>. Chi tiết ở chương <a href="#v-data-h">Data cho VLM</a>.</li>
+<li><b>Mở LLM:</b> gần như bắt buộc nếu muốn chất lượng cao. Câu hỏi là mở toàn bộ hay dùng LoRA (xem Idefics2 bên dưới).</li>
+<li><b>Mở ViT:</b> giúp ViT thích nghi với độ phân giải cao và với những miền mà pre-training contrastive yếu (chữ nhỏ, biểu đồ). Nhưng ViT dễ bị phá khi learning rate lớn → thường dùng LR nhỏ hơn nhiều cho ViT.</li>
+</ol>
+
+<h4>Bài học từ MM1 (Apple, 2024)</h4>
+<p>MM1 ("MM1: Methods, Analysis &amp; Insights from Multimodal LLM Pre-training", McKinzie et al., 2024) là một trong những nghiên cứu ablation có hệ thống nhất về stage pre-training. Các kết luận chính:</p>
+<ul>
+<li><b>Độ phân giải ảnh</b> ảnh hưởng lớn nhất, sau đó tới kích thước vision encoder và dữ liệu pre-train của encoder.</li>
+<li><b>Thiết kế connector ít quan trọng</b> so với <i>số lượng visual token</i> và độ phân giải.</li>
+<li><b>Data mix:</b> interleaved data quan trọng cho few-shot và cho khả năng text-only; caption data quan trọng cho zero-shot. Mix họ chọn là <b>caption : interleaved : text-only ≈ 45 : 45 : 10</b>.</li>
+<li>Thêm text-only data giúp giữ năng lực ngôn ngữ và few-shot.</li>
+</ul>
+
+<h4>Bài học từ Idefics2 — "What matters when building vision-language models?"</h4>
+<p>Laurençon et al. (Hugging Face, 2024) làm ablation trên nhiều trục và rút ra:</p>
+<ul>
+<li><b>Backbone LLM quan trọng hơn vision encoder</b> khi cố định tổng số tham số: nâng cấp LLM cho lợi lớn hơn nâng cấp ViT.</li>
+<li><b>Cross-attention vs fully-autoregressive:</b> khi đóng băng các backbone (unimodal), kiến trúc cross-attention (kiểu Flamingo) tốt hơn; nhưng khi cho phép train backbone, kiến trúc fully-autoregressive (nối token ảnh vào chuỗi) lại tốt hơn.</li>
+<li><b>Mở toàn bộ backbone gây bất ổn</b> (loss divergence) trong kiến trúc fully-autoregressive → họ dùng <b>LoRA</b> cho các backbone để vừa thích nghi vừa ổn định.</li>
+<li><b>Giảm số visual token</b> bằng perceiver resampler (64 token/ảnh) không làm giảm chất lượng mà tăng hiệu quả mạnh.</li>
+<li><b>Giữ nguyên tỉ lệ khung hình</b> và <b>chia ảnh thành các ô (image splitting)</b> giúp đáng kể cho tác vụ OCR/tài liệu.</li>
+</ul>
+
+<h4>Bài học từ Cambrian-1 (2024)</h4>
+<p>Cambrian-1 (Tong et al., 2024) tiếp cận "vision-centric": đánh giá hơn 20 vision encoder qua giao thức instruction tuning của MLLM, đề xuất benchmark CV-Bench cho các năng lực thị giác thuần (đếm, quan hệ không gian, độ sâu), và connector Spatial Vision Aggregator (SVA). Họ ghi nhận việc <b>mở vision encoder</b> trong giai đoạn fine-tune có lợi, và encoder được giám sát bằng ngôn ngữ (CLIP/SigLIP) nhìn chung vẫn mạnh hơn encoder tự giám sát (như DINOv2) — dù kết hợp nhiều encoder có thể bổ sung cho nhau.</p>
+
+<h3 id="v2-stage3">Stage 3 — Instruction tuning (SFT)</h3>
+
+<p>Mục tiêu giống SFT của LLM (xem chương post-training trong tài liệu LLM): biến model "nói tiếp caption" thành assistant biết trả lời câu hỏi về ảnh, theo định dạng chat template. Khác biệt chính:</p>
+<ul>
+<li><b>Đa dạng tác vụ là yếu tố sống còn.</b> Một bộ instruction VLM tốt gồm hàng chục tới hàng trăm nguồn: VQA tổng quát, OCR/document QA, chart/table QA, toán có hình, khoa học, grounding (trả bounding box/point), multi-image, hội thoại nhiều lượt, và <b>text-only SFT</b>.</li>
+<li><b>Định dạng câu trả lời:</b> nhiều benchmark học thuật có câu trả lời ngắn ("yes", "3", tên đối tượng). LLaVA-1.5 phát hiện nếu trộn thẳng dữ liệu đáp án ngắn vào, model sẽ có xu hướng trả lời cụt cả khi user muốn câu dài. Giải pháp: thêm <b>prompt định dạng</b> vào câu hỏi, ví dụ "Answer the question using a single word or phrase." để model học được khi nào cần ngắn.</li>
+<li><b>Chất lượng &gt; số lượng</b> ở cuối pipeline: nhiều lab chạy một vòng SFT cuối trên tập nhỏ chất lượng rất cao.</li>
+</ul>
+
+<h3 id="v2-loss-masking">Loss masking — chỉ học trên phần text model phải sinh</h3>
+
+<p>Một chuỗi huấn luyện VLM trông như sau (đã qua chat template):</p>
+<pre><code>&lt;|user|&gt; &lt;image&gt;[576 token ảnh]&lt;/image&gt; Biểu đồ này cho thấy gì? &lt;|assistant|&gt; Doanh thu tăng 20%... &lt;|end|&gt;</code></pre>
+<p>Loss chỉ được tính trên các token mà model <i>phải sinh</i> — phần trả lời của assistant:</p>
+\[
+\mathcal{L} = -\frac{1}{\sum_t m_t}\sum_{t} m_t \log p_\theta(x_t \mid x_{&lt;t}),\qquad
+m_t = \begin{cases}1 &amp; x_t \text{ thuộc lượt assistant}\\ 0 &amp; \text{token ảnh, prompt user, system}\end{cases}
+\]
+<ul>
+<li><b>Token ảnh không bao giờ có loss:</b> chúng là vector liên tục (output của projector), không phải token trong vocab, nên không có "nhãn" để dự đoán. Trong code, vị trí ảnh được gán nhãn <code>-100</code> (giá trị ignore_index của cross-entropy trong PyTorch).</li>
+<li><b>Prompt user</b> thường cũng bị mask, giống SFT của LLM.</li>
+<li>Ở stage 1/2 với caption hoặc interleaved, loss tính trên toàn bộ text (caption chính là thứ cần sinh).</li>
+</ul>
+
+<div class="callout warn"><div class="callout-title">Cạm bẫy: chuẩn hoá loss khi số token trả lời rất khác nhau</div>
+<p>Trong VLM, một batch có thể chứa mẫu "Answer: yes" (1–2 token loss) cạnh mẫu mô tả chi tiết (500 token loss). Nếu lấy trung bình loss <i>theo từng mẫu</i> rồi mới trung bình theo batch, mẫu ngắn được trọng số cực lớn trên mỗi token; nếu lấy trung bình <i>theo tổng số token</i> trong batch, mẫu dài chi phối. Hai cách cho hành vi khác nhau (model trả lời ngắn hay dài hơn). Với gradient accumulation và data parallel, cần chuẩn hoá theo <b>tổng số token có loss trên toàn bộ global batch</b> để kết quả không phụ thuộc cách chia micro-batch — đây cũng là lỗi đã được cộng đồng phát hiện trong nhiều framework fine-tuning năm 2024.</p>
+</div>
+
+<h3 id="v2-freeze">Freeze hay unfreeze — và differential learning rates</h3>
+
+<p>Đây là quyết định đặc thù nhất của VLM. Bảng tóm tắt lợi–hại:</p>
+<table>
+<thead><tr><th>Thành phần</th><th>Đóng băng</th><th>Mở ra train</th></tr></thead>
+<tbody>
+<tr><td><b>Vision encoder</b></td><td>Ổn định, rẻ (không cần lưu activation/gradient của ViT), có thể cache feature. Nhưng bị giới hạn ở những gì CLIP/SigLIP đã học — yếu với chữ nhỏ, độ phân giải mới.</td><td>Thích nghi với độ phân giải cao, OCR, biểu đồ. Rủi ro: phá hỏng biểu diễn tốt nếu LR lớn; tốn memory.</td></tr>
+<tr><td><b>Projector</b></td><td>Hầu như không bao giờ đóng băng (trừ khi tái dùng từ stage trước ở post-training).</td><td>Luôn train; có thể dùng LR lớn nhất.</td></tr>
+<tr><td><b>LLM</b></td><td>Giữ nguyên 100% năng lực text (lý do Llama 3.2 Vision đóng băng LLM). Nhưng hiệu năng multimodal bị giới hạn.</td><td>Chất lượng multimodal cao hơn nhiều; rủi ro catastrophic forgetting về text.</td></tr>
+</tbody>
+</table>
+
+<p><b>Differential learning rates:</b> thay vì chọn nhị phân freeze/unfreeze, đa số pipeline hiện đại dùng LR khác nhau cho từng khối:</p>
+\[
+\eta_{\text{ViT}} \;\ll\; \eta_{\text{LLM}} \;\le\; \eta_{\text{projector}}
+\]
+<p>Trực giác: khối nào "đã tốt sẵn" thì đi bước nhỏ; khối nào mới khởi tạo thì đi bước lớn. Ví dụ, nhiều công thức kiểu LLaVA-OneVision dùng LR cho vision tower nhỏ hơn LR của LLM vài lần (cỡ 2e-6 cho ViT so với 1e-5 cho LLM ở stage SFT). Molmo cũng dùng LR và warmup riêng cho connector, ViT và LLM. Trong code, đây chỉ là chia tham số thành nhiều <code>param_groups</code> của optimizer:</p>
+<pre><code>optimizer = torch.optim.AdamW([
+    {"params": vit.parameters(),       "lr": 2e-6},
+    {"params": projector.parameters(), "lr": 1e-4},
+    {"params": llm.parameters(),       "lr": 1e-5},
+], weight_decay=0.0, betas=(0.9, 0.95))</code></pre>
+
+<div class="callout note"><div class="callout-title">Giải thích thêm: vì sao ViT đặc biệt dễ "hỏng"?</div>
+<p>ViT của CLIP/SigLIP được pre-train contrastive với batch rất lớn (hàng chục nghìn cặp) và đã hội tụ tới một biểu diễn tổng quát. Khi fine-tune với loss next-token của LLM, gradient chảy ngược về ViT là tín hiệu <i>hẹp</i> (chỉ những gì cần để sinh câu trả lời trên tập SFT hiện tại). Với LR lớn, ViT nhanh chóng "chuyên hoá" theo tín hiệu hẹp này và mất khả năng tổng quát — giống catastrophic forgetting nhưng xảy ra ở phía thị giác. Đây là lý do Qwen2-VL đóng băng ViT ở stage instruction tuning cuối cùng, sau khi đã train ViT ở các stage trước.</p>
+</div>
+
+<h3 id="v2-text-retention">Giữ năng lực text — chống catastrophic forgetting</h3>
+
+<p>Một hiện tượng nhất quán: sau khi train multimodal, điểm text-only của LLM (MMLU, GSM8K, coding...) <b>giảm</b>. Lý do:</p>
+<ul>
+<li>Phân phối dữ liệu dịch chuyển mạnh: caption và VQA có văn phong rất khác văn bản web/sách/code.</li>
+<li>Nhiều câu trả lời VQA rất ngắn → model học thói quen trả lời cụt, mất chuỗi suy luận dài.</li>
+<li>Gradient từ token ảnh không có "neo" nào giữ năng lực ngôn ngữ.</li>
+</ul>
+<p>Các biện pháp đã được chứng minh:</p>
+<ol>
+<li><b>Trộn text-only data</b> ở mọi giai đoạn mở LLM (MM1 dùng khoảng 10% ở pre-training; Prismatic VLMs cũng ghi nhận co-training với dữ liệu ngôn ngữ thuần giúp giữ hành vi an toàn/ngôn ngữ của LLM gốc). InternVL3 đi xa hơn với <b>native multimodal pre-training</b>: train ảnh–text và text thuần <i>cùng lúc trong một giai đoạn</i> thay vì "chắp" multimodal vào sau.</li>
+<li><b>Đóng băng LLM</b> (Llama 3.2 Vision): đảm bảo tuyệt đối, đổi lại năng lực multimodal phải dồn vào các tham số mới (cross-attention layers).</li>
+<li><b>LoRA</b> trên LLM (Idefics2): giới hạn mức thay đổi của LLM.</li>
+<li><b>LR nhỏ cho LLM</b> + số epoch ít.</li>
+</ol>
+
+<div class="callout warn"><div class="callout-title">Cạm bẫy ngược: tái dùng quá nhiều text SFT</div>
+<p>SmolVLM (Marafioti et al., 2025) báo cáo một quan sát đáng chú ý cho model nhỏ: tái dùng quá nhiều dữ liệu SFT text của LLM (vốn đã thấy khi train LLM) lại <b>làm giảm</b> hiệu năng của VLM nhỏ — vì nó lấy mất "ngân sách" tham số và mẫu cho tác vụ thị giác và đa dạng kém. Họ cũng thấy chỉ nên dùng một lượng chain-of-thought vừa phải. Bài học: lượng text-only cần được ablate theo kích thước model, không có tỉ lệ "đúng cho mọi trường hợp".</p>
+</div>
+
+<h3 id="v2-longctx-video">Stage long-context, multi-image và video</h3>
+
+<p>Một ảnh độ phân giải cao chia ô có thể tốn vài nghìn token; một video vài phút tốn hàng chục nghìn token. Vì vậy các VLM hiện đại có giai đoạn mở rộng context riêng:</p>
+<ul>
+<li><b>LLaVA-OneVision</b> (Li et al., 2024): sau single-image SFT, có stage "OneVision" trộn single-image, multi-image và video để kỹ năng chuyển giao giữa các kịch bản. Họ phân bổ ngân sách token tương đối cân bằng giữa các kịch bản (ảnh đơn độ phân giải cao dùng nhiều token/ảnh; mỗi frame video dùng ít token hơn).</li>
+<li><b>Qwen2-VL / Qwen2.5-VL</b>: dùng <b>M-RoPE</b> (multimodal RoPE: tách chiều vị trí thành thời gian, chiều cao, chiều rộng) để mã hoá vị trí không gian–thời gian; Qwen2.5-VL căn chỉnh ID thời gian với <b>thời gian tuyệt đối</b> và lấy mẫu frame với FPS động, giúp model định vị sự kiện theo giây.</li>
+<li>Kỹ thuật mở rộng context của LLM (RoPE scaling, YaRN — xem tài liệu LLM) vẫn áp dụng, nhưng phải tính tới vị trí 2D/3D của token ảnh.</li>
+</ul>
+
+<h3 id="v2-case-studies">Case studies — công thức của các VLM tiêu biểu</h3>
+
+<table>
+<thead><tr><th>Model</th><th>Vision encoder</th><th>Connector</th><th>Công thức train nổi bật</th></tr></thead>
+<tbody>
+<tr><td><b>LLaVA-1.5</b> (2023)</td><td>CLIP ViT-L/14 @336px</td><td>MLP 2 lớp, 576 token/ảnh</td><td>Stage 1: chỉ projector (~558K caption). Stage 2: projector + LLM (~665K instruction, có VQA học thuật + prompt định dạng). ViT đóng băng suốt.</td></tr>
+<tr><td><b>LLaVA-OneVision</b> (2024)</td><td>SigLIP SO400M</td><td>MLP 2 lớp, AnyRes (chia ô)</td><td>Alignment → "high-quality knowledge" (recaption, OCR, data tổng hợp) → SFT single-image → stage OneVision (multi-image + video). LLM Qwen2.</td></tr>
+<tr><td><b>Idefics2</b> (2024)</td><td>SigLIP SO400M</td><td>Perceiver resampler → 64 token/ảnh</td><td>Fully-autoregressive; LoRA trên backbone để ổn định; pre-train trên OBELICS + caption + OCR; SFT trên The Cauldron (50 bộ dataset). LLM Mistral-7B.</td></tr>
+<tr><td><b>Idefics3</b> (2024)</td><td>SigLIP SO400M</td><td>Pixel shuffle + MLP (thay perceiver)</td><td>LLM Llama 3.1 8B; chia ảnh thành ô; giới thiệu Docmatix (dataset document QA lớn) để tăng mạnh document understanding.</td></tr>
+<tr><td><b>SmolVLM</b> (2025)</td><td>SigLIP (bản nhỏ cho model nhỏ)</td><td>Pixel shuffle mạnh</td><td>Model 256M–2.2B; cân đối kích thước encoder–LLM cho model nhỏ; mở rộng context; dùng token vị trí học được cho các ô ảnh; ít tái dùng text SFT.</td></tr>
+<tr><td><b>Qwen2-VL</b> (2024)</td><td>ViT ~675M, native dynamic resolution</td><td>MLP gộp 2×2 token kề nhau</td><td>Stage 1: train ViT (+ connector) trên caption/OCR; Stage 2: mở toàn bộ, data đa dạng; Stage 3: đóng băng ViT, SFT LLM. M-RoPE.</td></tr>
+<tr><td><b>Qwen2.5-VL</b> (2025)</td><td>ViT với window attention, native resolution</td><td>MLP gộp token</td><td>Pre-train mở rộng lên ~4.1T token; grounding bằng toạ độ tuyệt đối; video với FPS động + căn thời gian tuyệt đối; post-training SFT + DPO.</td></tr>
+<tr><td><b>InternVL 2.5 / 3</b> (2024–25)</td><td>InternViT (300M / 6B)</td><td>Pixel shuffle + MLP, 256 token / ô 448px</td><td>"ViT-MLP-LLM"; dynamic tiling; 2.5: MLP warm-up → (tuỳ chọn) ViT incremental → full SFT, lọc mạnh dữ liệu lặp. 3: native multimodal pre-training, V2PE, post-training với MPO.</td></tr>
+<tr><td><b>Molmo</b> (Ai2, 2024)</td><td>CLIP ViT-L/14 @336px</td><td>Pooling + MLP, multi-crop</td><td>Không distill từ VLM đóng; data PixMo do người tạo (dense caption bằng giọng nói, pointing). Pipeline đơn giản: caption pre-training → SFT; LR riêng cho từng khối.</td></tr>
+<tr><td><b>Llama 3.2 Vision</b> (2024)</td><td>ViT (image encoder riêng)</td><td>Cross-attention layers chèn vào LLM</td><td>Kiến trúc compositional (theo Llama 3 paper): LLM text đóng băng để giữ nguyên năng lực text, chỉ train encoder + adapter cross-attention.</td></tr>
+</tbody>
+</table>
+
+<div class="callout tip"><div class="callout-title">Ý chính</div>
+<ul>
+<li>Stage 1 (chỉ train projector) rẻ và giảm rủi ro, nhưng không bắt buộc với connector MLP (Prismatic).</li>
+<li>Chất lượng LLM backbone và độ phân giải/số visual token quan trọng hơn thiết kế connector (Idefics2, MM1).</li>
+<li>Dùng differential LR: ViT nhỏ nhất, projector lớn nhất; cân nhắc đóng băng ViT ở stage cuối.</li>
+<li>Luôn trộn text-only data khi mở LLM, nhưng lượng tối ưu phụ thuộc kích thước model (SmolVLM).</li>
+<li>Loss chỉ trên token text cần sinh; chuẩn hoá theo tổng token trên global batch.</li>
+</ul>
+</div>
+
+<div class="callout note"><div class="callout-title">Nguồn tham khảo</div>
+<ul>
+<li>Liu et al. — <i>Visual Instruction Tuning</i> (LLaVA), 2023, arXiv:2304.08485.</li>
+<li>Liu et al. — <i>Improved Baselines with Visual Instruction Tuning</i> (LLaVA-1.5), 2023, arXiv:2310.03744.</li>
+<li>Li et al. — <i>LLaVA-OneVision: Easy Visual Task Transfer</i>, 2024, arXiv:2408.03326.</li>
+<li>Laurençon et al. (Hugging Face) — <i>What matters when building vision-language models?</i> (Idefics2), 2024, arXiv:2405.02246.</li>
+<li>Laurençon et al. (Hugging Face) — <i>Building and better understanding vision-language models: insights and future directions</i> (Idefics3), 2024, arXiv:2408.12637.</li>
+<li>Marafioti et al. (Hugging Face) — <i>SmolVLM: Redefining small and efficient multimodal models</i>, 2025, arXiv:2504.05299.</li>
+<li>McKinzie et al. (Apple) — <i>MM1: Methods, Analysis &amp; Insights from Multimodal LLM Pre-training</i>, 2024, arXiv:2403.09611.</li>
+<li>Karamcheti et al. — <i>Prismatic VLMs: Investigating the Design Space of Visually-Conditioned Language Models</i>, 2024, arXiv:2402.07865.</li>
+<li>Tong et al. — <i>Cambrian-1: A Fully Open, Vision-Centric Exploration of Multimodal LLMs</i>, 2024, arXiv:2406.16860.</li>
+<li>Wang et al. (Alibaba Qwen) — <i>Qwen2-VL</i>, 2024, arXiv:2409.12191; Bai et al. — <i>Qwen2.5-VL Technical Report</i>, 2025, arXiv:2502.13923.</li>
+<li>Chen et al. (Shanghai AI Lab) — <i>InternVL 2.5</i>, 2024, arXiv:2412.05271; Zhu et al. — <i>InternVL3</i>, 2025, arXiv:2504.10479.</li>
+<li>Deitke et al. (Ai2) — <i>Molmo and PixMo</i>, 2024, arXiv:2409.17146.</li>
+<li>Llama Team (Meta) — <i>The Llama 3 Herd of Models</i>, 2024, arXiv:2407.21783 (phần vision/video adapters).</li>
+</ul>
+</div>
+</section>
+
+<section id="v-data">
+<h2 id="v-data-h">Data cho VLM</h2>
+
+<div class="callout tip"><div class="callout-title">Đọc nhanh</div>
+<ul>
+<li>Dữ liệu ảnh–chữ trên web (alt-text) rất "bẩn": mô tả ngắn, sai, hoặc chẳng liên quan đến ảnh. Cách chữa phổ biến nhất hiện nay là cho một VLM mạnh viết lại caption (recaptioning).</li>
+<li>Ngoài caption còn cần: tài liệu web có ảnh xen chữ, dữ liệu đọc chữ/tài liệu/biểu đồ, dữ liệu chỉ vị trí vật thể (grounding), video và dữ liệu hội thoại hướng dẫn.</li>
+<li>Lọc dữ liệu dùng điểm CLIP (ảnh và chữ có khớp nhau không), khử trùng lặp ảnh, và lọc nội dung độc hại — đặc biệt nội dung lạm dụng trẻ em phải bị loại bỏ tuyệt đối.</li>
+<li>Luôn trộn thêm dữ liệu chỉ có chữ để model không quên khả năng ngôn ngữ.</li>
+<li>Pipeline ảnh rất dễ bị nghẽn ở CPU (giải nén, resize) — cần đóng gói dữ liệu thành shard và cân bằng số token ảnh giữa các GPU.</li>
+</ul>
+</div>
+
+<p>Nếu ở LLM "data là tất cả", thì ở VLM điều này còn đúng hơn: kiến trúc VLM đã hội tụ khá nhiều (ViT + connector + LLM), và phần lớn khác biệt giữa các model mạnh và yếu nằm ở <b>dữ liệu</b>. Chương này đi qua từng loại dữ liệu, vai trò của nó, cách thu thập/tổng hợp, cách lọc, và cách trộn.</p>
+
+<h3 id="v2-caption-data">Caption data — từ alt-text nhiễu tới recaptioning</h3>
+
+<h4>Nguồn gốc: alt-text quy mô web</h4>
+<p>Các bộ dữ liệu ảnh–text lớn nhất được xây từ thuộc tính <code>alt</code> của thẻ <code>&lt;img&gt;</code> trong Common Crawl:</p>
+<ul>
+<li><b>LAION-5B</b> (Schuhmann et al., 2022): khoảng 5.85 tỉ cặp ảnh–text, lọc bằng độ tương đồng CLIP giữa ảnh và alt-text (ngưỡng cỡ 0.28 với CLIP ViT-B/32 cho phần tiếng Anh).</li>
+<li><b>COYO-700M</b> (Kakao Brain, 2022): ~747M cặp, lọc theo các tiêu chí ảnh và text.</li>
+<li><b>DataComp</b> (Gadre et al., 2023): một benchmark cho chính bài toán <i>lọc dữ liệu</i> — giữ cố định code train CLIP, thi xem chiến lược lọc nào cho model tốt nhất. Kết luận chính: lọc kỹ (CLIP score, lọc theo độ tương đồng với ảnh ImageNet) cho model tốt hơn hẳn dùng toàn bộ dữ liệu thô.</li>
+</ul>
+
+<p><b>Vấn đề của alt-text:</b> alt-text được viết cho SEO hoặc accessibility, không phải để mô tả ảnh đầy đủ. Ví dụ ảnh một con chó Corgi chạy trên bãi biển lúc hoàng hôn có alt-text "IMG_2031.jpg" hoặc "Mua ngay áo phông giá rẻ". Ngay cả alt-text "tốt" cũng chỉ vài từ ("dog on beach"), thiếu chi tiết về màu sắc, số lượng, vị trí, chữ trong ảnh — chính là những gì VLM cần học.</p>
+
+<h4>Recaptioning — viết lại caption bằng model mạnh</h4>
+<p>Ý tưởng: dùng một VLM (hoặc captioner chuyên dụng) mạnh để sinh caption chi tiết thay cho alt-text. Đây hiện là kỹ thuật chuẩn:</p>
+<ul>
+<li><b>ShareGPT4V</b> (Chen et al., 2023): thu ~100K caption rất chi tiết từ GPT-4V, train một captioner trên đó, rồi dùng captioner sinh ~1.2M caption chi tiết. Thay caption trong cả stage pre-training lẫn SFT giúp nhiều VLM tăng điểm rõ rệt.</li>
+<li>LLaVA-OneVision, Qwen-VL, InternVL đều dùng dữ liệu recaption quy mô lớn trong stage "high-quality knowledge" hoặc pre-training.</li>
+<li>Recaptioning cũng được dùng cho chính model text-to-image (DALL·E 3 dùng caption tổng hợp mô tả chi tiết) — cho thấy đây là xu hướng chung của multimodal.</li>
+</ul>
+
+<div class="callout warn"><div class="callout-title">Cạm bẫy của recaptioning</div>
+<ul>
+<li><b>Thừa hưởng hallucination</b> của captioner: nếu model sinh caption hay bịa vật thể, VLM của bạn học bịa theo. Caption càng dài càng nhiều chi tiết sai.</li>
+<li><b>Mất đa dạng ngôn ngữ</b>: caption tổng hợp có văn phong đơn điệu ("The image shows..."), đôi khi mất tên riêng/kiến thức thực thể mà alt-text gốc có (tên địa danh, tên người nổi tiếng, tên sản phẩm). Một số pipeline đưa alt-text gốc vào prompt của captioner để giữ thông tin thực thể.</li>
+<li><b>Ràng buộc license</b>: nhiều API đóng cấm dùng output để train model cạnh tranh — động lực cho các dự án như PixMo.</li>
+</ul>
+</div>
+
+<h4>PixMo — caption chi tiết do người tạo, bằng giọng nói</h4>
+<p>Molmo/PixMo (Ai2, 2024) chọn hướng ngược lại: <b>không distill từ VLM đóng</b>. Để có caption dày đặc mà người gán nhãn không mỏi tay, họ cho annotator <b>nói</b> mô tả ảnh trong khoảng 60–90 giây, rồi chuyển giọng nói thành văn bản và dùng LLM chỉnh lại. Nói nhanh hơn gõ nhiều lần, và người nói tự nhiên mô tả nhiều chi tiết hơn — kết quả là caption dài, giàu thông tin mà vẫn "người thật". Bộ PixMo-Cap chứa khoảng 712K ảnh với caption dạng này, và chỉ với dữ liệu mở, Molmo đạt hiệu năng cạnh tranh với nhiều VLM đóng thời điểm đó.</p>
+
+<h3 id="v2-interleaved">Interleaved web documents — ảnh xen giữa văn bản</h3>
+
+<p>Một trang web thật (bài báo, blog, hướng dẫn nấu ăn) có ảnh nằm xen kẽ trong văn bản. Dữ liệu dạng này (<b>interleaved</b>) dạy model những điều mà cặp ảnh–caption không dạy được:</p>
+<ul>
+<li><b>Nhiều ảnh trong một context</b> và quan hệ giữa chúng (so sánh, trình tự các bước).</li>
+<li><b>In-context learning / few-shot</b> multimodal (Flamingo là model đầu tiên chứng minh rõ điều này).</li>
+<li><b>Văn bản dài, tự nhiên</b> → giữ năng lực ngôn ngữ tốt hơn caption ngắn (MM1).</li>
+</ul>
+
+<table>
+<thead><tr><th>Dataset</th><th>Quy mô</th><th>Ghi chú</th></tr></thead>
+<tbody>
+<tr><td><b>OBELICS</b> (Laurençon et al., 2023)</td><td>~141M trang web, ~353M ảnh, ~115B token text</td><td>Trích từ Common Crawl, giữ cấu trúc DOM để biết vị trí ảnh trong văn bản; lọc nhiều tầng (trang, đoạn, ảnh); dùng cho Idefics.</td></tr>
+<tr><td><b>MMC4</b> (Zhu et al., 2023)</td><td>~101M tài liệu, ~571M ảnh</td><td>Gán ảnh vào câu văn bằng CLIP (bipartite matching) dựa trên C4.</td></tr>
+<tr><td><b>MINT-1T</b> (Awadalla et al., 2024)</td><td>~1T token text, ~3.4B ảnh</td><td>Mở rộng quy mô ~10 lần so với các bộ trước; thêm nguồn PDF và ArXiv bên cạnh HTML.</td></tr>
+</tbody>
+</table>
+
+<div class="callout note"><div class="callout-title">Giải thích thêm: loss trên interleaved data</div>
+<p>Với chuỗi \( (t_1, I_1, t_2, I_2, t_3) \) gồm đoạn text và ảnh xen kẽ, loss next-token tính trên mọi token text, mỗi token text được điều kiện trên <i>tất cả</i> ảnh và text đứng trước nó. Một chi tiết thiết kế: có nên cho text <i>trước</i> ảnh "nhìn thấy" ảnh không? Trong decoder causal, không — text chỉ thấy ảnh đứng trước. Nên dữ liệu thường được sắp sao cho ảnh đứng trước đoạn văn mô tả nó (Flamingo dùng cơ chế mask cross-attention để mỗi đoạn text chỉ attend tới ảnh ngay trước nó).</p>
+</div>
+
+<h3 id="v2-ocr-doc">OCR, document, chart và table data</h3>
+
+<p>Đọc chữ trong ảnh là năng lực có giá trị thương mại cao nhất của VLM (hoá đơn, hợp đồng, slide, screenshot, biểu đồ). Nhưng CLIP/SigLIP pre-train contrastive lại yếu ở chữ nhỏ. Vì vậy cần lượng lớn dữ liệu chuyên biệt:</p>
+<ul>
+<li><b>Dữ liệu OCR thật:</b> ảnh tài liệu/scan + văn bản trích bằng OCR engine; PDF với text layer có sẵn (text "miễn phí", đúng tuyệt đối). Idefics3 xây <b>Docmatix</b>: khoảng 2.4M ảnh và 9.5M cặp hỏi–đáp sinh từ ~1.3M PDF, dùng LLM sinh QA từ text đã trích.</li>
+<li><b>Render tổng hợp (synthetic rendering):</b> lấy text/HTML/LaTeX/code → render thành ảnh bằng trình duyệt hoặc thư viện vẽ → có ngay nhãn đúng 100%. Ví dụ: render bảng từ dữ liệu có cấu trúc để train table QA; vẽ biểu đồ từ bảng số bằng matplotlib để train chart QA (đáp án tính được chính xác từ dữ liệu gốc); render công thức LaTeX để train đọc toán.</li>
+<li><b>Document QA</b> kiểu DocVQA, ChartQA, InfographicVQA, TextVQA: bộ dữ liệu người gán nhãn, dùng cả làm SFT và benchmark (cẩn thận contamination — xem bên dưới).</li>
+<li><b>Screenshot / UI:</b> ảnh chụp giao diện web/app kèm cây accessibility hoặc HTML — nền tảng cho GUI agent (xem chương post-training).</li>
+</ul>
+
+<div class="callout tip"><div class="callout-title">Ý chính</div>
+<p>Năng lực OCR phụ thuộc vào ba thứ cùng lúc: <b>độ phân giải đầu vào</b> (chữ phải đủ lớn trên lưới patch), <b>số visual token</b> (nén quá mạnh sẽ mất chữ), và <b>dữ liệu đọc chữ</b>. Thiếu một trong ba thì hai cái còn lại không cứu được.</p>
+</div>
+
+<h3 id="v2-grounding">Grounding và pointing — dạy model "chỉ" vào ảnh</h3>
+
+<p>Grounding là khả năng liên kết ngôn ngữ với vị trí cụ thể trong ảnh: trả lời "con mèo ở đâu?" bằng toạ độ. Cách phổ biến nhất trong VLM kiểu LLM là <b>biểu diễn toạ độ như text</b>, để không phải thêm head riêng:</p>
+<table>
+<thead><tr><th>Model</th><th>Cách biểu diễn</th></tr></thead>
+<tbody>
+<tr><td>Qwen-VL / Qwen2-VL</td><td>Bounding box dạng text <code>(x1,y1),(x2,y2)</code> với toạ độ chuẩn hoá về khoảng [0, 1000)</td></tr>
+<tr><td>Qwen2.5-VL</td><td>Toạ độ <b>tuyệt đối theo pixel</b> của ảnh đầu vào (kết hợp native resolution), thường xuất dạng JSON</td></tr>
+<tr><td>Kosmos-2, PaliGemma</td><td>Thêm <b>location token</b> rời rạc vào vocab (PaliGemma: 1024 token <code>&lt;loc0000&gt;</code>…<code>&lt;loc1023&gt;</code>, mỗi box là 4 token)</td></tr>
+<tr><td>Molmo (PixMo-Points)</td><td><b>Điểm</b> thay cho box, dạng text kiểu <code>&lt;point x="…" y="…"&gt;</code> với toạ độ chuẩn hoá — rẻ để gán nhãn (một cú click) và dùng được cho đếm vật thể ("chỉ vào từng quả táo rồi đếm")</td></tr>
+</tbody>
+</table>
+<p><b>Đánh đổi:</b> toạ độ chuẩn hoá giúp model không phụ thuộc kích thước ảnh nhưng buộc model "chia tỉ lệ" ngầm; toạ độ tuyệt đối khớp tự nhiên với native resolution (mỗi patch tương ứng một vùng pixel cố định) nhưng cần model hiểu kích thước ảnh. Location token rời rạc tránh việc tokenizer cắt số thành nhiều mảnh nhưng tốn thêm vocab.</p>
+
+<h3 id="v2-video-data">Video data</h3>
+<ul>
+<li><b>Nguồn thô:</b> video web với ASR transcript (HowTo100M), video kèm alt-text/mô tả ngắn (WebVid). Vấn đề tương tự alt-text: lời nói trong video thường không mô tả hình ảnh.</li>
+<li><b>Recaption video:</b> sinh caption dày đặc theo từng đoạn thời gian bằng model mạnh (ShareGPT4Video, LLaVA-Video-178K là các bộ dữ liệu tổng hợp tiêu biểu).</li>
+<li><b>Temporal grounding:</b> câu hỏi kiểu "sự kiện X xảy ra ở giây thứ mấy?" — cần mã hoá thời gian tuyệt đối (Qwen2.5-VL).</li>
+<li><b>Ngân sách token:</b> video là thứ tốn token nhất. Chiến lược phổ biến: lấy mẫu frame thưa (ví dụ 1–2 fps), giảm token/frame bằng pooling, giới hạn tổng số frame.</li>
+</ul>
+
+<h3 id="v2-instruction-data">Instruction data cho VLM</h3>
+<ul>
+<li><b>LLaVA-Instruct-158K</b> (2023): sinh bằng GPT-4 <i>chỉ đọc text</i> — đưa caption và bounding box của ảnh COCO cho GPT-4 (model không nhìn ảnh), yêu cầu sinh hội thoại, mô tả chi tiết và câu hỏi suy luận phức tạp. Một mẹo thông minh khi chưa có VLM mạnh, nhưng dễ có câu hỏi về chi tiết không có trong caption.</li>
+<li><b>The Cauldron</b> (Hugging Face, cho Idefics2): gộp 50 bộ dataset vision-language học thuật về cùng định dạng hỏi–đáp.</li>
+<li><b>Bộ tổng hợp lớn</b> của các lab (LLaVA-OneVision data, Cambrian-7M, dữ liệu SFT của InternVL…): hàng triệu mẫu, phủ VQA, OCR, chart, toán, khoa học, multi-image, video, grounding, text-only.</li>
+<li><b>Toán có hình và reasoning:</b> bài hình học, đồ thị hàm số, đề thi có hình — thường kèm lời giải từng bước (CoT).</li>
+</ul>
+
+<h3 id="v2-filtering">Lọc dữ liệu: CLIP score, dedup ảnh, an toàn</h3>
+
+<h4>CLIP score filtering</h4>
+<p>Với ảnh \( I \) và text \( t \), dùng encoder CLIP \( f_I, f_T \) (vector đã chuẩn hoá), điểm tương đồng là:</p>
+\[
+s(I, t) = \frac{f_I(I)^\top f_T(t)}{\lVert f_I(I)\rVert\,\lVert f_T(t)\rVert}
+\]
+<p>Giữ lại cặp có \( s \) lớn hơn ngưỡng (hoặc giữ top-\( k\% \)). Hạn chế: CLIP score ưu tiên các ảnh có chữ trùng với caption (ảnh chứa đúng dòng chữ trong alt-text được điểm rất cao dù vô nghĩa), và thiên vị những khái niệm phổ biến trong dữ liệu train của CLIP. DataComp cho thấy kết hợp CLIP score với các tiêu chí khác (ví dụ độ tương đồng với phân phối ảnh mục tiêu) tốt hơn chỉ dùng CLIP score.</p>
+
+<h4>Dedup ảnh</h4>
+<ul>
+<li><b>Perceptual hashing</b> (pHash, dHash): hash bền với resize/nén nhẹ; hai ảnh có hash gần nhau (khoảng cách Hamming nhỏ) coi là trùng.</li>
+<li><b>Embedding dedup:</b> dùng embedding CLIP/SSCD, gom cụm và loại các ảnh có cosine similarity rất cao — bắt được bản crop, thêm watermark, đổi màu.</li>
+<li>Dedup quan trọng vì web có rất nhiều ảnh lặp (ảnh stock, logo, meme); ảnh lặp hàng nghìn lần làm model ghi nhớ và lãng phí compute.</li>
+</ul>
+
+<h4>An toàn: NSFW, PII, CSAM</h4>
+<p>Dữ liệu web chứa nội dung độc hại. Pipeline chuẩn gồm classifier NSFW, làm mờ/loại khuôn mặt hoặc thông tin cá nhân khi cần, và đặc biệt là <b>đối chiếu với cơ sở dữ liệu hash của nội dung lạm dụng tình dục trẻ em (CSAM)</b> do các tổ chức chuyên trách cung cấp. Năm 2023, Stanford Internet Observatory phát hiện LAION-5B chứa các liên kết tới CSAM đã được xác minh, dẫn tới việc LAION gỡ dataset và phát hành lại bản đã làm sạch (Re-LAION-5B, 2024). Bài học: lọc an toàn không phải bước tuỳ chọn; mọi dataset ảnh quy mô web cần được kiểm tra trước khi dùng.</p>
+
+<h3 id="v2-mixture">Data mixture — trộn bao nhiêu mỗi loại?</h3>
+
+<p>Không có công thức chung, nhưng các báo cáo công khai cho vài điểm neo:</p>
+<ul>
+<li><b>MM1</b>: ở pre-training, caption : interleaved : text-only ≈ <b>45 : 45 : 10</b>.</li>
+<li><b>Idefics2/3</b>: pre-training trộn interleaved (OBELICS), caption, và OCR/PDF; SFT trên The Cauldron + text-only instruction.</li>
+<li><b>InternVL3</b>: native multimodal pre-training — trộn dữ liệu multimodal với text corpus ngay trong một stage, thay vì thêm text-only như "thuốc chữa" về sau.</li>
+<li><b>SmolVLM</b>: với model nhỏ, tỉ lệ text-only và CoT cần thấp hơn trực giác.</li>
+</ul>
+
+<div class="callout note"><div class="callout-title">Giải thích thêm: tính tỉ lệ theo mẫu hay theo token?</div>
+<p>Một mẫu caption có thể chỉ 600 token (576 token ảnh + 20 token text), trong khi một tài liệu interleaved có thể dài 4.000 token với 5 ảnh. Tỉ lệ "45:45:10" theo <i>số mẫu</i> và theo <i>số token</i> là hai thứ rất khác. Thêm nữa, token ảnh không có loss — nên "số token có loss" lại là một thước đo thứ ba. Khi đọc báo cáo hoặc tự ablate, luôn ghi rõ đơn vị. Với ngân sách compute, đơn vị đúng là <b>tổng token</b> (ảnh + text) vì đó là thứ quyết định FLOPs; với tín hiệu học, đơn vị đúng là <b>token có loss</b>.</p>
+</div>
+
+<h3 id="v2-contamination">Contamination với benchmark ảnh</h3>
+<p>Benchmark VLM (DocVQA, ChartQA, TextVQA, MMMU, MathVista...) thường được xây từ ảnh có sẵn trên web hoặc từ các dataset công khai — và tập train của chúng hay nằm trong data mixture SFT (The Cauldron và nhiều bộ tổng hợp chứa chính phần train của các benchmark này). Rủi ro:</p>
+<ul>
+<li><b>Ảnh test lọt vào train</b> qua crawl web → cần dedup ảnh (hash/embedding) giữa train và test, không chỉ so n-gram text như LLM.</li>
+<li><b>Overfit định dạng benchmark</b>: train nhiều trên phần train của DocVQA giúp điểm DocVQA tăng mạnh hơn năng lực đọc tài liệu thật.</li>
+<li><b>"Blind" performance</b>: nhiều câu hỏi benchmark trả lời được mà <i>không cần nhìn ảnh</i> (dựa vào kiến thức hoặc thiên lệch ngôn ngữ). Cambrian-1 và MMStar đều chỉ ra vấn đề này; MMStar được xây để loại những câu như vậy. Một kiểm tra rẻ: chạy model với ảnh trắng/không có ảnh — điểm còn cao thì benchmark đang đo kiến thức ngôn ngữ, không phải thị giác.</li>
+</ul>
+
+<h3 id="v2-data-pipeline-opt">Optimization — data pipeline cho ảnh</h3>
+
+<p>Với LLM, dataloader gần như "miễn phí" (đọc mảng token từ file memory-mapped). Với VLM thì không: mỗi mẫu cần <b>đọc file ảnh → giải nén JPEG/PNG → resize/chia ô → chuẩn hoá</b> trên CPU, và số token mỗi mẫu dao động rất mạnh. Ba nút thắt chính:</p>
+
+<h4>1. CPU decode/resize</h4>
+<p>Giải nén một JPEG vài megapixel tốn cỡ vài chục mili-giây trên một lõi CPU. Nếu mỗi GPU xử lý vài chục ảnh mỗi step và step chỉ dài vài trăm ms, số lõi CPU dành cho mỗi GPU có thể không đủ → GPU ngồi chờ dữ liệu.</p>
+<div class="callout example"><div class="callout-title">Ví dụ số (minh hoạ)</div>
+<p>Giả sử mỗi GPU cần 64 ảnh/step, step dài 0.5 s, decode + resize trung bình 20 ms/ảnh/lõi. Tổng công việc CPU: \( 64 \times 20\text{ ms} = 1.28 \) lõi·giây cho mỗi 0.5 s → cần ít nhất \( 1.28 / 0.5 \approx 2.6 \) lõi chuyên cho decode mỗi GPU, chưa tính augmentation, tokenize text, chia ô AnyRes. Một node 8 GPU với 2 socket CPU vẫn đủ, nhưng nếu ảnh gốc là 4K hoặc PNG lớn, con số tăng nhiều lần.</p>
+</div>
+<p>Giải pháp:</p>
+<ul>
+<li><b>Tiền xử lý offline:</b> resize ảnh về độ phân giải tối đa mà model dùng (ví dụ cạnh dài ≤ 1–2K px) và lưu lại dạng JPEG chất lượng cao — giảm cả dung lượng đọc lẫn thời gian decode.</li>
+<li><b>Decode trên GPU</b> (NVIDIA DALI, nvJPEG) khi CPU là nút thắt.</li>
+<li>Đủ <code>num_workers</code> cho DataLoader, dùng <code>pin_memory</code> và prefetch.</li>
+</ul>
+
+<h4>2. Đọc file nhỏ từ storage</h4>
+<p>Hàng trăm triệu file ảnh nhỏ trên network filesystem/object storage là cơn ác mộng về metadata và độ trễ. Chuẩn hiện nay là gom thành <b>shard dạng tar</b> (định dạng <b>WebDataset</b>): mỗi shard vài trăm MB tới vài GB chứa hàng nghìn mẫu (<code>000123.jpg</code>, <code>000123.json</code>…), đọc tuần tự, stream được từ S3/GCS, shuffle ở hai mức (thứ tự shard + buffer trong bộ nhớ). Các framework khác như MosaicML Streaming (MDS) hoặc định dạng Parquet chứa bytes ảnh dùng cùng ý tưởng.</p>
+
+<h4>3. Số token dao động và mất cân bằng giữa GPU</h4>
+<p>Với dynamic resolution / AnyRes, một mẫu có thể là 64 token (ảnh nhỏ) hoặc hơn 6.000 token (tài liệu chia nhiều ô). Nếu batch theo <i>số mẫu</i>, GPU nhận phải mẫu nặng sẽ chậm và các GPU khác chờ ở bước all-reduce. Các kỹ thuật:</p>
+<ul>
+<li><b>Packing theo ngân sách token:</b> ghép nhiều mẫu vào một sequence có độ dài cố định (giống sequence packing của LLM), kết hợp attention mask theo tài liệu/varlen FlashAttention để mẫu không nhìn nhau.</li>
+<li><b>Cân bằng cả phía ViT:</b> chi phí ViT tỉ lệ với số patch, chi phí LLM tỉ lệ với tổng token sau connector — một batch cân bằng token LLM vẫn có thể lệch về số patch ViT. Một số framework cân bằng theo ước lượng FLOPs của cả hai.</li>
+<li><b>Bucketing theo độ dài/kích thước ảnh</b> để giảm padding.</li>
+</ul>
+
+<h4>4. Pre-compute vision features (khi ViT đóng băng)</h4>
+<p>Nếu ViT đóng băng (stage 1 kiểu LLaVA), có thể chạy ViT <b>một lần</b> trên toàn bộ ảnh, lưu feature xuống đĩa, rồi train projector + LLM trực tiếp trên feature. Tiết kiệm compute ViT ở mọi epoch, nhưng đánh đổi: feature tốn dung lượng lớn (576 token × 1024 chiều × 2 byte ≈ 1.2 MB/ảnh ở bf16 — lớn hơn chính file JPEG) và không áp dụng được augmentation/thay đổi độ phân giải. Thực tế chỉ đáng dùng cho thí nghiệm nhỏ hoặc nhiều epoch.</p>
+
+<div class="callout tip"><div class="callout-title">Ý chính</div>
+<ul>
+<li>Recaptioning bằng model mạnh là kỹ thuật chuẩn; PixMo cho thấy dữ liệu người tạo (bằng giọng nói) cũng cạnh tranh được mà không cần distill.</li>
+<li>Interleaved data giúp multi-image, few-shot và giữ năng lực ngôn ngữ; OCR/document data cần cho đọc chữ — synthetic rendering cho nhãn đúng tuyệt đối.</li>
+<li>Grounding thường biểu diễn toạ độ như text hoặc location token.</li>
+<li>Lọc an toàn (đặc biệt CSAM) là bắt buộc; kiểm tra contamination bằng dedup ảnh và kiểm tra "blind" (không ảnh).</li>
+<li>Pipeline ảnh: shard tar (WebDataset), resize offline, packing theo token và cân bằng tải ViT/LLM giữa các GPU.</li>
+</ul>
+</div>
+
+<div class="callout note"><div class="callout-title">Nguồn tham khảo</div>
+<ul>
+<li>Schuhmann et al. — <i>LAION-5B: An open large-scale dataset for training next generation image-text models</i>, 2022, arXiv:2210.08402.</li>
+<li>Gadre et al. — <i>DataComp: In search of the next generation of multimodal datasets</i>, 2023, arXiv:2304.14108.</li>
+<li>Chen et al. — <i>ShareGPT4V: Improving Large Multi-Modal Models with Better Captions</i>, 2023, arXiv:2311.12793.</li>
+<li>Deitke et al. (Ai2) — <i>Molmo and PixMo: Open Weights and Open Data for State-of-the-Art Vision-Language Models</i>, 2024, arXiv:2409.17146.</li>
+<li>Laurençon et al. — <i>OBELICS: An Open Web-Scale Filtered Dataset of Interleaved Image-Text Documents</i>, 2023, arXiv:2306.16527.</li>
+<li>Zhu et al. — <i>Multimodal C4 (MMC4)</i>, 2023, arXiv:2304.06939.</li>
+<li>Awadalla et al. — <i>MINT-1T: Scaling Open-Source Multimodal Data by 10x</i>, 2024, arXiv:2406.11271.</li>
+<li>Laurençon et al. — Idefics2 (arXiv:2405.02246) và Idefics3/Docmatix (arXiv:2408.12637).</li>
+<li>McKinzie et al. (Apple) — <i>MM1</i>, 2024, arXiv:2403.09611.</li>
+<li>Chen et al. — <i>Are We on the Right Way for Evaluating Large Vision-Language Models?</i> (MMStar), 2024, arXiv:2403.20330.</li>
+<li>Beyer et al. (Google) — <i>PaliGemma</i>, 2024, arXiv:2407.07726 (location tokens).</li>
+<li>Thiel (Stanford Internet Observatory) — <i>Identifying and Eliminating CSAM in Generative ML Training Data and Models</i>, 2023.</li>
+<li>WebDataset — github.com/webdataset/webdataset.</li>
+</ul>
+</div>
+</section>
+
+<section id="v-post">
+<h2 id="v-post-h">Post-training VLM — alignment, giảm hallucination, reasoning</h2>
+
+<div class="callout tip"><div class="callout-title">Đọc nhanh</div>
+<ul>
+<li>Lỗi khó chịu nhất của VLM là <b>hallucination</b>: tự tin mô tả những thứ không có trong ảnh. Nguyên nhân chính là model dựa vào "thói quen ngôn ngữ" nhiều hơn nhìn ảnh.</li>
+<li>Cách sửa phổ biến: dạy model bằng các cặp câu trả lời "tốt hơn / tệ hơn" (preference optimization), trong đó câu tệ chứa chi tiết bịa.</li>
+<li>Giống LLM, VLM ngày nay cũng được train bằng RL với đáp án kiểm chứng được — toán có hình, đếm vật thể, khoanh vùng vật thể — để suy luận tốt hơn.</li>
+<li>Xu hướng mới: "thinking with images" — model tự phóng to, cắt ảnh trong lúc suy nghĩ; và GUI agent — model nhìn màn hình rồi bấm, gõ như người.</li>
+</ul>
+</div>
+
+<p>Sau SFT, VLM đã biết trả lời câu hỏi về ảnh, nhưng còn hai điểm yếu lớn mà SFT khó sửa: <b>hallucination</b> (nói sai về nội dung ảnh) và <b>reasoning</b> (suy luận nhiều bước dựa trên thông tin thị giác). Các công cụ post-training của LLM — preference optimization (DPO và biến thể) và RL với reward kiểm chứng được (GRPO…) — đều được mang sang, với những điều chỉnh đặc thù cho thị giác. Phần lý thuyết DPO/PPO/GRPO đã có trong tài liệu LLM; chương này tập trung vào phần khác biệt.</p>
+
+<h3 id="v2-hallucination">Object hallucination — vì sao VLM "bịa"?</h3>
+
+<p><b>Object hallucination</b>: model nhắc tới vật thể không có trong ảnh (ví dụ ảnh bàn ăn không có dĩa nhưng model nói "bên cạnh đĩa có dao và dĩa"). Các nguyên nhân đã được nghiên cứu:</p>
+<ul>
+<li><b>Language prior quá mạnh:</b> LLM backbone đã học trên hàng nghìn tỉ token rằng "bàn ăn" thường đi với "dao, dĩa". Khi tín hiệu thị giác yếu hoặc mơ hồ, xác suất có điều kiện theo ngôn ngữ áp đảo tín hiệu từ ảnh.</li>
+<li><b>Co-occurrence trong dữ liệu train:</b> vật thể hay xuất hiện cùng nhau trong caption → model học "đi kèm" thay vì "nhìn thấy".</li>
+<li><b>Caption train chứa chi tiết không có trong ảnh:</b> alt-text hoặc caption tổng hợp bị lỗi (xem chương <a href="#v-data-h">Data</a>) dạy model rằng nói thêm chi tiết là được thưởng.</li>
+<li><b>Câu trả lời dài:</b> càng về cuối câu mô tả dài, model càng dựa vào ngữ cảnh text đã sinh và ít "nhìn lại" ảnh → hallucination tăng theo độ dài.</li>
+<li><b>Độ phân giải thấp / visual token bị nén</b>: vật nhỏ không còn thấy rõ, model đoán.</li>
+</ul>
+
+<h4>Đo hallucination: CHAIR và POPE</h4>
+<p><b>CHAIR</b> (Rohrbach et al., 2018) đo trên caption sinh tự do, dùng nhãn vật thể của COCO:</p>
+\[
+\text{CHAIR}_i = \frac{\#\{\text{vật thể bịa được nhắc tới}\}}{\#\{\text{tất cả vật thể được nhắc tới}\}},\qquad
+\text{CHAIR}_s = \frac{\#\{\text{câu có ít nhất một vật thể bịa}\}}{\#\{\text{tất cả câu}\}}
+\]
+<p>Hạn chế: phụ thuộc vào việc khớp từ với danh sách vật thể COCO và chỉ áp dụng được cho caption tự do.</p>
+
+<p><b>POPE</b> (Polling-based Object Probing Evaluation, Li et al., 2023) biến bài toán thành câu hỏi yes/no: "Is there a &lt;object&gt; in the image?". Câu hỏi "yes" lấy từ vật thể có thật trong ảnh; câu hỏi "no" lấy vật thể <i>không có</i> theo ba cách:</p>
+<table>
+<thead><tr><th>Setting</th><th>Cách chọn vật thể không có</th><th>Đo cái gì</th></tr></thead>
+<tbody>
+<tr><td><b>Random</b></td><td>Ngẫu nhiên từ toàn bộ danh mục</td><td>Hallucination cơ bản</td></tr>
+<tr><td><b>Popular</b></td><td>Vật thể xuất hiện nhiều nhất trong dataset</td><td>Thiên lệch theo tần suất</td></tr>
+<tr><td><b>Adversarial</b></td><td>Vật thể hay <i>đi kèm</i> với vật thể có trong ảnh</td><td>Thiên lệch co-occurrence — khó nhất</td></tr>
+</tbody>
+</table>
+<p>Ngoài accuracy/F1, POPE báo cáo <b>tỉ lệ trả lời "yes"</b>: model hallucinate nhiều thường có xu hướng nói "yes" quá nhiều (thiên lệch đồng ý). Model tốt có tỉ lệ yes gần 50% trên tập cân bằng.</p>
+
+<div class="callout warn"><div class="callout-title">Lưu ý khi dùng POPE</div>
+<p>POPE chỉ đo hallucination <i>khi được hỏi trực tiếp</i>. Một model có thể đạt POPE cao nhưng vẫn bịa nhiều khi mô tả ảnh tự do (CHAIR cao). Các benchmark mới hơn như AMBER, HallusionBench, MMHal-Bench bổ sung các khía cạnh thuộc tính, quan hệ, và câu hỏi đánh lừa. Nên dùng nhiều benchmark cùng lúc.</p>
+</div>
+
+<h3 id="v2-vlm-po">Preference optimization cho VLM</h3>
+
+<p>Ý tưởng chung: tạo cặp \( (x, y_w, y_l) \) với \( x \) = (ảnh, câu hỏi), \( y_w \) = câu trả lời đúng/trung thực, \( y_l \) = câu trả lời có hallucination, rồi tối ưu DPO (công thức giống hệt LLM, chỉ khác input có ảnh):</p>
+\[
+\mathcal{L}_{\text{DPO}} = -\,\mathbb{E}\left[\log \sigma\!\left(\beta \log\frac{\pi_\theta(y_w\mid x)}{\pi_{\text{ref}}(y_w\mid x)} - \beta\log\frac{\pi_\theta(y_l\mid x)}{\pi_{\text{ref}}(y_l\mid x)}\right)\right]
+\]
+<p>Câu hỏi thú vị nằm ở <b>cách tạo cặp</b>:</p>
+
+<h4>LLaVA-RLHF — Factually Augmented RLHF</h4>
+<p>Sun et al. (2023) là một trong những công trình đầu tiên áp dụng RLHF cho VLM. Vấn đề họ gặp: reward model bị <b>reward hacking</b> — ưu ái câu trả lời dài, nhiều chi tiết (kể cả bịa). Giải pháp <b>Factually Augmented RLHF</b>: cho reward model thêm thông tin thực tế về ảnh (caption gốc, các lựa chọn đúng) để chấm điểm, giảm khả năng thưởng cho chi tiết bịa.</p>
+
+<h4>RLHF-V — sửa lỗi ở mức đoạn (fine-grained correctional feedback)</h4>
+<p>Yu et al. (2023): thay vì yêu cầu người chấm so sánh hai câu trả lời nguyên vẹn (tín hiệu thô, nhiễu), họ yêu cầu người chấm <b>sửa trực tiếp</b> những đoạn bị hallucinate trong câu trả lời. Câu gốc thành \( y_l \), câu đã sửa thành \( y_w \) — hai câu chỉ khác nhau đúng ở phần sai. Họ dùng biến thể DPO có trọng số cao hơn cho các đoạn bị sửa (Dense DPO). Ưu điểm: tín hiệu học tập trung đúng vào chỗ cần sửa, rất hiệu quả về số mẫu.</p>
+
+<h4>RLAIF-V — thay người bằng AI feedback mở</h4>
+<p>Yu et al. (2024) mở rộng ý tưởng nhưng dùng <b>model mã nguồn mở</b> làm người chấm. Mẹo "divide and conquer": tách câu trả lời dài thành các khẳng định nguyên tử (atomic claims), chuyển mỗi khẳng định thành câu hỏi yes/no, để model mở trả lời từng câu (dễ hơn nhiều so với chấm cả đoạn), rồi tổng hợp thành điểm cho cả câu trả lời. Kết quả là dữ liệu preference chất lượng cao mà không cần GPT-4V hay người gán nhãn.</p>
+
+<h4>MPO — Mixed Preference Optimization (InternVL)</h4>
+<p>Wang et al. (2024) (dùng trong InternVL2-MPO, InternVL 2.5/3) quan sát rằng DPO thuần trên dữ liệu reasoning đa phương thức có thể làm câu trả lời kém mạch lạc. Họ kết hợp ba loss:</p>
+\[
+\mathcal{L}_{\text{MPO}} = w_p\,\mathcal{L}_{\text{preference}} + w_q\,\mathcal{L}_{\text{quality}} + w_g\,\mathcal{L}_{\text{generation}}
+\]
+<ul>
+<li>\( \mathcal{L}_{\text{preference}} \): DPO — học <i>tương đối</i> câu nào tốt hơn.</li>
+<li>\( \mathcal{L}_{\text{quality}} \): BCO (Binary Classifier Optimization) — học <i>tuyệt đối</i> chất lượng của từng câu (tốt/xấu), không chỉ so sánh.</li>
+<li>\( \mathcal{L}_{\text{generation}} \): loss SFT trên câu tốt — giữ khả năng sinh câu hoàn chỉnh, mạch lạc.</li>
+</ul>
+<p>Dữ liệu (bộ MMPR) được tạo tự động: với bài có đáp án, câu trả lời đúng là chosen, sai là rejected; với bài không có đáp án, họ dùng kỹ thuật "cắt câu trả lời giữa chừng rồi để model viết tiếp mà không có ảnh" để tạo rejected có hallucination.</p>
+
+<div class="callout note"><div class="callout-title">Giải thích thêm: vì sao thêm loss SFT vào DPO lại giúp?</div>
+<p>DPO chỉ ràng buộc <i>hiệu</i> của log-likelihood giữa chosen và rejected. Model có thể thoả mãn ràng buộc này bằng cách hạ xác suất <i>cả hai</i>, miễn rejected giảm nhanh hơn (hiện tượng likelihood displacement — xem tài liệu LLM). Khi đó xác suất của câu trả lời tốt cũng giảm, và model bắt đầu sinh văn bản "lạ". Loss SFT trên chosen kéo xác suất câu tốt lên một cách tuyệt đối, chặn hiện tượng này. Đây cũng là ý tưởng của RPO và nhiều biến thể DPO + NLL khác.</p>
+</div>
+
+<h3 id="v2-vlm-rl">RL với reward kiểm chứng được cho VLM</h3>
+
+<p>Sau thành công của DeepSeek-R1 với RLVR trên text, làn sóng 2025 mang RL sang VLM. Khung chung giống GRPO trên LLM: với mỗi (ảnh, câu hỏi), sample một nhóm câu trả lời, chấm bằng reward tự động, tính advantage trong nhóm, cập nhật policy. Điểm khác nằm ở <b>loại tác vụ và reward</b>:</p>
+
+<table>
+<thead><tr><th>Tác vụ</th><th>Reward</th><th>Ghi chú</th></tr></thead>
+<tbody>
+<tr><td><b>Toán có hình</b> (hình học, đồ thị, đề thi)</td><td>Đáp án cuối khớp (số, biểu thức, lựa chọn) → 1/0</td><td>Giống math RLVR; dữ liệu như Geometry3K, MathVista-style, đề thi</td></tr>
+<tr><td><b>Đếm vật thể</b></td><td>Số đếm khớp chính xác</td><td>Dễ kiểm chứng, buộc model nhìn kỹ</td></tr>
+<tr><td><b>Grounding / detection</b></td><td>IoU giữa box dự đoán và box thật: \( \text{IoU} = \frac{|B_p \cap B_g|}{|B_p \cup B_g|} \), có thể dùng trực tiếp làm reward liên tục hoặc ngưỡng (IoU &gt; 0.5)</td><td>Reward liên tục cho tín hiệu mịn hơn 1/0</td></tr>
+<tr><td><b>OCR / document QA</b></td><td>Exact match hoặc độ tương đồng chuỗi (ANLS)</td><td>Cẩn thận với cách viết khác nhau của cùng đáp án</td></tr>
+<tr><td><b>Định dạng</b></td><td>Thưởng nhỏ khi tuân thủ <code>&lt;think&gt;…&lt;/think&gt;&lt;answer&gt;…&lt;/answer&gt;</code></td><td>Giống R1; tránh để format reward chi phối</td></tr>
+</tbody>
+</table>
+
+<p>Các ví dụ công khai: <b>Kimi-VL-Thinking</b> (Moonshot, 2025) dùng long-CoT SFT rồi RL để có bản VLM "thinking"; <b>Kimi k1.5</b> train RL đa phương thức chung cho text và ảnh; Qwen-VL và InternVL các phiên bản sau cũng bổ sung giai đoạn RL/reasoning. Nhiều công trình học thuật (ví dụ Visual-RFT) cho thấy GRPO với reward IoU cải thiện grounding ngay cả với ít dữ liệu.</p>
+
+<div class="callout warn"><div class="callout-title">Cạm bẫy riêng của RL cho VLM</div>
+<ul>
+<li><b>"Suy luận mà không nhìn":</b> model có thể học giải bài bằng kiến thức ngôn ngữ, bỏ qua ảnh (nhất là khi câu hỏi chứa đủ thông tin). Reward vẫn cao nhưng năng lực thị giác không tăng. Nên lọc những bài giải được mà không cần ảnh (chạy model với ảnh trống).</li>
+<li><b>Hallucination trong chuỗi suy luận:</b> CoT dài có thể chứa mô tả ảnh sai nhưng đáp án cuối vẫn đúng — reward theo kết quả không phạt điều này.</li>
+<li><b>Chi phí rollout cao hơn:</b> mỗi rollout phải encode ảnh (thường nhiều nghìn visual token) → prefill đắt; prefix caching trên phần ảnh + prompt giữa các sample trong cùng nhóm giúp rất nhiều (xem tài liệu Inference).</li>
+<li><b>ViT thường được đóng băng</b> trong RL để ổn định và tiết kiệm memory.</li>
+</ul>
+</div>
+
+<h3 id="v2-thinking-images">Thinking with images — suy nghĩ bằng thao tác trên ảnh</h3>
+<p>Một hạn chế cơ bản: ảnh được encode <b>một lần</b> ở đầu với độ phân giải cố định; nếu chi tiết quan trọng quá nhỏ (biển số xe ở góc ảnh), model không có cách "nhìn lại kỹ hơn". Hướng <b>thinking with images</b> cho model các công cụ thao tác ảnh trong lúc suy luận:</p>
+<ul>
+<li><b>Crop / zoom:</b> model xuất toạ độ vùng quan tâm, hệ thống cắt vùng đó ở độ phân giải cao và đưa lại vào context như một ảnh mới.</li>
+<li><b>Xoay, tăng tương phản, vẽ đường phụ</b> (cho hình học) — thường qua sinh và chạy code.</li>
+<li>OpenAI công bố o3/o4-mini (2025) có khả năng này; nhiều công trình mở sau đó train hành vi tương tự bằng RL nhiều lượt với công cụ crop/zoom, trong đó reward vẫn là đáp án cuối, và model tự học khi nào nên zoom.</li>
+</ul>
+<p>Về mặt train, đây chính là <b>agentic RL nhiều lượt</b> (multi-turn tool use) — giống RL cho coding agent trong tài liệu LLM, chỉ khác công cụ trả về ảnh thay vì text.</p>
+
+<h3 id="v2-gui-agent">GUI agent và screen grounding</h3>
+<p>GUI agent nhận screenshot màn hình (web, desktop, mobile) và xuất hành động: <code>click(x, y)</code>, <code>type("...")</code>, <code>scroll</code>. Năng lực cốt lõi là <b>screen grounding</b> — biết nút "Đăng nhập" nằm ở toạ độ nào.</p>
+<ul>
+<li><b>Data:</b> screenshot kèm cây accessibility/HTML cho nhãn vị trí phần tử miễn phí; quỹ đạo thao tác do người hoặc agent tạo. Benchmark grounding tiêu biểu: ScreenSpot (SeeClick, 2024).</li>
+<li><b>Thách thức thị giác:</b> screenshot độ phân giải cao, chữ nhỏ, nhiều phần tử → cần native/high resolution và nhiều visual token.</li>
+<li><b>Model tiêu biểu:</b> UI-TARS (ByteDance, 2025) train VLM end-to-end cho GUI agent với dữ liệu perception, grounding và quỹ đạo, kèm reflection; các VLM tổng quát như Qwen2.5-VL cũng đưa năng lực agent/grounding vào post-training.</li>
+<li><b>RL môi trường:</b> chạy agent trong máy ảo/trình duyệt thật, reward là việc hoàn thành tác vụ (kiểm tra trạng thái cuối). Đắt và chậm, nhưng là hướng chính để vượt qua giới hạn của imitation learning.</li>
+</ul>
+
+<div class="callout tip"><div class="callout-title">Ý chính</div>
+<ul>
+<li>Hallucination của VLM chủ yếu do language prior và co-occurrence; đo bằng nhiều benchmark (CHAIR, POPE adversarial, AMBER…), không chỉ một.</li>
+<li>Preference data hiệu quả nhất là cặp chỉ khác nhau ở chỗ hallucinate (RLHF-V); có thể tạo tự động bằng model mở (RLAIF-V).</li>
+<li>Kết hợp DPO với loss chất lượng tuyệt đối và loss SFT (MPO) giúp ổn định với reasoning đa phương thức.</li>
+<li>RLVR cho VLM dùng reward như đáp án toán, số đếm, IoU; cần lọc bài "không cần nhìn ảnh".</li>
+<li>Thinking with images và GUI agent là RL nhiều lượt với công cụ thị giác — biên giới hiện tại của post-training VLM.</li>
+</ul>
+</div>
+
+<div class="callout note"><div class="callout-title">Nguồn tham khảo</div>
+<ul>
+<li>Rohrbach et al. — <i>Object Hallucination in Image Captioning</i> (CHAIR), EMNLP 2018, arXiv:1809.02156.</li>
+<li>Li et al. — <i>Evaluating Object Hallucination in Large Vision-Language Models</i> (POPE), 2023, arXiv:2305.10355.</li>
+<li>Sun et al. — <i>Aligning Large Multimodal Models with Factually Augmented RLHF</i> (LLaVA-RLHF), 2023, arXiv:2309.14525.</li>
+<li>Yu et al. — <i>RLHF-V: Towards Trustworthy MLLMs via Behavior Alignment from Fine-grained Correctional Human Feedback</i>, 2023, arXiv:2312.00849.</li>
+<li>Yu et al. — <i>RLAIF-V: Aligning MLLMs through Open-Source AI Feedback for Super GPT-4V Trustworthiness</i>, 2024, arXiv:2405.17220.</li>
+<li>Wang et al. — <i>Enhancing the Reasoning Ability of Multimodal Large Language Models via Mixed Preference Optimization</i> (MPO, MMPR), 2024, arXiv:2411.10442.</li>
+<li>Kimi Team — <i>Kimi-VL Technical Report</i>, 2025, arXiv:2504.07491; <i>Kimi k1.5: Scaling Reinforcement Learning with LLMs</i>, 2025, arXiv:2501.12599.</li>
+<li>Liu et al. — <i>Visual-RFT: Visual Reinforcement Fine-Tuning</i>, 2025.</li>
+<li>Cheng et al. — <i>SeeClick: Harnessing GUI Grounding for Advanced Visual GUI Agents</i> (ScreenSpot), 2024, arXiv:2401.10935.</li>
+<li>Qin et al. (ByteDance) — <i>UI-TARS: Pioneering Automated GUI Interaction with Native Agents</i>, 2025, arXiv:2501.12326.</li>
+<li>OpenAI — <i>Thinking with images</i> (giới thiệu o3 / o4-mini), 2025.</li>
+</ul>
+</div>
+</section>
+
+<section id="v-systems">
+<h2 id="v-systems-h">Training systems optimization cho VLM</h2>
+
+<div class="callout tip"><div class="callout-title">Đọc nhanh</div>
+<ul>
+<li>Trong VLM, phần lớn compute vẫn nằm ở LLM. Thứ quyết định chi phí là <b>số visual token</b> mỗi ảnh đưa vào LLM, nên giảm token (pixel shuffle, merge) là cách tiết kiệm lớn nhất.</li>
+<li>Mỗi sample có số ảnh khác nhau nên khối lượng việc giữa các GPU lệch nhau. GPU nhanh phải đứng chờ GPU chậm, vì vậy cần cân bằng theo "ngân sách token" chứ không theo số sample.</li>
+<li>Đóng băng (freeze) một phần model giúp tiết kiệm rất nhiều memory. Encoder đứng ở đầu nên freeze nó tiết kiệm được cả activation, còn freeze LLM thì vẫn phải lưu activation để gradient đi ngược về connector.</li>
+<li>Khi encoder bị freeze và không có augmentation, có thể tính feature ảnh một lần rồi cache lại.</li>
+<li>Rất nhiều VLM bị nghẽn ở khâu <b>đọc và giải mã ảnh</b> chứ không phải ở GPU. Luôn đo dataloader trước khi tối ưu kernel.</li>
+</ul>
+</div>
+
+<p>Chương này áp dụng các kỹ thuật trong <a href="frontier-model-training-vi.html#s-systems">chương Training systems optimization của tài liệu LLM</a> (FSDP, recompute, packing, mixed precision) vào trường hợp có thêm một <b>vision encoder</b> (thường là ViT như SigLIP hoặc CLIP) và một <b>connector</b> (MLP projector, có thể kèm pixel shuffle). Điểm khác biệt so với LLM thuần text là <b>dữ liệu dị thể (heterogeneous)</b>: mỗi sample có số ảnh khác nhau, độ phân giải khác nhau, số tile khác nhau. Hệ quả là compute và memory mỗi micro-batch dao động mạnh.</p>
+
+<h3 id="v3-accounting">FLOPs và memory accounting khi có vision encoder</h3>
+
+<p>Một bước train VLM gồm ba khối compute:</p>
+<ol>
+<li><b>Vision encoder</b> chạy trên các patch của ảnh. Ảnh \(H\times W\) với patch size \(p\) cho \(n_p = (H/p)(W/p)\) patch token.</li>
+<li><b>Connector</b> (pixel shuffle + MLP) biến \(n_p\) patch thành \(n_v\) visual token đưa vào LLM. Pixel shuffle tỉ lệ \(r\) gom \(r\times r\) patch kề nhau thành 1 token, nên \(n_v = n_p / r^2\).</li>
+<li><b>LLM</b> chạy trên chuỗi gồm \(n_v\) visual token cộng \(n_t\) text token.</li>
+</ol>
+
+<p>Dùng quy tắc quen thuộc "forward ≈ 2 FLOPs mỗi tham số mỗi token, backward ≈ 2× forward" (xem <a href="frontier-model-training-vi.html#t-flops">FLOPs accounting</a>):</p>
+\[
+\begin{aligned}
+C_{\text{enc}} &\approx k_{\text{enc}}\cdot 2 N_{\text{enc}}\, n_p \;+\; \text{(attention term)} \\
+C_{\text{LLM}} &\approx 6\, N_{\text{LLM}}\,(n_v + n_t)
+\end{aligned}
+\]
+<ul>
+<li>\(N_{\text{enc}}, N_{\text{LLM}}\): số tham số của encoder và LLM.</li>
+<li>\(k_{\text{enc}}\): bằng 3 nếu encoder được train (forward + backward), bằng 1 nếu encoder bị freeze (chỉ cần forward, chạy dưới <code>no_grad</code>).</li>
+<li>Attention term của ViT mỗi layer ≈ \(4 n_p^2 d\) FLOPs forward (hai phép nhân \(QK^\top\) và \(AV\)). Với ảnh độ phân giải cao, term này không còn nhỏ.</li>
+</ul>
+
+<div class="callout example"><div class="callout-title">Ví dụ số — encoder ~400M + LLM 7B</div>
+<p>Giả sử encoder cỡ SigLIP-SO400M (khoảng 400M tham số, 27 layer, hidden 1152). Ảnh 512×512, patch 16, cho \(n_p = 32\times 32 = 1024\) patch. Mỗi sample có 1 ảnh và 512 text token.</p>
+<ul>
+<li><b>Encoder forward (phần tham số):</b> \(2\times 4\cdot10^{8}\times 1024 \approx 8.2\cdot10^{11}\) FLOPs.</li>
+<li><b>Attention của ViT:</b> \(4\times 1024^2\times 1152\times 27 \approx 1.3\cdot10^{11}\) FLOPs, tức khoảng 16% phần tham số.</li>
+<li><b>Encoder train được (×3):</b> khoảng \(2.85\cdot10^{12}\) FLOPs.</li>
+</ul>
+<p><b>Trường hợp A, không có pixel shuffle</b> (\(n_v=1024\)): LLM chạy trên 1536 token, \(C_{\text{LLM}} = 6\times 7\cdot10^9\times 1536 \approx 6.45\cdot10^{13}\). Encoder chỉ chiếm khoảng 4% tổng, nhưng <b>2/3 compute của LLM là để xử lý visual token</b>.</p>
+<p><b>Trường hợp B, pixel shuffle \(r=4\)</b> (\(n_v = 1024/16 = 64\)): LLM chạy trên 576 token, \(C_{\text{LLM}}\approx 2.42\cdot10^{13}\). Tổng compute giảm khoảng 2.5 lần. Encoder lúc này chiếm khoảng 11%.</p>
+<p><b>Trường hợp C, LLM nhỏ 1.7B</b> (cỡ SmolVLM) với pixel shuffle \(r=4\): \(C_{\text{LLM}} = 6\times1.7\cdot10^9\times576\approx 5.9\cdot10^{12}\). Encoder train được (\(2.85\cdot10^{12}\)) chiếm tới khoảng <b>1/3</b> tổng compute. Với VLM nhỏ, encoder <i>không</i> còn là phần phụ.</p>
+</div>
+
+<div class="callout tip"><div class="callout-title">Ý chính</div>
+<p>Hai "núm vặn" lớn nhất của chi phí train VLM là <b>số visual token mỗi ảnh</b> (quyết định compute của LLM) và <b>có train encoder hay không</b> (quyết định compute của encoder, đặc biệt quan trọng khi LLM nhỏ). Cách chia ảnh thành tile (AnyRes, dynamic resolution) nhân số token lên nhiều lần. Ví dụ LLaVA-NeXT dùng ảnh gốc cộng 4 tile 336px, mỗi phần 576 token, tổng cộng 2880 visual token cho một ảnh.</p>
+</div>
+
+<h4>Memory</h4>
+<p>Memory mỗi GPU gồm bốn phần: weights, gradient, optimizer state và activation (xem <a href="frontier-model-training-vi.html#s-memory-anatomy">memory anatomy</a>). VLM có hai đặc thù:</p>
+<ul>
+<li><b>Activation của ViT tỉ lệ với số ảnh/tile trong micro-batch</b>, không tỉ lệ với số sample. Một micro-batch có thể đột ngột chứa 20 tile, đủ để gây OOM dù batch size theo sample không đổi.</li>
+<li><b>Chuỗi của LLM dài hơn hẳn</b> khi visual token nhiều. Activation của LLM tăng tuyến tính theo độ dài chuỗi, cộng thêm phần logits nếu không dùng fused cross-entropy.</li>
+</ul>
+
+<h3 id="v3-imbalance">Optimization — dữ liệu dị thể và load imbalance</h3>
+
+<p>Với LLM thuần text, packing đưa mọi micro-batch về cùng độ dài, nên compute giữa các rank gần như bằng nhau. Với VLM, hai micro-batch cùng 4096 token LLM có thể khác nhau rất xa về compute của encoder: một bên toàn text, một bên chứa 12 tile ảnh. Hệ quả:</p>
+<ul>
+<li><b>Data parallel:</b> mọi rank phải chờ nhau ở bước all-reduce hoặc reduce-scatter gradient. Rank có nhiều ảnh nhất quyết định thời gian của cả step (hiện tượng <i>straggler</i>).</li>
+<li><b>Pipeline parallel:</b> encoder thường đặt ở stage đầu, nên stage đó nặng hơn hẳn và bubble tăng.</li>
+</ul>
+
+<h4>Các cách giảm imbalance</h4>
+<ol>
+<li><b>Cân bằng theo ngân sách hai chiều.</b> Khi đóng gói micro-batch, đặt giới hạn cho cả số text+visual token của LLM lẫn số patch của encoder, chứ không chỉ theo số sample. Một heuristic đơn giản là coi chi phí sample ≈ \(a\cdot n_{\text{LLM-tokens}} + b\cdot n_{\text{patches}}\), với \(a, b\) lấy từ FLOPs ở trên, rồi chia các sample sao cho tổng chi phí mỗi rank xấp xỉ bằng nhau (bài toán bin packing).</li>
+<li><b>Sort/bucket theo số tile</b> trong một cửa sổ lớn (vài nghìn sample) trước khi chia batch, rồi shuffle lại thứ tự các batch. Cách này giảm phương sai mà không làm hỏng tính ngẫu nhiên của data.</li>
+<li><b>Giới hạn số tile mỗi ảnh</b>, ví dụ dynamic resolution có trần tổng số pixel (Qwen2-VL đặt min/max pixels). Đây vừa là lựa chọn về chất lượng, vừa là công cụ kiểm soát phương sai compute.</li>
+<li><b>Với pipeline parallel:</b> report Llama 3 (phần vision, kiến trúc cross-attention) mô tả đúng vấn đề này. Họ cân bằng bằng cách cho mỗi pipeline stage chứa cùng một tổ hợp layer (4 self-attention layer của LLM cộng 1 cross-attention layer, vì cứ sau 4 self-attention layer lại có 1 cross-attention), và <b>nhân bản (replicate) image encoder trên mọi pipeline stage</b> để chia đều phần compute của ảnh.</li>
+</ol>
+
+<div class="callout warn"><div class="callout-title">Lưu ý về numerics</div>
+<p>Report Llama 3 cũng ghi nhận rằng sau khi thêm image encoder, việc tích luỹ gradient ở độ chính xác thấp gây bất ổn số học, nên họ chuyển gradient accumulation sang FP32. Bài học chung: khi gradient của một khối đến từ nhiều micro-batch có độ lớn chênh nhau (micro-batch nhiều ảnh và micro-batch toàn text), hãy tích luỹ ở FP32.</p>
+</div>
+
+<h3 id="v3-packing">Optimization — sequence packing cho sample đa phương thức</h3>
+
+<p>Packing là ghép nhiều sample ngắn vào một chuỗi dài cố định để không phí padding (xem <a href="frontier-model-training-vi.html#e-sequence-packing">sequence packing</a>). Với VLM, packing diễn ra ở <b>hai nơi</b>:</p>
+
+<h4>1. Packing phía LLM</h4>
+<p>Chuỗi sau khi chèn visual token (placeholder <code>&lt;image&gt;</code> được thay bằng \(n_v\) embedding) được ghép giống text thường. Để các sample không "nhìn" thấy nhau, dùng <b>varlen FlashAttention</b>: thay vì một attention mask \(L\times L\), ta truyền mảng <code>cu_seqlens</code> chứa vị trí bắt đầu của từng sample, và kernel <code>flash_attn_varlen_func</code> chỉ tính attention bên trong từng đoạn. Đồng thời phải <b>reset <code>position_ids</code></b> về 0 ở đầu mỗi sample. Với M-RoPE (RoPE nhiều chiều cho ảnh/video như Qwen2-VL), cần reset cả ba thành phần vị trí.</p>
+
+<pre><code># ví dụ: 3 sample dài 900, 2100, 1096 token ghép thành 1 chuỗi 4096
+cu_seqlens = [0, 900, 3000, 4096]     # int32, trên GPU
+max_seqlen = 2100
+out = flash_attn_varlen_func(q, k, v, cu_seqlens, cu_seqlens,
+                             max_seqlen, max_seqlen, causal=True)</code></pre>
+
+<h4>2. Packing phía encoder (kiểu NaViT)</h4>
+<p>Nếu ảnh có độ phân giải gốc khác nhau (native/dynamic resolution), số patch mỗi ảnh khác nhau. Thay vì resize mọi ảnh về cùng kích thước hoặc pad, có thể ghép patch của nhiều ảnh thành một chuỗi rồi dùng varlen attention <b>không causal</b> để mỗi ảnh chỉ attend nội bộ. Ý tưởng này đến từ NaViT ("Patch n' Pack"), và ViT của Qwen2-VL xử lý ảnh độ phân giải động theo cách tương tự.</p>
+
+<div class="callout tip"><div class="callout-title">Ý chính</div>
+<p>Packing đúng cách cần đủ ba thứ: (1) varlen attention để chặn attention chéo giữa các sample, (2) reset position id, (3) loss mask chỉ tính trên token cần học (thường là câu trả lời, không tính visual token và prompt). Thiếu một trong ba, model vẫn train được nhưng chất lượng giảm âm thầm.</p>
+</div>
+
+<h3 id="v3-sharding">Optimization — chiến lược song song cho encoder và LLM</h3>
+
+<p>Encoder và LLM có kích thước chênh nhau một bậc độ lớn, nên thường được song song hoá <b>khác nhau</b>:</p>
+<table>
+<thead><tr><th>Thành phần</th><th>Kích thước điển hình</th><th>Cách song song hợp lý</th><th>Lý do</th></tr></thead>
+<tbody>
+<tr><td>Vision encoder (ViT)</td><td>~100M – 700M</td><td>Replicate (DDP), hoặc FSDP wrap thành một khối</td><td>Nhỏ, vừa memory của mỗi GPU. Tensor parallel trên ViT có hidden nhỏ tốn communication hơn lợi ích.</td></tr>
+<tr><td>Connector (MLP)</td><td>vài chục M – ~100M</td><td>Replicate</td><td>Rất nhỏ.</td></tr>
+<tr><td>LLM</td><td>1B – hàng trăm B</td><td>FSDP/ZeRO-3, thêm TP/PP khi lớn</td><td>Giống LLM thuần text.</td></tr>
+</tbody>
+</table>
+<p>Khi dùng FSDP, nên wrap encoder thành <b>một đơn vị</b> (hoặc mỗi block ViT một đơn vị nếu encoder lớn), tách khỏi các decoder layer của LLM, để không phải all-gather lặt vặt nhiều lần. Nếu encoder bị freeze, có thể để nó ngoài FSDP hoàn toàn, mỗi rank giữ một bản bf16 và chạy dưới <code>torch.no_grad()</code>.</p>
+
+<h3 id="v3-freezing">Optimization — freeze từng phần: tiết kiệm memory thế nào</h3>
+
+<p>Các recipe VLM thường train theo giai đoạn. Giai đoạn đầu chỉ train connector; sau đó mở dần LLM, và có thể cả encoder. Freeze một khối giúp bỏ được gradient và optimizer state của khối đó:</p>
+<table>
+<thead><tr><th>Trạng thái tham số</th><th>Byte/tham số (bf16 + AdamW, master fp32)</th></tr></thead>
+<tbody>
+<tr><td>Trainable</td><td>2 (weight bf16) + 2 (grad) + 4 (master fp32) + 4 + 4 (Adam m, v) = <b>16</b></td></tr>
+<tr><td>Frozen</td><td><b>2</b> (chỉ weight bf16)</td></tr>
+</tbody>
+</table>
+
+<div class="callout example"><div class="callout-title">Ví dụ số</div>
+<ul>
+<li>Encoder 400M: trainable tốn 6.4 GB, frozen chỉ 0.8 GB.</li>
+<li>LLM 7B: trainable tốn 112 GB (phải shard qua nhiều GPU), frozen 14 GB.</li>
+<li>Connector: giả sử pixel shuffle \(r=4\) nên đầu vào có \(1152\times16 = 18432\) chiều, MLP 2 layer lên 4096: \(18432\times4096 + 4096\times4096 \approx 92\)M tham số, tức khoảng 1.5 GB khi trainable. Rất rẻ.</li>
+</ul>
+</div>
+
+<div class="callout warn"><div class="callout-title">Cái bẫy: freeze LLM không tiết kiệm activation</div>
+<p>Gradient đi <b>ngược</b> từ loss (ở đầu ra LLM) về connector. Encoder nằm ở <i>đầu vào</i>, nên khi freeze nó, ta có thể dừng backward tại đầu ra encoder và không cần lưu activation của encoder. Ngược lại, LLM nằm <i>giữa</i> loss và connector: dù freeze, gradient vẫn phải đi xuyên qua toàn bộ LLM để tới connector, nên <b>activation của LLM vẫn phải lưu đầy đủ</b>, và backward qua LLM vẫn tốn khoảng 2× forward (chỉ bỏ được phần tính gradient của weight, khoảng một nửa backward). Vì vậy giai đoạn "chỉ train projector" rẻ về memory cho optimizer, nhưng compute mỗi token không rẻ hơn bao nhiêu.</p>
+</div>
+
+<p>Một điểm thực hành nữa: khi mở encoder ra train, các recipe thường dùng <b>learning rate nhỏ hơn đáng kể cho vision tower</b> để không phá representation đã được pretrain. Ví dụ LLaVA-OneVision dùng 2e-6 cho vision tower so với 1e-5 cho phần còn lại. Trong code, chỉ cần tạo param group riêng cho optimizer.</p>
+
+<h3 id="v3-recompute">Optimization — activation checkpointing trong ViT</h3>
+
+<p>Có thể ước lượng activation mỗi layer transformer (không recompute, có FlashAttention) bằng công thức ≈ \(34\, s\, h\) byte mỗi sample (\(s\) = số token, \(h\) = hidden; xem <a href="frontier-model-training-vi.html#s-memory-anatomy">memory anatomy</a>).</p>
+
+<div class="callout example"><div class="callout-title">Ví dụ số — ViT ~400M, ảnh 1024 patch</div>
+<ul>
+<li>Mỗi layer: \(34\times1024\times1152\approx 40\) MB mỗi ảnh (hoặc tile).</li>
+<li>27 layer: khoảng 1.08 GB mỗi ảnh.</li>
+<li>Micro-batch có 16 tile: khoảng <b>17 GB</b> chỉ riêng activation của encoder.</li>
+<li>Với full checkpointing (chỉ lưu đầu vào mỗi layer, \(2sh\) byte): \(2\times1024\times1152\times27\approx 64\) MB mỗi ảnh. Đổi lại phải tính forward của encoder thêm một lần, tức compute encoder tăng khoảng 33%.</li>
+</ul>
+</div>
+<p>Quy tắc thực hành: nếu encoder được train và mỗi sample có nhiều tile, bật checkpointing cho các block ViT trước, vì compute encoder thường nhỏ so với LLM nên recompute ở đây rẻ. Nếu encoder bị freeze thì không cần, vì không lưu activation nào.</p>
+
+<h3 id="v3-precision">Optimization — mixed precision cho vision encoder</h3>
+<ul>
+<li>Chạy ViT ở <b>bf16 autocast</b> giống LLM. LayerNorm, softmax và việc nội suy position embedding (khi đổi độ phân giải) nên giữ ở fp32. Autocast của PyTorch tự làm điều này cho LayerNorm và softmax.</li>
+<li>Khi dùng ảnh độ phân giải khác lúc pretrain, position embedding học sẵn phải được <b>nội suy</b> (bicubic) lên lưới mới. Làm việc này ở fp32 rồi mới cast, vì nội suy ở bf16 gây sai số thấy được.</li>
+<li>FP8 cho encoder hiếm khi đáng công. Encoder chiếm phần nhỏ compute, các ma trận nhỏ nên lợi ích FP8 thấp, mà rủi ro numerics lại thêm vào. Nếu dùng FP8 thì ưu tiên cho các linear lớn của LLM trước (xem <a href="frontier-model-training-vi.html#s-mixed-precision">mixed precision</a>).</li>
+</ul>
+
+<h3 id="v3-feature-cache">Optimization — cache feature ảnh khi encoder bị freeze</h3>
+
+<p>Nếu encoder bị freeze <b>và</b> không có augmentation ngẫu nhiên trên ảnh (random crop, color jitter), thì đầu ra của encoder cho mỗi ảnh là cố định. Khi đó ta có thể chạy encoder <b>một lần</b> trên toàn bộ dataset, lưu feature xuống đĩa, rồi lúc train chỉ đọc lại.</p>
+
+<div class="callout example"><div class="callout-title">Ví dụ số — chi phí lưu trữ</div>
+<p>Feature đầu ra của ViT: 1024 token × 1152 chiều × 2 byte (bf16) ≈ <b>2.36 MB mỗi ảnh</b>. Với 1 triệu ảnh là khoảng 2.4 TB, trong khi JPEG gốc thường chỉ vài chục đến vài trăm KB mỗi ảnh. Pixel shuffle chỉ sắp xếp lại phần tử nên không giảm dung lượng. Muốn nhỏ hơn thì phải cache sau projector, nhưng chỉ được làm vậy khi projector cũng bị freeze.</p>
+<p>Lợi ích về compute: với cấu hình ở trường hợp C phía trên (LLM 1.7B, encoder chỉ chạy forward ≈ \(9.5\cdot10^{11}\) FLOPs mỗi sample), cache feature bỏ được khoảng 14% compute mỗi step, đồng thời bỏ luôn khâu decode ảnh trên CPU.</p>
+</div>
+<p><b>Khi nào không nên cache:</b> khi định unfreeze encoder ở giai đoạn sau, khi dùng augmentation, khi số tile phụ thuộc vào cấu hình còn đang ablate, hoặc khi dung lượng/IO đĩa còn đắt hơn compute đã tiết kiệm. Trên cluster, đọc 2.4 TB mỗi epoch có thể chậm hơn chạy lại encoder.</p>
+
+<h3 id="v3-preprocess">Optimization — tiền xử lý ảnh: CPU worker hay GPU</h3>
+
+<p>Mỗi ảnh phải qua các bước: đọc file → <b>decode JPEG/PNG</b> → resize/tile → normalize → chuyển thành tensor. Decode và resize ảnh độ phân giải cao trên CPU rất tốn. Với VLM nhỏ train nhanh, CPU thường <b>không theo kịp</b> GPU.</p>
+<table>
+<thead><tr><th>Cách làm</th><th>Ưu điểm</th><th>Nhược điểm</th></tr></thead>
+<tbody>
+<tr><td>PyTorch DataLoader với nhiều CPU worker</td><td>Đơn giản, linh hoạt</td><td>Giới hạn bởi số core CPU mỗi GPU (thường 8–16 core cho 1 GPU)</td></tr>
+<tr><td>Decode trên GPU: <code>torchvision.io.decode_jpeg(..., device="cuda")</code> hoặc NVIDIA DALI (dùng nvJPEG)</td><td>Giải phóng CPU, decode nhanh</td><td>Tốn một ít memory và compute GPU; pipeline phức tạp hơn</td></tr>
+<tr><td>Tiền xử lý offline: resize sẵn về độ phân giải tối đa sẽ dùng, lưu dạng shard (WebDataset tar)</td><td>Giảm decode lúc train, đọc tuần tự nhanh, tránh hàng triệu file nhỏ</td><td>Cố định chính sách resize; tốn một lần xử lý</td></tr>
+</tbody>
+</table>
+<p>Nên đóng gói ảnh và text vào <b>shard lớn</b> (vài trăm MB đến vài GB mỗi shard) thay vì để từng file ảnh riêng lẻ. Hệ thống file mạng xử lý hàng triệu file nhỏ rất chậm, và đây là một nguyên nhân rất phổ biến khiến GPU "đói" data.</p>
+
+<h3 id="v3-dataloader-debug">Optimization — chẩn đoán nghẽn dataloader</h3>
+<ol>
+<li><b>Đo thời gian chờ data mỗi step:</b> ghi lại thời điểm <code>next(iter)</code> trả về và thời điểm forward bắt đầu. Nếu thời gian chờ chiếm hơn vài phần trăm step time thì dataloader đang nghẽn.</li>
+<li><b>Thử synthetic data:</b> thay batch thật bằng tensor ngẫu nhiên cùng shape. Throughput tăng mạnh nghĩa là nghẽn ở data chứ không phải model.</li>
+<li><b>Xem profiler:</b> trong PyTorch profiler hoặc Nsight, các khoảng trống giữa các kernel trên timeline GPU ở đầu mỗi step là dấu hiệu GPU đang chờ.</li>
+<li><b>Các núm vặn:</b> tăng <code>num_workers</code>, bật <code>pin_memory=True</code>, <code>persistent_workers=True</code>, tăng <code>prefetch_factor</code>; giảm độ phân giải lưu trữ; chuyển decode sang GPU; dùng shard tuần tự.</li>
+<li><b>Kiểm tra cả RAM:</b> mỗi worker giữ một bản dataset index. Index lớn (hàng chục triệu dòng Python object) nhân với 16 worker có thể làm hết RAM. Nên dùng index dạng mảng numpy hoặc Arrow (memory-mapped).</li>
+</ol>
+
+<div class="callout tip"><div class="callout-title">Ý chính</div>
+<p>Thứ tự ưu tiên khi tối ưu throughput VLM: (1) giảm số visual token đưa vào LLM, (2) đảm bảo dataloader không nghẽn, (3) cân bằng compute giữa các rank theo ngân sách token/patch, (4) packing bằng varlen attention, (5) freeze hoặc cache encoder khi recipe cho phép, (6) checkpointing cho ViT nếu thiếu memory.</p>
+</div>
+
+<div class="callout note"><div class="callout-title">Nguồn tham khảo</div>
+<ul>
+<li>The Llama 3 Herd of Models, Meta, 2024, arXiv:2407.21783 (phần vision: model/data heterogeneity, FP32 gradient accumulation).</li>
+<li>Patch n' Pack: NaViT, a Vision Transformer for any Aspect Ratio and Resolution, Google DeepMind, 2023, arXiv:2307.06304.</li>
+<li>Qwen2-VL: Enhancing Vision-Language Model's Perception of the World at Any Resolution, Alibaba, 2024, arXiv:2409.12191.</li>
+<li>LLaVA-OneVision: Easy Visual Task Transfer, 2024, arXiv:2408.03326.</li>
+<li>SmolVLM: Redefining small and efficient multimodal models, Hugging Face, 2025, arXiv:2504.05299.</li>
+<li>FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning, Tri Dao, 2023, arXiv:2307.08691 (varlen API).</li>
+<li>Reducing Activation Recomputation in Large Transformer Models, Korthikanti et al. (NVIDIA), 2022, arXiv:2205.05198.</li>
+<li>NVIDIA DALI documentation; torchvision.io.decode_jpeg (GPU decode).</li>
+</ul>
+</div>
+</section>
+
+<section id="v-eval">
+<h2 id="v-eval-h">Evaluation và inference cho VLM</h2>
+
+<div class="callout tip"><div class="callout-title">Đọc nhanh</div>
+<ul>
+<li>Không có benchmark nào đo được "VLM tốt" nói chung. Cần một bộ benchmark phủ các năng lực: hiểu tài liệu/OCR, biểu đồ, toán trong ảnh, kiến thức chuyên môn, hallucination, video.</li>
+<li>Nhiều câu hỏi trong benchmark VLM <b>trả lời được mà không cần nhìn ảnh</b>. Luôn chạy thêm bản "mù" (không có ảnh) để biết model có thật sự dùng ảnh hay không.</li>
+<li>Điểm số phụ thuộc mạnh vào prompt và cách trích đáp án. Dùng một framework chung (lmms-eval, VLMEvalKit) để so sánh công bằng.</li>
+<li>Khi chạy inference, visual token làm phần prefill phình to. Giảm visual token, cache feature của ảnh lặp lại và batching encoder là các cách tăng tốc chính.</li>
+</ul>
+</div>
+
+<h3 id="v3-bench-families">Các nhóm benchmark và mỗi cái đo gì</h3>
+
+<table>
+<thead><tr><th>Benchmark</th><th>Nhóm năng lực</th><th>Đo cái gì / định dạng</th></tr></thead>
+<tbody>
+<tr><td><b>MMMU</b></td><td>Kiến thức chuyên môn + reasoning</td><td>Khoảng 11.5K câu hỏi trình độ đại học thuộc 30 môn, 6 lĩnh vực lớn (khoa học, kỹ thuật, y, nghệ thuật, kinh doanh, xã hội). Ảnh là biểu đồ, sơ đồ, bản nhạc, ảnh y khoa... Chủ yếu trắc nghiệm.</td></tr>
+<tr><td><b>MathVista</b></td><td>Toán trong ngữ cảnh hình ảnh</td><td>Bài toán cần đọc hình học, đồ thị, bảng, hình minh hoạ. Kết hợp nhiều dataset có sẵn với dataset mới.</td></tr>
+<tr><td><b>DocVQA</b></td><td>Hiểu tài liệu</td><td>Hỏi đáp trên ảnh scan tài liệu (form, thư, báo cáo). Metric là ANLS (độ tương đồng chuỗi, cho phép sai lệch nhỏ).</td></tr>
+<tr><td><b>ChartQA</b></td><td>Biểu đồ</td><td>Hỏi về giá trị và so sánh trên biểu đồ, có câu cần tính toán. Metric "relaxed accuracy" (chấp nhận sai số số học 5%).</td></tr>
+<tr><td><b>TextVQA</b></td><td>Đọc chữ trong ảnh tự nhiên</td><td>Biển hiệu, nhãn sản phẩm... Câu trả lời thường chính là đoạn chữ trong ảnh.</td></tr>
+<tr><td><b>OCRBench</b></td><td>OCR tổng hợp</td><td>1000 câu hỏi thuộc nhiều loại tác vụ OCR (nhận dạng chữ, scene text VQA, document VQA, key information extraction, chữ viết tay của biểu thức toán).</td></tr>
+<tr><td><b>AI2D</b></td><td>Sơ đồ khoa học</td><td>Trắc nghiệm trên sơ đồ khoa học cấp phổ thông (vòng đời, chuỗi thức ăn...).</td></tr>
+<tr><td><b>MMBench</b></td><td>Tổng hợp perception + reasoning</td><td>Trắc nghiệm nhiều kỹ năng, dùng <b>CircularEval</b>: hoán vị vòng các đáp án, model chỉ được tính đúng nếu đúng ở mọi hoán vị, nhằm loại trừ đoán mò và bias vị trí.</td></tr>
+<tr><td><b>MME</b></td><td>Perception + cognition</td><td>Câu hỏi yes/no thuộc 14 subtask (đếm, vị trí, màu, OCR, người nổi tiếng, tính toán...).</td></tr>
+<tr><td><b>MMStar</b></td><td>Năng lực thật sự cần nhìn ảnh</td><td>1500 sample được lọc thủ công sao cho <b>bắt buộc phải nhìn ảnh</b> mới trả lời được và ít khả năng bị leak vào data train.</td></tr>
+<tr><td><b>POPE</b></td><td>Object hallucination</td><td>Câu hỏi "Trong ảnh có X không?". Object âm được chọn theo ba cách: random, popular (vật thể phổ biến) và adversarial (vật thể hay xuất hiện cùng). Model hallucinate sẽ nói "có" quá nhiều.</td></tr>
+<tr><td><b>RealWorldQA</b></td><td>Hiểu không gian thực tế</td><td>Do xAI phát hành: ảnh thực tế (nhiều ảnh từ xe), hỏi về vị trí, khoảng cách, hướng.</td></tr>
+<tr><td><b>Video-MME</b></td><td>Hiểu video</td><td>Trắc nghiệm trên video ngắn, trung bình và dài, có thể kèm phụ đề và âm thanh.</td></tr>
+<tr><td><b>BLINK</b></td><td>Perception "thị giác thuần"</td><td>14 tác vụ mà con người giải "trong chớp mắt" (độ sâu tương đối, tương ứng điểm giữa hai ảnh, phản chiếu, ghép mảnh...). VLM thường kém xa con người ở đây.</td></tr>
+</tbody>
+</table>
+
+<div class="callout tip"><div class="callout-title">Ý chính — chọn bộ eval</div>
+<p>Một bộ tối thiểu để theo dõi trong lúc phát triển nên có: <b>1 benchmark document/OCR</b> (DocVQA hoặc OCRBench), <b>1 biểu đồ</b> (ChartQA), <b>1 kiến thức + reasoning</b> (MMMU), <b>1 toán</b> (MathVista), <b>1 hallucination</b> (POPE), <b>1 bộ "bắt buộc nhìn ảnh"</b> (MMStar), cộng video nếu model hỗ trợ. Áp dụng tiêu chí chọn eval ở <a href="frontier-model-training-vi.html#a-eval-criteria">tài liệu LLM</a>: eval phải có tín hiệu sớm, ít nhiễu và phân biệt được các ablation.</p>
+</div>
+
+<h3 id="v3-eval-pitfalls">Những cái bẫy khi đánh giá VLM</h3>
+
+<h4>1. Câu hỏi giải được mà không cần nhìn ảnh</h4>
+<p>Đây là động lực chính của MMStar. Nhóm tác giả chỉ ra hai vấn đề trong nhiều benchmark: (a) <b>visual content không cần thiết</b>, khi đáp án suy ra được từ câu hỏi, đáp án hoặc kiến thức chung; (b) <b>data leakage</b>, khi LLM nền đã thấy câu hỏi lúc train nên trả lời được mà không cần ảnh. Kiểm tra đơn giản nhất là chạy model (và cả LLM nền) <b>không đưa ảnh</b>. Điểm của bản mù càng gần điểm thật thì benchmark càng ít đo năng lực thị giác.</p>
+
+<h4>2. Prompt và cách trích đáp án</h4>
+<ul>
+<li>Cùng một model có thể chênh vài điểm chỉ do thêm câu "Answer with the option's letter from the given choices directly." hay không.</li>
+<li>Câu trả lời tự do phải được trích ra (regex, so khớp) hoặc nhờ một LLM chấm. Regex yếu sẽ chấm sai các câu trả lời đúng nhưng định dạng lạ, đặc biệt với reasoning model trả lời dài.</li>
+<li>Metric khác nhau giữa các benchmark: exact match, ANLS, relaxed accuracy, CircularEval. So số liệu giữa các paper chỉ có nghĩa khi cùng cài đặt.</li>
+</ul>
+
+<h4>3. Contamination</h4>
+<p>Nhiều dataset train (đặc biệt là các bộ tổng hợp lớn cho instruction tuning) chứa ảnh hoặc câu hỏi từ split train của chính benchmark, đôi khi cả split test. Cần dedup ảnh (perceptual hash) và câu hỏi (n-gram) giữa data train và eval, giống quy trình decontamination cho text (xem <a href="frontier-model-training-vi.html#dt-pii-decontam">PII và decontamination</a>).</p>
+
+<h4>4. Dùng LLM-as-judge</h4>
+<p>Với câu trả lời dài (mô tả ảnh, open-ended QA), nhiều benchmark dùng một LLM mạnh để chấm. Cần lưu ý: judge có thiên vị độ dài và văn phong, phiên bản judge thay đổi thì điểm thay đổi, và judge chỉ đọc text nên không tự kiểm chứng được nội dung ảnh trừ khi được cho đáp án tham chiếu. Nên cố định model judge, ghi rõ phiên bản và dùng rubric cụ thể.</p>
+
+<h3 id="v3-eval-tooling">Công cụ đánh giá</h3>
+<ul>
+<li><b>lmms-eval</b> (LMMs-Lab): mở rộng tinh thần của lm-evaluation-harness sang đa phương thức. Hỗ trợ rất nhiều benchmark ảnh và video, chạy được với nhiều họ model.</li>
+<li><b>VLMEvalKit</b> (OpenCompass): toolkit đánh giá VLM, dùng cho OpenCompass leaderboard. Hỗ trợ trích đáp án bằng LLM khi regex thất bại.</li>
+</ul>
+<p>Thực hành tốt: chạy cùng một framework, cùng prompt, cùng cách trích đáp án cho mọi checkpoint cần so sánh, và lưu lại toàn bộ output thô để soi lỗi về sau.</p>
+
+<h3 id="v3-inference-cost">Inference VLM: visual token làm prefill phình to</h3>
+
+<p>Inference LLM có hai pha: <b>prefill</b> (xử lý toàn bộ prompt một lần, compute-bound) và <b>decode</b> (sinh từng token, memory-bound). Chi tiết xem ở <a href="inference-deploy-vi.html">tài liệu Inference &amp; Deploy</a>. Với VLM, prompt có thêm visual token:</p>
+<ul>
+<li>Một ảnh dùng AnyRes kiểu LLaVA-NeXT (ảnh gốc + 4 tile 336px) tốn 2880 token, nhiều hơn hầu hết prompt text. Prefill vì vậy chiếm phần lớn <b>time-to-first-token (TTFT)</b>.</li>
+<li>Thêm vào đó là thời gian chạy <b>vision encoder</b> và tiền xử lý ảnh (decode, resize) trước khi LLM bắt đầu.</li>
+<li>Visual token cũng nằm trong <b>KV cache</b> suốt quá trình decode, chiếm memory và giảm số request chạy đồng thời được.</li>
+</ul>
+
+<div class="callout example"><div class="callout-title">Ví dụ số — KV cache của visual token</div>
+<p>LLM kiểu 7–8B với 32 layer, GQA 8 KV head, head dim 128, bf16: KV cache mỗi token = \(2\times32\times8\times128\times2 = 131072\) byte ≈ 128 KB. Một ảnh 2880 token chiếm khoảng <b>360 MB</b> KV cache. Nếu giảm xuống 64 token mỗi ảnh (pixel shuffle mạnh), chỉ còn khoảng 8 MB.</p>
+</div>
+
+<h3 id="v3-infer-opt">Optimization — tăng tốc inference cho VLM</h3>
+
+<h4>1. Giảm visual token ngay từ thiết kế</h4>
+<p>Cách hiệu quả nhất là chọn kiến trúc có ít token mỗi ảnh: pixel shuffle hoặc token merge 2×2 (như Qwen2-VL), giới hạn số tile hoặc tổng pixel. Lựa chọn này phải làm từ lúc train, vì model chỉ quen với số token đã thấy khi train.</p>
+
+<h4>2. Giảm visual token lúc inference (training-free)</h4>
+<ul>
+<li><b>FastV</b> quan sát rằng sau vài layer đầu, attention dành cho visual token rất thấp. Họ cắt bớt (prune) phần lớn visual token sau layer 2 dựa trên attention score, giảm đáng kể FLOPs mà chất lượng giảm ít trên nhiều tác vụ. Paper có tên "An Image is Worth 1/2 Tokens After Layer 2".</li>
+<li><b>Token Merging (ToMe)</b> gộp các token tương tự nhau trong ViT để tăng tốc encoder.</li>
+<li>Rủi ro: các tác vụ cần chi tiết nhỏ (OCR dày đặc, tài liệu, biểu đồ) thường giảm điểm rõ hơn. Luôn đo trên DocVQA/ChartQA trước khi bật.</li>
+</ul>
+
+<h4>3. Cache cho ảnh lặp lại</h4>
+<ul>
+<li><b>Encoder cache:</b> trong hội thoại nhiều lượt, cùng một ảnh xuất hiện lại ở mọi lượt. Lưu đầu ra encoder theo hash của ảnh để không chạy lại encoder.</li>
+<li><b>Prefix caching:</b> nếu prefix (system prompt + ảnh) giống nhau giữa các request, KV cache của prefix đó có thể dùng lại. Với VLM, khoá cache phải bao gồm <b>hash nội dung ảnh</b>, vì hai ảnh khác nhau có cùng chuỗi placeholder token. Các engine như vLLM dùng hash của dữ liệu đa phương thức cho mục đích này.</li>
+</ul>
+
+<h4>4. Batching encoder và tách pha</h4>
+<ul>
+<li>Gom ảnh của nhiều request để chạy encoder theo batch, tránh chạy từng ảnh một (kém hiệu quả trên GPU).</li>
+<li>Prefill dài vì visual token có thể chặn các request đang decode. <b>Chunked prefill</b> chia prefill thành từng phần để xen kẽ với decode, giữ latency decode ổn định.</li>
+<li>Trong hệ thống lớn, có thể tách encoder ra máy hoặc GPU riêng (encoder disaggregation) để scale độc lập với LLM.</li>
+</ul>
+
+<h4>5. Quantization: encoder khác LLM</h4>
+<ul>
+<li><b>LLM</b> chiếm phần lớn weights và memory bandwidth khi decode, nên quantize LLM (INT4/INT8 weight-only, FP8) mang lại lợi ích lớn nhất.</li>
+<li><b>Vision encoder</b> nhỏ và chủ yếu ảnh hưởng prefill. Quantize nó ít lợi hơn, mà rủi ro mất độ chính xác ở các tác vụ chi tiết (OCR) lại cao hơn. Thực hành phổ biến là giữ encoder ở bf16 hoặc FP8, quantize LLM mạnh hơn.</li>
+<li>Luôn đánh giá lại trên benchmark OCR/document sau khi quantize, vì chúng nhạy nhất với sai số.</li>
+</ul>
+
+<h4>6. Serving engine</h4>
+<p><b>vLLM</b> và <b>SGLang</b> đều hỗ trợ nhiều họ VLM (LLaVA, Qwen-VL, InternVL, Idefics, Gemma 3...), với PagedAttention, continuous batching và prefix caching áp dụng cho cả visual token. Khi tự triển khai, cần kiểm tra: giới hạn số ảnh mỗi prompt, giới hạn độ phân giải hoặc số pixel, và phần tiền xử lý ảnh của engine có khớp với processor dùng lúc train không. Lệch tiền xử lý (resize, normalize, số tile) là nguồn lỗi chất lượng âm thầm rất phổ biến.</p>
+
+<div class="callout warn"><div class="callout-title">Cái bẫy hay gặp</div>
+<p>Model train với chính sách tile A nhưng serve với processor mặc định của thư viện dùng chính sách B. Model vẫn chạy và vẫn trả lời "nghe có lý", nhưng điểm DocVQA có thể tụt mạnh. Hãy đưa processor config vào cùng checkpoint và kiểm thử end-to-end trên vài benchmark sau khi deploy.</p>
+</div>
+
+<div class="callout note"><div class="callout-title">Nguồn tham khảo</div>
+<ul>
+<li>MMMU, Yue et al., 2023, arXiv:2311.16502.</li>
+<li>MathVista, Lu et al., 2023, arXiv:2310.02255.</li>
+<li>DocVQA: A Dataset for VQA on Document Images, Mathew et al., 2020, arXiv:2007.00398.</li>
+<li>ChartQA, Masry et al., 2022, arXiv:2203.10244.</li>
+<li>Towards VQA Models That Can Read (TextVQA), Singh et al., 2019, arXiv:1904.08920.</li>
+<li>OCRBench (On the Hidden Mystery of OCR in Large Multimodal Models), Liu et al., 2023, arXiv:2305.07895.</li>
+<li>A Diagram Is Worth A Dozen Images (AI2D), Kembhavi et al., 2016, arXiv:1603.07396.</li>
+<li>MMBench, Liu et al., 2023, arXiv:2307.06281.</li>
+<li>MME, Fu et al., 2023, arXiv:2306.13394.</li>
+<li>Are We on the Right Way for Evaluating Large Vision-Language Models? (MMStar), Chen et al., 2024, arXiv:2403.20330.</li>
+<li>Evaluating Object Hallucination in Large Vision-Language Models (POPE), Li et al., 2023, arXiv:2305.10355.</li>
+<li>Video-MME, Fu et al., 2024, arXiv:2405.21075.</li>
+<li>BLINK: Multimodal Large Language Models Can See but Not Perceive, Fu et al., 2024, arXiv:2404.12390.</li>
+<li>RealWorldQA, xAI, 2024 (phát hành cùng Grok-1.5V).</li>
+<li>LMMs-Eval: Reality Check on the Evaluation of Large Multimodal Models, 2024, arXiv:2407.12772.</li>
+<li>VLMEvalKit, OpenCompass, 2024, arXiv:2407.11691.</li>
+<li>An Image is Worth 1/2 Tokens After Layer 2 (FastV), Chen et al., 2024, arXiv:2403.06764.</li>
+<li>Token Merging: Your ViT But Faster, Bolya et al., 2022, arXiv:2210.09461.</li>
+</ul>
+</div>
+</section>
+
+<section id="v-takeaways">
+<h2 id="v-takeaways-h">Tổng kết, lộ trình học và tài liệu VLM</h2>
+
+<div class="callout tip"><div class="callout-title">Đọc nhanh</div>
+<ul>
+<li>Một VLM nhỏ thực tế gồm: vision encoder pretrain sẵn (SigLIP) + LLM nhỏ + connector MLP có pixel shuffle.</li>
+<li>Train theo giai đoạn: căn chỉnh connector → train rộng trên caption/OCR/interleaved → instruction tuning → (tuỳ chọn) preference/RL.</li>
+<li>Chất lượng LLM nền và chất lượng data quan trọng hơn hầu hết lựa chọn kiến trúc.</li>
+<li>Các lỗi hay gặp: lệch tiền xử lý ảnh giữa train và serve, loss mask sai, quá nhiều visual token, benchmark không thật sự cần nhìn ảnh.</li>
+</ul>
+</div>
+
+<h3 id="v3-recipe">Recipe thực hành: xây một VLM nhỏ</h3>
+
+<p>Recipe dưới đây tổng hợp từ các paper mở có mô tả chi tiết (Idefics2/3, SmolVLM, LLaVA-1.5/OneVision, Molmo). Đây là một điểm xuất phát hợp lý, không phải cấu hình tối ưu duy nhất.</p>
+
+<h4>Kiến trúc</h4>
+<table>
+<thead><tr><th>Thành phần</th><th>Lựa chọn khởi điểm</th><th>Ghi chú</th></tr></thead>
+<tbody>
+<tr><td>Vision encoder</td><td>SigLIP (base patch16 cho model rất nhỏ, SO400M cho model lớn hơn)</td><td>Các nghiên cứu so sánh thường thấy SigLIP tốt hơn CLIP ở cùng kích thước khi dùng làm encoder cho VLM.</td></tr>
+<tr><td>LLM</td><td>LLM nhỏ đã qua instruction tuning hoặc base tốt (vd SmolLM2, Qwen2.5 cỡ 0.5–3B)</td><td>Idefics2 thấy rằng với cùng ngân sách tham số, LLM nền tốt hơn mang lại nhiều lợi ích hơn encoder tốt hơn.</td></tr>
+<tr><td>Connector</td><td>Pixel shuffle + MLP 2 layer (GELU)</td><td>Đơn giản, hiệu quả. Model nhỏ hưởng lợi từ pixel shuffle mạnh hơn (SmolVLM).</td></tr>
+<tr><td>Độ phân giải</td><td>Chia ảnh thành tile + một ảnh thumbnail toàn cục</td><td>Rất quan trọng cho OCR/tài liệu; đổi lại số token tăng.</td></tr>
+<tr><td>Kiểu fusion</td><td>Fully autoregressive (visual token chèn thẳng vào chuỗi LLM)</td><td>Idefics2 thấy kiểu này tốt hơn cross-attention khi các backbone được unfreeze.</td></tr>
+</tbody>
+</table>
+
+<h4>Các giai đoạn train</h4>
+<ol>
+<li><b>Alignment (căn chỉnh connector).</b> Freeze encoder và LLM, chỉ train connector trên cặp ảnh-caption (vd caption chất lượng cao kiểu ShareGPT4V hoặc PixMo). Mục tiêu là đưa visual feature về "ngôn ngữ" mà LLM hiểu. Giai đoạn này rẻ về optimizer state, nhưng xem lại cảnh báo về activation ở mục <a href="#v3-freezing">freeze từng phần</a>.</li>
+<li><b>Pre-training đa phương thức.</b> Unfreeze LLM (full hoặc LoRA) và thường cả encoder với LR nhỏ. Train trên hỗn hợp: caption, tài liệu interleaved ảnh-text (vd OBELICS), OCR và tài liệu (vd Docmatix), biểu đồ, cùng một phần text thuần để giữ năng lực ngôn ngữ.</li>
+<li><b>Instruction tuning (SFT).</b> Data dạng hội thoại hỏi-đáp về ảnh: The Cauldron, dữ liệu của LLaVA-OneVision, Cambrian-10M... Chỉ tính loss trên câu trả lời.</li>
+<li><b>(Tuỳ chọn) Preference / RL.</b> DPO hoặc RL với reward kiểm chứng được (toán trong ảnh, grounding) để giảm hallucination và tăng reasoning. Lý thuyết giống LLM, xem <a href="frontier-model-training-vi.html#e-po">preference optimization</a> và <a href="frontier-model-training-vi.html#e-rl">RL</a>.</li>
+</ol>
+
+<h4>Data — những điểm đáng nhớ</h4>
+<ul>
+<li><b>Caption dày đặc, chất lượng cao</b> có giá trị hơn nhiều so với alt-text ngắn từ web. Molmo thu thập caption chi tiết bằng cách cho người chú thích <b>mô tả ảnh bằng giọng nói</b> rồi chuyển thành văn bản, và không distill từ VLM độc quyền.</li>
+<li><b>OCR/tài liệu/biểu đồ</b> là loại data đem lại cải thiện lớn cho các benchmark "đọc", và cần độ phân giải đủ cao.</li>
+<li><b>Giữ text thuần trong mixture</b> để tránh suy giảm năng lực ngôn ngữ. Tỉ lệ tối ưu cần ablate, và SmolVLM ghi nhận rằng với model rất nhỏ, tái dùng data SFT text của LLM không phải lúc nào cũng có lợi.</li>
+<li><b>Cân bằng nguồn data</b>: Cambrian-1 nhấn mạnh rằng việc cân bằng tỉ lệ các nguồn trong data instruction có ảnh hưởng rõ đến kết quả.</li>
+</ul>
+
+<h3 id="v3-mistakes">Những lỗi hay gặp</h3>
+<table>
+<thead><tr><th>Lỗi</th><th>Triệu chứng</th><th>Cách phòng</th></tr></thead>
+<tbody>
+<tr><td>Lệch tiền xử lý ảnh giữa train và inference</td><td>Model trả lời trôi chảy nhưng điểm OCR/doc tụt mạnh</td><td>Lưu processor config cùng checkpoint; test end-to-end sau khi deploy</td></tr>
+<tr><td>Loss mask sai (tính loss trên prompt hoặc visual placeholder)</td><td>Loss thấp bất thường, model hay lặp lại câu hỏi</td><td>In ra và kiểm tra mask của vài sample trước khi train</td></tr>
+<tr><td>Packing không có varlen attention</td><td>Chất lượng giảm nhẹ, khó phát hiện</td><td>Dùng <code>cu_seqlens</code>, reset position id</td></tr>
+<tr><td>Quá nhiều visual token</td><td>Train chậm, OOM thất thường, context bị lấp đầy</td><td>Pixel shuffle, giới hạn tile/pixel</td></tr>
+<tr><td>Unfreeze encoder với LR quá lớn</td><td>Loss dao động, mất năng lực thị giác tổng quát</td><td>LR riêng nhỏ hơn cho encoder; warmup</td></tr>
+<tr><td>Đánh giá bằng benchmark không cần nhìn ảnh</td><td>Điểm tăng nhưng năng lực thị giác không tăng</td><td>Chạy bản "mù"; theo dõi MMStar/BLINK</td></tr>
+<tr><td>Contamination với benchmark</td><td>Điểm cao bất thường trên một benchmark riêng lẻ</td><td>Dedup ảnh (perceptual hash) và câu hỏi giữa train và eval</td></tr>
+<tr><td>Dataloader nghẽn</td><td>GPU utilization thấp, step time dao động</td><td>Đo thời gian chờ data, dùng shard, decode trên GPU</td></tr>
+</tbody>
+</table>
+
+<h3 id="v3-roadmap">Lộ trình học gợi ý</h3>
+<ol>
+<li><b>Nền tảng thị giác:</b> CNN → ViT (ảnh là chuỗi patch) → contrastive learning (CLIP, SigLIP). Khoá Stanford CS231n và Hugging Face Computer Vision Course là điểm bắt đầu tốt.</li>
+<li><b>Kiến trúc VLM:</b> đọc Flamingo (cross-attention), BLIP-2 (Q-Former), rồi LLaVA (MLP projector đơn giản), theo đúng thứ tự lịch sử để hiểu vì sao kiến trúc đơn giản lại thắng.</li>
+<li><b>Những gì thật sự quan trọng:</b> Idefics2 ("What matters...") và Cambrian-1, hai bài ablation có hệ thống.</li>
+<li><b>Hệ thống hiện đại:</b> Qwen2.5-VL, InternVL3, Molmo, SmolVLM để thấy dynamic resolution, data pipeline và recipe đầy đủ.</li>
+<li><b>Tự làm:</b> đọc và chạy <b>nanoVLM</b> của Hugging Face (VLM tối giản bằng PyTorch thuần) để hiểu từng dòng code của encoder, connector và training loop.</li>
+</ol>
+
+<h3 id="v3-reading-list">Danh sách tài liệu chọn lọc</h3>
+
+<h4>Blog và khoá học</h4>
+<ul>
+<li><b>Vision Language Models Explained</b> (Hugging Face blog, 2024): tổng quan dễ đọc về VLM, cách chọn model, benchmark và fine-tune.</li>
+<li><b>Vision Language Models (Better, Faster, Stronger)</b> (Hugging Face blog, 2025): cập nhật các xu hướng mới (any-to-any, reasoning, model nhỏ, video, agent).</li>
+<li><b>Generalized Visual Language Models</b> (Lilian Weng, 2022): phân loại các cách ghép vision vào LM, nền tảng lịch sử tốt.</li>
+<li><b>nanoVLM</b> (Hugging Face, GitHub): code VLM tối giản để học bằng cách đọc và chạy.</li>
+<li><b>Stanford CS231n</b>: nền tảng deep learning cho thị giác máy tính.</li>
+</ul>
+
+<h4>Paper nền tảng</h4>
+<ul>
+<li><b>An Image is Worth 16x16 Words (ViT)</b>, Google, 2020, arXiv:2010.11929: biểu diễn ảnh thành chuỗi patch cho Transformer.</li>
+<li><b>CLIP</b>, OpenAI, 2021, arXiv:2103.00020: học ảnh và text chung một không gian bằng contrastive loss softmax trên 400M cặp ảnh-text.</li>
+<li><b>SigLIP</b> (Sigmoid Loss for Language Image Pre-Training), Google, 2023, arXiv:2303.15343: thay softmax bằng sigmoid loss theo cặp, scale batch tốt hơn. Đây là encoder phổ biến nhất cho VLM mở hiện nay.</li>
+<li><b>Flamingo</b>, DeepMind, 2022, arXiv:2204.14198: Perceiver Resampler + gated cross-attention, few-shot đa phương thức với dữ liệu interleaved.</li>
+<li><b>BLIP-2</b>, Salesforce, 2023, arXiv:2301.12597: Q-Former nối encoder và LLM đều bị freeze.</li>
+</ul>
+
+<h4>Paper về recipe và ablation</h4>
+<ul>
+<li><b>LLaVA</b> (Visual Instruction Tuning), 2023, arXiv:2304.08485, và <b>LLaVA-1.5</b> (Improved Baselines), arXiv:2310.03744: projector MLP đơn giản cùng instruction data sinh bằng GPT-4, trở thành baseline chuẩn.</li>
+<li><b>What matters when building vision-language models? (Idefics2)</b>, Hugging Face, 2024, arXiv:2405.02246: ablation có hệ thống về backbone, kiểu fusion, pooling token và độ phân giải.</li>
+<li><b>Building and better understanding vision-language models (Idefics3)</b>, Hugging Face, 2024, arXiv:2408.12637: pixel shuffle, dataset Docmatix.</li>
+<li><b>Cambrian-1</b>, NYU, 2024, arXiv:2406.16860: nghiên cứu "vision-centric", so sánh nhiều encoder, đề xuất Spatial Vision Aggregator và benchmark CV-Bench.</li>
+<li><b>Molmo and PixMo</b>, AI2, 2024, arXiv:2409.17146: data mở hoàn toàn, caption bằng giọng nói, dữ liệu pointing.</li>
+<li><b>SmolVLM</b>, Hugging Face, 2025, arXiv:2504.05299: các bài học khi thiết kế VLM rất nhỏ chạy được trên thiết bị.</li>
+<li><b>PaliGemma</b>, Google, 2024, arXiv:2407.07726: VLM nhỏ dễ fine-tune cho tác vụ chuyên biệt.</li>
+</ul>
+
+<h4>Technical report của model mạnh</h4>
+<ul>
+<li><b>Qwen2-VL</b>, 2024, arXiv:2409.12191: naive dynamic resolution, M-RoPE.</li>
+<li><b>Qwen2.5-VL</b>, 2025, arXiv:2502.13923: window attention trong ViT, grounding bằng toạ độ tuyệt đối, hiểu video dài.</li>
+<li><b>InternVL3</b>, 2025, arXiv:2504.10479: native multimodal pre-training, recipe quy mô lớn.</li>
+<li><b>The Llama 3 Herd of Models</b>, Meta, 2024, arXiv:2407.21783: phần vision dùng cross-attention adapter, có thảo luận về hệ thống train.</li>
+</ul>
+
+<div class="callout note"><div class="callout-title">Nguồn tham khảo</div>
+<ul>
+<li>Toàn bộ các tài liệu trong danh sách trên.</li>
+<li>LLaVA-OneVision: Easy Visual Task Transfer, 2024, arXiv:2408.03326.</li>
+<li>OBELICS: An Open Web-Scale Filtered Dataset of Interleaved Image-Text Documents, Hugging Face, 2023, arXiv:2306.16527.</li>
+</ul>
+</div>
+</section>
+
+<section id="v-glossary">
+<h2 id="v-glossary-h">Bảng thuật ngữ</h2>
+<table>
+<thead><tr><th>Thuật ngữ</th><th>Giải thích</th></tr></thead>
+<tbody>
+<tr><td>2D RoPE</td><td>RoPE cho ảnh: một nửa chiều xoay theo toạ độ hàng, nửa còn lại theo toạ độ cột.</td></tr>
+<tr><td>[CLS] token</td><td>Token học được đặt đầu chuỗi, dùng làm đại diện cho cả ảnh khi pre-train/phân loại.</td></tr>
+<tr><td>Alignment stage (projector warm-up)</td><td>Giai đoạn đầu train VLM: đóng băng ViT và LLM, chỉ train projector trên cặp ảnh–caption.</td></tr>
+<tr><td>Alt-text</td><td>Văn bản thay thế gắn với ảnh trên web; nguồn caption quy mô lớn nhưng rất nhiễu.</td></tr>
+<tr><td>ANLS</td><td>Average Normalized Levenshtein Similarity, metric chấm đáp án chuỗi cho DocVQA, cho phép sai khác nhỏ.</td></tr>
+<tr><td>AnyRes / dynamic tiling</td><td>Cắt ảnh độ phân giải cao thành nhiều ô theo lưới hợp tỉ lệ, encode từng ô, kèm ảnh thu nhỏ toàn cảnh.</td></tr>
+<tr><td>AnyRes / image splitting</td><td>Chia ảnh độ phân giải cao thành nhiều ô, encode từng ô để giữ chi tiết.</td></tr>
+<tr><td>AnyRes / tiling</td><td>Chia ảnh độ phân giải cao thành nhiều tile cộng một ảnh thumbnail toàn cục; mỗi tile đi qua encoder riêng.</td></tr>
+<tr><td>Blind evaluation</td><td>Chạy benchmark mà không đưa ảnh để kiểm tra câu hỏi có thật sự cần thông tin thị giác.</td></tr>
+<tr><td>C-Abstractor</td><td>Connector dạng convolution + pooling giữ tính cục bộ không gian (Honeybee).</td></tr>
+<tr><td>CHAIR</td><td>Metric đo tỉ lệ vật thể bịa trong caption sinh tự do (theo nhãn COCO).</td></tr>
+<tr><td>CircularEval</td><td>Cách chấm của MMBench: hoán vị vòng các lựa chọn, chỉ tính đúng nếu đúng ở mọi hoán vị.</td></tr>
+<tr><td>CLIP score filtering</td><td>Lọc cặp ảnh–text theo độ tương đồng cosine giữa embedding CLIP của ảnh và của text.</td></tr>
+<tr><td>CLIP</td><td>Phương pháp pre-train ghép đôi ảnh–caption bằng contrastive softmax loss (OpenAI 2021).</td></tr>
+<tr><td>Connector / projector / adapter</td><td>Khối nối vision encoder với LLM: đổi số chiều và thường nén số token ảnh.</td></tr>
+<tr><td>Contrastive loss / InfoNCE</td><td>Loss kéo cặp đúng lại gần và đẩy các cặp sai trong batch ra xa, dạng cross-entropy trên ma trận độ tương đồng.</td></tr>
+<tr><td>CSAM filtering</td><td>Đối chiếu dữ liệu với cơ sở dữ liệu hash nội dung lạm dụng trẻ em để loại bỏ; bắt buộc với dataset web.</td></tr>
+<tr><td>Differential learning rate</td><td>Dùng learning rate khác nhau cho từng khối (ViT nhỏ, projector lớn) qua các param group.</td></tr>
+<tr><td>DINOv2</td><td>Vision encoder self-supervised (không dùng text) của Meta, mạnh về đặc trưng không gian.</td></tr>
+<tr><td>Docmatix</td><td>Dataset document QA lớn của Hugging Face (Idefics3), sinh QA từ text trích của PDF.</td></tr>
+<tr><td>Dynamic / native resolution</td><td>Đưa ảnh vào encoder ở gần độ phân giải gốc, số patch thay đổi theo kích thước ảnh (NaViT, Qwen2-VL).</td></tr>
+<tr><td>Early fusion</td><td>Kiến trúc trộn ảnh và text ngay từ input dưới dạng token rời rạc chung một vocab (Chameleon).</td></tr>
+<tr><td>Encoder cache</td><td>Lưu đầu ra vision encoder theo hash ảnh để dùng lại khi ảnh lặp lại giữa các lượt/request.</td></tr>
+<tr><td>Encoder disaggregation</td><td>Chạy vision encoder trên tài nguyên tách biệt với LLM để scale độc lập khi serving.</td></tr>
+<tr><td>Encoder-free VLM</td><td>VLM không có vision encoder; patch pixel được chiếu tuyến tính thẳng vào LLM (Fuyu, EVE).</td></tr>
+<tr><td>FastV</td><td>Phương pháp training-free cắt bớt visual token sau vài layer đầu của LLM dựa trên attention score.</td></tr>
+<tr><td>Feature caching (encoder)</td><td>Chạy encoder bị freeze một lần trên dataset, lưu feature để không phải chạy lại khi train.</td></tr>
+<tr><td>Fully autoregressive VLM</td><td>Kiểu fusion chèn visual token thẳng vào chuỗi đầu vào của LLM (LLaVA, Idefics2), khác với kiểu cross-attention (Flamingo, Llama 3 V).</td></tr>
+<tr><td>Gated cross-attention (tanh gating)</td><td>Layer cross-attn chèn vào LLM với cổng tanh(α), α khởi tạo 0 để ban đầu là hàm đồng nhất.</td></tr>
+<tr><td>Grounding</td><td>Liên kết ngôn ngữ với vị trí trong ảnh (bounding box, điểm).</td></tr>
+<tr><td>Interleaved data</td><td>Tài liệu có ảnh xen giữa văn bản (OBELICS, MMC4, MINT-1T).</td></tr>
+<tr><td>lmms-eval / VLMEvalKit</td><td>Hai framework mã nguồn mở để đánh giá VLM trên nhiều benchmark với cài đặt thống nhất.</td></tr>
+<tr><td>Location token</td><td>Token rời rạc thêm vào vocab để biểu diễn toạ độ (vd &lt;loc0000&gt;–&lt;loc1023&gt; của PaliGemma).</td></tr>
+<tr><td>M-RoPE (Multimodal RoPE)</td><td>RoPE tách ba thành phần thời gian/cao/rộng dùng trong LLM của Qwen2-VL; với text thì tương đương RoPE 1D.</td></tr>
+<tr><td>M-RoPE</td><td>Multimodal RoPE của Qwen2-VL: tách vị trí thành các thành phần thời gian, chiều cao, chiều rộng.</td></tr>
+<tr><td>MLP projector</td><td>Connector gồm vài lớp tuyến tính + GELU áp dụng riêng cho từng patch (LLaVA-1.5).</td></tr>
+<tr><td>MPO (Mixed Preference Optimization)</td><td>Kết hợp DPO, loss chất lượng tuyệt đối (BCO) và loss SFT; dùng trong InternVL.</td></tr>
+<tr><td>NaFlex</td><td>Biến thể SigLIP 2 nhận ảnh ở tỉ lệ khung hình gốc với số patch linh hoạt.</td></tr>
+<tr><td>Native dynamic resolution</td><td>ViT nhận ảnh ở kích thước gốc (nhờ 2D RoPE), số token thay đổi theo ảnh (Qwen2-VL).</td></tr>
+<tr><td>Native multimodal pre-training</td><td>Train dữ liệu multimodal và text thuần cùng lúc trong một stage (InternVL3) thay vì gắn multimodal vào sau.</td></tr>
+<tr><td>NaViT (Patch n' Pack)</td><td>Ghép patch của nhiều ảnh khác kích thước vào một chuỗi, dùng attention có mask để mỗi ảnh chỉ attend nội bộ.</td></tr>
+<tr><td>NVIDIA DALI / nvJPEG</td><td>Thư viện tiền xử lý dữ liệu và decode ảnh trên GPU.</td></tr>
+<tr><td>Object hallucination</td><td>VLM nhắc tới vật thể/chi tiết không có trong ảnh.</td></tr>
+<tr><td>Patch / patchify</td><td>Ô vuông P×P pixel của ảnh; patchify là bước cắt ảnh thành lưới các ô này.</td></tr>
+<tr><td>Perceiver resampler</td><td>Connector dùng M latent học được cross-attend lên đặc trưng ảnh để ra đúng M token (Flamingo, Idefics2).</td></tr>
+<tr><td>Perceptual hash</td><td>Hash ảnh bền với resize/nén nhẹ, dùng để dedup ảnh.</td></tr>
+<tr><td>Pixel shuffle (space-to-depth)</td><td>Gộp mỗi khối r×r patch thành một token bằng cách nối kênh; số token giảm r² lần mà không vứt thông tin.</td></tr>
+<tr><td>Pixel shuffle (VLM)</td><td>Gom r×r patch kề nhau thành một token có số chiều lớn hơn r² lần, giảm số visual token r² lần.</td></tr>
+<tr><td>PixMo</td><td>Bộ dữ liệu mở của Ai2 cho Molmo: caption dày đặc bằng giọng nói, dữ liệu pointing.</td></tr>
+<tr><td>Pointing</td><td>Grounding bằng một điểm (x, y) thay vì box; rẻ để gán nhãn, dùng cho đếm.</td></tr>
+<tr><td>POPE</td><td>Benchmark hallucination dạng hỏi yes/no về sự có mặt của vật thể (random/popular/adversarial).</td></tr>
+<tr><td>Q-Former</td><td>Transformer nhỏ với 32 query học được, rút thông tin từ ảnh qua cross-attention (BLIP-2).</td></tr>
+<tr><td>Recaptioning</td><td>Dùng VLM/captioner mạnh viết lại caption chi tiết thay cho alt-text.</td></tr>
+<tr><td>Relaxed accuracy</td><td>Metric của ChartQA, chấp nhận đáp án số sai lệch trong khoảng 5%.</td></tr>
+<tr><td>RLHF-V / RLAIF-V</td><td>Preference optimization cho VLM với phản hồi sửa lỗi chi tiết của người / của model mở.</td></tr>
+<tr><td>Screen grounding</td><td>Xác định toạ độ phần tử giao diện trên screenshot; năng lực cốt lõi của GUI agent.</td></tr>
+<tr><td>SigLIP / SigLIP 2</td><td>Biến thể của CLIP dùng sigmoid loss cho từng cặp, không cần chuẩn hoá toàn batch; bản 2 thêm loss phụ và NaFlex.</td></tr>
+<tr><td>So400m</td><td>Kiến trúc ViT ~400M tham số được tối ưu hình dạng (shape-optimized), encoder phổ biến trong VLM mở.</td></tr>
+<tr><td>Straggler</td><td>Rank chậm nhất trong một nhóm đồng bộ; mọi rank khác phải chờ nó ở bước communication.</td></tr>
+<tr><td>Temperature (CLIP/SigLIP)</td><td>Hệ số chia/nhân vào cosine similarity để điều chỉnh độ "sắc" của softmax/sigmoid.</td></tr>
+<tr><td>Thinking with images</td><td>Model thao tác ảnh (crop, zoom…) trong lúc suy luận, như một công cụ.</td></tr>
+<tr><td>Thumbnail / global view</td><td>Ảnh thu nhỏ toàn cảnh đi kèm các ô để model nắm được bố cục tổng thể.</td></tr>
+<tr><td>Token merging (ToMe)</td><td>Gộp các token giống nhau theo từng layer để giảm số token mà không cần train lại.</td></tr>
+<tr><td>Token pruning (FastV)</td><td>Bỏ các token ảnh nhận ít attention sau một layer nhất định của LLM để tăng tốc inference.</td></tr>
+<tr><td>Varlen attention (cu_seqlens)</td><td>API FlashAttention nhận mảng vị trí bắt đầu của các đoạn để tính attention riêng cho từng sample trong chuỗi đã pack.</td></tr>
+<tr><td>Vision encoder</td><td>Mạng (thường là ViT) biến ảnh thành dãy vector đặc trưng, mỗi vector ứng với một patch.</td></tr>
+<tr><td>Visual token</td><td>Vector đại diện một vùng ảnh khi đưa vào LLM, chiếm chỗ trong context như token text.</td></tr>
+<tr><td>ViT (Vision Transformer)</td><td>Transformer áp dụng cho ảnh bằng cách cắt ảnh thành patch và coi mỗi patch như một token.</td></tr>
+<tr><td>VLM (Vision-Language Model)</td><td>Model nhận cả ảnh/video và text, sinh ra text; thường gồm vision encoder + connector + LLM.</td></tr>
+<tr><td>WebDataset</td><td>Định dạng đóng gói mẫu thành shard tar để đọc tuần tự/stream hiệu quả.</td></tr>
+<tr><td>Window attention (ViT)</td><td>Attention giới hạn trong cửa sổ cục bộ để giảm chi phí với ảnh lớn (Qwen2.5-VL).</td></tr>
+</tbody>
+</table>
+</section>
+
+</main>
+</div>
+<button class="lite-btn" id="liteBtn" title="Ẩn/hiện công thức lớn và phần suy dẫn">Đọc nhẹ</button>
+<button class="theme-btn" id="themeBtn">Sáng / Tối</button>
+<script>
+(function(){
+  var root=document.documentElement, btn=document.getElementById('themeBtn');
+  try{var t=localStorage.getItem('theme'); if(t) root.setAttribute('data-theme',t);}catch(e){}
+  btn.addEventListener('click',function(){
+    var cur=root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+    var nxt=cur==='dark'?'light':'dark'; root.setAttribute('data-theme',nxt);
+    try{localStorage.setItem('theme',nxt);}catch(e){}
+  });
+  var links=[].slice.call(document.querySelectorAll('nav.toc a'));
+  var map={}; links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
+  var heads=[].slice.call(document.querySelectorAll('main h2[id], main h3[id]'));
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){links.forEach(function(l){l.classList.remove('active')}); var a=map[e.target.id]; if(a){a.classList.add('active'); a.scrollIntoView({block:'nearest'});}}});},{rootMargin:'0px 0px -75% 0px'});
+    heads.forEach(function(h){io.observe(h)});
+  }
+})();
+</script>
+<script>
+(function(){
+  var root=document.documentElement, b=document.getElementById('liteBtn');
+  try{if(localStorage.getItem('lite')==='1') root.classList.add('lite');}catch(e){}
+  b.addEventListener('click',function(){
+    var on=root.classList.toggle('lite');
+    try{localStorage.setItem('lite',on?'1':'0');}catch(e){}
+  });
+})();
+</script>
+</body>
+</html>
