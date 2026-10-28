@@ -1,0 +1,2244 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM Inference & Deploy (VI)</title>
+<script>
+window.MathJax = { tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']] }, chtml: { scale: 1.0 } };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-chtml.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbfaf7; --surface:#ffffff; --text:#1f2328; --muted:#5b636e; --border:#e4e1da;
+  --accent:#b4532a; --accent-soft:#f6e8e0; --link:#9a4220;
+  --note:#2f6fb0; --note-bg:#eef4fb; --tip:#2e7d4f; --tip-bg:#ecf6f0;
+  --warn:#a86b00; --warn-bg:#fdf5e4; --ex:#6c4fb0; --ex-bg:#f3f0fb;
+  --code-bg:#f2f0ea;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#16181c; --surface:#1d2025; --text:#e6e6e3; --muted:#a2a8b1; --border:#2e333a;
+    --accent:#e48a5f; --accent-soft:#3a2a22; --link:#f0a27c;
+    --note:#7fb2ea; --note-bg:#1c2633; --tip:#77c99a; --tip-bg:#1a2a21;
+    --warn:#e2b24f; --warn-bg:#2d2615; --ex:#b7a2ef; --ex-bg:#251f36;
+    --code-bg:#24272d;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16181c; --surface:#1d2025; --text:#e6e6e3; --muted:#a2a8b1; --border:#2e333a;
+  --accent:#e48a5f; --accent-soft:#3a2a22; --link:#f0a27c;
+  --note:#7fb2ea; --note-bg:#1c2633; --tip:#77c99a; --tip-bg:#1a2a21;
+  --warn:#e2b24f; --warn-bg:#2d2615; --ex:#b7a2ef; --ex-bg:#251f36;
+  --code-bg:#24272d;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:16px}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Be Vietnam Pro",system-ui,sans-serif;font-size:16.5px;line-height:1.75}
+a{color:var(--link)}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);max-width:1240px;margin:0 auto;gap:40px;padding:0 24px}
+nav.toc{position:sticky;top:0;height:100vh;overflow-y:auto;padding:28px 6px 40px 0;font-size:13.5px;line-height:1.5;border-right:1px solid var(--border)}
+nav.toc .toc-title{font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:12px;color:var(--muted);margin-bottom:10px}
+nav.toc ol{list-style:none;margin:0;padding:0}
+nav.toc li.l2{margin-top:10px}
+nav.toc li.l2>a{font-weight:600;color:var(--text)}
+nav.toc li.l3{padding-left:14px}
+nav.toc li.l3>a{color:var(--muted)}
+nav.toc a{text-decoration:none;display:block;padding:2px 6px;border-radius:5px}
+nav.toc a:hover,nav.toc a.active{background:var(--accent-soft);color:var(--accent)}
+main{padding:40px 0 120px;min-width:0;max-width:820px}
+header.hero h1{font-size:2.1rem;line-height:1.25;margin:0 0 8px}
+header.hero .meta{color:var(--muted);font-size:14px}
+header.hero .lead{font-size:1.06rem;margin-top:18px}
+h2{font-size:1.6rem;margin:64px 0 12px;padding-top:12px;border-top:2px solid var(--border);line-height:1.3}
+h3{font-size:1.22rem;margin:40px 0 8px;color:var(--accent);line-height:1.35}
+h4{font-size:1.04rem;margin:26px 0 6px}
+p{margin:12px 0}
+ul,ol{padding-left:24px}
+li{margin:5px 0}
+code{font-family:"JetBrains Mono",monospace;font-size:.86em;background:var(--code-bg);padding:1px 5px;border-radius:4px}
+pre{background:var(--code-bg);padding:14px 16px;border-radius:8px;overflow-x:auto;line-height:1.5;border:1px solid var(--border)}
+pre code{background:none;padding:0;font-size:13.5px}
+blockquote{margin:16px 0;padding:8px 18px;border-left:3px solid var(--accent);background:var(--surface);color:var(--muted);font-style:italic}
+table{border-collapse:collapse;width:100%;margin:16px 0;font-size:14.5px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}
+thead th{background:var(--accent-soft)}
+tbody tr:nth-child(even){background:var(--surface)}
+figure{margin:24px 0;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}
+figure img{max-width:100%;height:auto;display:block;margin:0 auto;border-radius:6px;background:#fff}
+figcaption{font-size:14px;color:var(--muted);margin-top:10px}
+.callout{border-left:4px solid;border-radius:8px;padding:10px 16px;margin:18px 0}
+.callout-title{font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.callout.note{border-color:var(--note);background:var(--note-bg)} .callout.note .callout-title{color:var(--note)}
+.callout.tip{border-color:var(--tip);background:var(--tip-bg)} .callout.tip .callout-title{color:var(--tip)}
+.callout.warn{border-color:var(--warn);background:var(--warn-bg)} .callout.warn .callout-title{color:var(--warn)}
+.callout.example{border-color:var(--ex);background:var(--ex-bg)} .callout.example .callout-title{color:var(--ex)}
+mjx-container[display="true"]{overflow-x:auto;overflow-y:hidden;max-width:100%}
+mjx-container:not([display="true"]){display:inline-block;max-width:100%;overflow-x:auto;overflow-y:hidden;vertical-align:middle}
+.theme-btn{position:fixed;right:16px;bottom:16px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:20px;padding:6px 14px;font:inherit;font-size:13px;cursor:pointer}
+.toc-toggle{display:none}
+@media (max-width:900px){
+  .layout{grid-template-columns:1fr;padding:0 16px;gap:0}
+  nav.toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border);padding:16px 0;display:none}
+  nav.toc.open{display:block}
+  .toc-toggle{display:block;margin:16px 0 0;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;padding:8px 12px;font:inherit;width:100%;text-align:left}
+  main{padding-top:20px}
+  header.hero h1{font-size:1.6rem}
+}
+nav.toc li.opt>a::before{content:"⚙ ";color:var(--accent)}
+main svg{max-width:100%;height:auto;display:block;margin:0 auto}
+.related{margin-top:14px;font-size:14px;color:var(--muted)}
+.lite-btn{position:fixed;right:16px;bottom:56px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:20px;padding:6px 14px;font:inherit;font-size:13px;cursor:pointer}
+html.lite .lite-btn{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.lite-banner{display:none}
+html.lite .lite-banner{display:block}
+html.lite main mjx-container[display="true"],html.lite main table.symtab,html.lite main .deriv{display:none}
+</style>
+</head>
+<body>
+<div class="layout">
+<div>
+<button class="toc-toggle" onclick="document.querySelector('nav.toc').classList.toggle('open')">Mục lục</button>
+<nav class="toc"><div class="toc-title">Mục lục</div>
+<ol>
+<li class="l2"><a href="#i-foundations-h">Nền tảng inference — prefill, decode và giới hạn phần cứng</a></li>
+<li class="l3"><a href="#i-gen-loop">Vòng lặp sinh autoregressive</a></li>
+<li class="l3"><a href="#i-prefill-decode">Prefill và decode — hai pha với hai "nút thắt" khác nhau</a></li>
+<li class="l3"><a href="#i-kv-size">KV cache — công thức kích thước và ví dụ</a></li>
+<li class="l3"><a href="#i-batching-theory">Batching làm tăng intensity — nhưng có giá</a></li>
+<li class="l3"><a href="#i-metrics">Các chỉ số đo inference — TTFT, TPOT, throughput, goodput</a></li>
+<li class="l3"><a href="#i-sampling">Sampling — chọn token tiếp theo từ logits</a></li>
+<li class="l3"><a href="#i-structured">Structured / constrained decoding — ép output theo grammar</a></li>
+<li class="l3 opt"><a href="#i-opt-foundations">Optimization — những đòn bẩy cơ bản rút ra từ roofline</a></li>
+<li class="l2"><a href="#i-serving-h">Serving systems — batching, memory và scheduling</a></li>
+<li class="l3 opt"><a href="#i-batching">Optimization — từ static batching đến continuous batching</a></li>
+<li class="l3 opt"><a href="#i-paged">Optimization — PagedAttention: KV cache như bộ nhớ ảo</a></li>
+<li class="l3 opt"><a href="#i-prefix-cache">Optimization — Prefix caching và RadixAttention</a></li>
+<li class="l3 opt"><a href="#i-chunked-prefill">Optimization — Chunked prefill và piggybacking</a></li>
+<li class="l3 opt"><a href="#i-disagg">Optimization — Tách prefill và decode (disaggregation)</a></li>
+<li class="l3"><a href="#i-scheduling">Scheduling, preemption và các chính sách hàng đợi</a></li>
+<li class="l3 opt"><a href="#i-parallel-inference">Optimization — Parallelism khi inference</a></li>
+<li class="l3 opt"><a href="#i-kernels">Optimization — CUDA graphs và kernel cho decode</a></li>
+<li class="l3"><a href="#i-engines">Bức tranh các inference engine</a></li>
+<li class="l2"><a href="#i-spec-h">Speculative decoding và các cách giải mã nhanh</a></li>
+<li class="l3"><a href="#i-spec-algo">Thuật toán draft–verify</a></li>
+<li class="l3"><a href="#i-spec-speedup">Tăng tốc kỳ vọng và cách chọn γ</a></li>
+<li class="l3"><a href="#i-spec-variants">Các biến thể tạo bản nháp</a></li>
+<li class="l3 opt"><a href="#i-spec-when">Optimization — Khi nào speculative decoding không có lợi</a></li>
+<li class="l2"><a href="#i-quant-h">Quantization — nén weights, activations và KV cache</a></li>
+<li class="l3"><a href="#i2-basics">Quantization cơ bản — scale, zero-point và lỗi làm tròn</a></li>
+<li class="l3"><a href="#i2-granularity">Granularity — một scale cho bao nhiêu số?</a></li>
+<li class="l3"><a href="#i2-wa">Weight-only vs weight-activation — W4A16, W8A8, W4A8</a></li>
+<li class="l3"><a href="#i2-outliers">Outliers trong activation và LLM.int8()</a></li>
+<li class="l3"><a href="#i2-smoothquant">SmoothQuant — chuyển "độ khó" từ activation sang weight</a></li>
+<li class="l3"><a href="#i2-gptq">GPTQ — quantize từng cột và bù lỗi bằng thông tin bậc hai</a></li>
+<li class="l3"><a href="#i2-awq">AWQ — bảo vệ các kênh "quan trọng" bằng scaling</a></li>
+<li class="l3"><a href="#i2-rotation">Rotation — QuIP#, QuaRot, SpinQuant: xoay để outliers "tan" ra</a></li>
+<li class="l3"><a href="#i2-fp-formats">FP8, MXFP4, NVFP4 — số thực bit thấp thay cho số nguyên</a></li>
+<li class="l3"><a href="#i2-kv-quant">KV cache quantization — khi context dài chiếm hết bộ nhớ</a></li>
+<li class="l3"><a href="#i2-qat">PTQ vs QAT — quantize sau hay train cùng quantization</a></li>
+<li class="l3"><a href="#i2-formats">Định dạng trong thực tế — GGUF, GPTQ/AWQ checkpoint, NF4</a></li>
+<li class="l3"><a href="#i2-memory-table">Bảng tính bộ nhớ và tốc độ cho model 70B</a></li>
+<li class="l3"><a href="#i2-eval">Đánh giá chất lượng sau quantization</a></li>
+<li class="l3 opt"><a href="#i2-opt-choose">Optimization — chọn scheme theo phần cứng và batch size</a></li>
+<li class="l2"><a href="#i-compress-h">Pruning và distillation — làm model nhỏ hơn</a></li>
+<li class="l3"><a href="#i2-unstructured">Unstructured pruning — magnitude, SparseGPT, Wanda</a></li>
+<li class="l3"><a href="#i2-24-sparsity">Semi-structured 2:4 sparsity — và thực tế về tốc độ</a></li>
+<li class="l3"><a href="#i2-structured">Structured pruning — cắt head, neuron, layer</a></li>
+<li class="l3"><a href="#i2-layer-drop">Bỏ bớt layer — các lớp sâu có thừa không?</a></li>
+<li class="l3"><a href="#i2-kd-theory">Knowledge distillation — lý thuyết</a></li>
+<li class="l3"><a href="#i2-kd-practice">Logit distillation trong pre-training — các ví dụ thực tế</a></li>
+<li class="l3 opt"><a href="#i2-opt-decision">Optimization — nên quantize, prune, distill hay train model nhỏ?</a></li>
+<li class="l2"><a href="#i-deploy-h">Deploy thực tế — chọn phần cứng, cấu hình và vận hành</a></li>
+<li class="l3"><a href="#i3-sizing">Sizing một deployment — cộng bộ nhớ từng bước</a></li>
+<li class="l3"><a href="#i3-latency-throughput">Throughput vs latency — chọn batch size và concurrency</a></li>
+<li class="l3"><a href="#i3-launch-examples">Ví dụ cấu hình — vLLM, SGLang, llama.cpp</a></li>
+<li class="l3"><a href="#i3-cost">Chi phí mỗi triệu token — công thức và ví dụ</a></li>
+<li class="l3 opt"><a href="#i3-autoscaling">Optimization — autoscaling, routing và load balancing</a></li>
+<li class="l3 opt"><a href="#i3-multi-lora">Optimization — serve nhiều LoRA adapter trên một base model</a></li>
+<li class="l3"><a href="#i3-long-context-serving">Long-context serving — những gì thay đổi khi context lên 128K+</a></li>
+<li class="l3 opt"><a href="#i3-moe-serving">Optimization — serve MoE</a></li>
+<li class="l3"><a href="#i3-edge">On-device và edge — laptop, Mac, điện thoại</a></li>
+<li class="l3"><a href="#i3-observability">Observability — theo dõi gì khi chạy production</a></li>
+<li class="l3"><a href="#i3-checklist">Production checklist</a></li>
+<li class="l2"><a href="#i-eval-h">Evaluation chuyên sâu — đo model cho đúng</a></li>
+<li class="l3"><a href="#i3-eval-types">Các kiểu eval — log-likelihood và generative</a></li>
+<li class="l3"><a href="#i3-passk">pass@k — ước lượng không chệch và suy dẫn</a></li>
+<li class="l3"><a href="#i3-llm-judge">LLM-as-judge — tiện, nhưng thiên vị</a></li>
+<li class="l3"><a href="#i3-eval-stats">Thống kê cho eval — sai số, khoảng tin cậy, cỡ mẫu</a></li>
+<li class="l3"><a href="#i3-arena">Arena-style rating — Elo và Bradley–Terry</a></li>
+<li class="l3"><a href="#i3-contamination">Contamination — phát hiện "lộ đề"</a></li>
+<li class="l3"><a href="#i3-harness">Eval harness — công cụ nên dùng</a></li>
+<li class="l3 opt"><a href="#i3-regression-eval">Optimization — regression eval khi deploy (quantized vs gốc)</a></li>
+<li class="l2"><a href="#i-takeaways-h">Tổng kết và tài liệu đọc thêm</a></li>
+<li class="l3"><a href="#i3-decision-order">Thứ tự áp dụng — từ rẻ đến đắt</a></li>
+<li class="l3"><a href="#i3-common-mistakes">Những lỗi hay gặp</a></li>
+<li class="l3"><a href="#i3-reading-list">Tài liệu đọc thêm (đã chọn lọc)</a></li>
+<li class="l2"><a href="#i-glossary-h">Bảng thuật ngữ</a></li>
+</ol>
+</nav>
+</div>
+<main>
+<header class="hero">
+<h1>LLM inference, nén model và deploy — từ lý thuyết đến vận hành</h1>
+<div class="meta">Tài liệu tiếng Việt, giữ nguyên thuật ngữ tiếng Anh · Tổng hợp từ các paper lớn (vLLM, SGLang, FlashAttention, speculative decoding, GPTQ, AWQ, SmoothQuant, SparseGPT, Minitron…) · 23/10/2026</div>
+<p class="lead">Train xong mới là một nửa: chi phí thật của một LLM nằm ở inference. Tài liệu này giải thích vì sao sinh token lại bị giới hạn bởi băng thông bộ nhớ chứ không phải compute, các serving system (vLLM, SGLang…) xoay xở với KV cache và batching ra sao, speculative decoding tăng tốc mà không đổi output thế nào, cách nén model (quantization, pruning, distillation), cách tính phần cứng và chi phí khi deploy, và cách evaluate cho đúng.</p>
+<div class="callout note"><div class="callout-title">Cách đọc bản này</div>Mỗi chương mở đầu bằng hộp <b>Đọc nhanh</b> (không có toán), sau đó mới đi vào trực giác, công thức, ví dụ số; các mục có dấu ⚙ trong mục lục là phần <b>Optimization</b>. Thấy toán nặng thì bật nút <b>Đọc nhẹ</b> ở góc phải dưới. Cuối mỗi mục có <b>Nguồn tham khảo</b>, cuối bài có bảng thuật ngữ.</div>
+<div class="related">Bộ tài liệu: <a href="frontier-model-training-vi.html">LLM training</a> · <a href="vlm-training-vi.html">VLM training</a> · <b>Inference, nén model &amp; deploy</b></div>
+<div class="callout warn lite-banner"><div class="callout-title">Đang bật chế độ đọc nhẹ</div>Đã ẩn công thức đứng riêng dòng, bảng giải thích ký hiệu và các đoạn suy dẫn; công thức nhỏ trong câu vẫn giữ. Mỗi chương mở đầu bằng hộp <b>Đọc nhanh</b>, và hộp <b>Ý chính</b> tóm tắt điều cần nhớ. Bấm nút <b>Đọc nhẹ</b> ở góc phải dưới để hiện lại đầy đủ.</div>
+</header>
+<section id="i-foundations">
+<h2 id="i-foundations-h">Nền tảng inference — prefill, decode và giới hạn phần cứng</h2>
+
+<div class="callout tip"><div class="callout-title">Đọc nhanh</div>
+<ul>
+<li>Sinh text gồm hai pha. <b>Prefill</b> đọc toàn bộ prompt một lần, việc này nặng về tính toán. <b>Decode</b> sinh từng token một, mỗi bước phải đọc lại toàn bộ weights, nên nặng về băng thông bộ nhớ.</li>
+<li>Khi chạy một request đơn lẻ, tốc độ decode bị chặn bởi tốc độ đọc bộ nhớ của GPU chứ không phải sức tính. Gộp nhiều request vào một batch là cách chính để tận dụng GPU.</li>
+<li><b>KV cache</b> (bộ nhớ lưu key/value của các token trước) tăng theo độ dài context và số request. Thường chính nó quyết định GPU phục vụ được bao nhiêu người cùng lúc.</li>
+<li>Đo inference bằng nhiều con số: thời gian ra token đầu (TTFT), thời gian mỗi token sau đó (TPOT), throughput, và goodput (số request đạt yêu cầu latency mỗi giây).</li>
+<li>Cách chọn token tiếp theo (greedy, temperature, top-p, min-p…) và việc ép output theo khuôn JSON/grammar đều là thao tác trên vector logits trước khi sample.</li>
+</ul>
+</div>
+
+<p>Train một model tốn vài tuần. Sau đó model được <b>inference</b> (chạy để sinh output) hàng tỉ lần trong suốt vòng đời, nên tổng chi phí inference thường vượt xa chi phí train. Inference còn nằm ngay trong vòng lặp RL: phần sinh rollout chiếm phần lớn thời gian của một step RL (xem <a href="frontier-model-training-vi.html#pt-opt-rl-systems">RL systems</a> trong tài liệu training). Chương này dựng nền tảng để hiểu các chương sau: vì sao inference chậm, chậm ở đâu, và đo bằng gì.</p>
+
+<h3 id="i-gen-loop">Vòng lặp sinh autoregressive</h3>
+
+<p>Một LLM decoder-only mô hình hoá xác suất của token kế tiếp:</p>
+\[
+p_\theta(x_{t+1} \mid x_1, \dots, x_t) = \text{softmax}\big(z_t\big), \qquad z_t = W_{\text{head}}\, h_t^{(L)} \in \mathbb{R}^{V}
+\]
+<ul>
+<li>\(x_1,\dots,x_t\): các token đã có (prompt + những token đã sinh).</li>
+<li>\(h_t^{(L)}\): hidden state của token cuối cùng ở layer cuối \(L\).</li>
+<li>\(z_t\): vector <b>logits</b> dài \(V\) (vocab size, ví dụ 128k với Llama 3), mỗi phần tử là "điểm" chưa chuẩn hoá của một token.</li>
+</ul>
+
+<p>Vòng lặp sinh rất đơn giản:</p>
+<pre><code>tokens = tokenize(prompt)
+kv_cache = empty
+logits, kv_cache = model.forward(tokens, kv_cache)       # PREFILL: cả prompt một lần
+while not done:
+    next_tok = sample(logits[-1])                         # chọn token tiếp theo
+    tokens.append(next_tok)
+    logits, kv_cache = model.forward([next_tok], kv_cache) # DECODE: chỉ 1 token mới
+    done = (next_tok == EOS) or len(tokens) &gt;= max_len</code></pre>
+
+<p>Điểm mấu chốt là <b>KV cache</b>. Trong attention, token mới cần key \(K\) và value \(V\) của <i>mọi</i> token trước nó. Không cache thì mỗi bước decode phải tính lại K, V cho toàn bộ chuỗi, tốn \(O(t)\) cho mỗi bước, tức \(O(n^2)\) cho cả chuỗi \(n\) token. Có cache thì mỗi bước chỉ tính K, V cho đúng 1 token mới và đọc lại phần đã lưu.</p>
+
+<div class="callout note"><div class="callout-title">Giải thích thêm: vì sao chỉ cache K, V mà không cache Q?</div>
+<p>Query \(q_t\) chỉ được dùng đúng một lần, ở bước \(t\), để token \(t\) "hỏi" các token trước. Ở bước \(t+1\), token mới có query riêng \(q_{t+1}\), còn \(q_t\) không còn cần nữa. Ngược lại, \(k_i, v_i\) của mọi token \(i \le t\) được <i>mọi</i> query sau này đọc lại. Vì vậy chỉ K và V đáng để cache. Đây cũng là lý do causal mask làm KV cache hoạt động được: token cũ không bao giờ phải "nhìn" token mới, nên K, V của chúng không đổi.</p>
+</div>
+
+<h3 id="i-prefill-decode">Prefill và decode — hai pha với hai "nút thắt" khác nhau</h3>
+
+<table>
+<thead><tr><th></th><th>Prefill</th><th>Decode</th></tr></thead>
+<tbody>
+<tr><td>Input mỗi lần forward</td><td>Toàn bộ prompt, \(n\) token cùng lúc</td><td>1 token mới mỗi sequence</td></tr>
+<tr><td>Phép tính chính</td><td>Matmul ma trận × ma trận (\(n \times d\) nhân \(d \times d\))</td><td>Matmul vector × ma trận (\(1 \times d\) nhân \(d \times d\))</td></tr>
+<tr><td>Nút thắt</td><td>Compute (FLOP/s của tensor core)</td><td>Băng thông bộ nhớ (đọc weights + KV cache từ HBM)</td></tr>
+<tr><td>Quyết định chỉ số nào</td><td>TTFT (thời gian ra token đầu)</td><td>TPOT (thời gian mỗi token sau)</td></tr>
+<tr><td>Song song hoá được?</td><td>Có, mọi token prompt tính song song</td><td>Không theo chiều thời gian: token \(t+1\) phụ thuộc token \(t\)</td></tr>
+</tbody>
+</table>
+
+<h4>Arithmetic intensity của từng pha</h4>
+<p>Nhắc lại (xem <a href="frontier-model-training-vi.html#t-roofline">Roofline model</a>): <b>arithmetic intensity</b> \(I\) = số FLOP thực hiện trên mỗi byte đọc từ bộ nhớ. Một kernel bị <b>memory-bound</b> khi \(I\) nhỏ hơn "ridge point" của phần cứng:</p>
+\[
+I_{\text{ridge}} = \frac{\text{peak FLOP/s}}{\text{bandwidth (byte/s)}}
+\]
+<p>H100 SXM: peak BF16 dense ≈ 989 TFLOP/s, HBM3 ≈ 3.35 TB/s, nên \(I_{\text{ridge}} \approx 989 / 3.35 \approx 295\) FLOP/byte.</p>
+
+<p><b>Linear layers.</b> Với một ma trận weight \(W \in \mathbb{R}^{d \times d}\) lưu ở bf16 (2 byte/phần tử), nhân với \(m\) token (input \(m \times d\)):</p>
+\[
+\text{FLOPs} = 2 m d^2, \qquad \text{Bytes} \approx 2 d^2 \;(\text{weights}) + 4 m d \;(\text{đọc input, ghi output}), \qquad I \approx \frac{2 m d^2}{2 d^2} = m \quad (\text{khi } m \ll d)
+\]
+<ul>
+<li>Prefill: \(m\) = số token prompt, ví dụ 2000, nên \(I \approx 2000\), lớn hơn nhiều so với 295. Prefill <b>compute-bound</b>.</li>
+<li>Decode batch 1: \(m = 1\), nên \(I \approx 1\) FLOP/byte, nhỏ hơn ridge khoảng 300 lần. Tensor core gần như ngồi chơi, GPU chủ yếu chờ đọc weights.</li>
+<li>Decode batch \(B\): mỗi bước có \(B\) token (mỗi sequence 1 token) dùng chung một lần đọc weights, nên \(I \approx B\). Muốn chạm ridge thì cần \(B \approx 300\).</li>
+</ul>
+
+<p><b>Attention khi decode.</b> Ở đây batch <i>không</i> giúp được. Mỗi sequence có KV cache riêng. Với một layer, một token mới, context dài \(c\), \(n_q\) query head, \(n_{kv}\) KV head, head dim \(d_h\), lưu bf16:</p>
+\[
+\text{Bytes đọc KV} = 2 \cdot n_{kv} \cdot d_h \cdot c \cdot 2, \qquad
+\text{FLOPs} = \underbrace{2 n_q d_h c}_{q K^\top} + \underbrace{2 n_q d_h c}_{P V} = 4 n_q d_h c
+\]
+\[
+I_{\text{attn-decode}} = \frac{4 n_q d_h c}{4 n_{kv} d_h c} = \frac{n_q}{n_{kv}} = g \quad (\text{group size của GQA})
+\]
+<p>Với Llama-3-8B (\(n_q = 32, n_{kv} = 8\)) thì \(I = 4\) FLOP/byte, không phụ thuộc batch hay context. Attention decode luôn memory-bound. Đây là lý do GQA/MQA/MLA quan trọng cho inference: chúng giảm số byte KV phải đọc cho mỗi FLOP, tức tăng \(g\). Với MQA (\(n_{kv}=1\)) thì \(I = n_q\). Với MLA, các head dùng chung một latent vector nén nên intensity còn cao hơn nữa (xem <a href="frontier-model-training-vi.html#ar-attn-theory">MLA</a>).</p>
+
+<svg viewBox="0 0 640 230" width="100%" role="img" aria-label="Roofline: decode batch 1 nằm sâu trong vùng memory-bound, prefill nằm ở vùng compute-bound">
+  <g font-family="sans-serif" font-size="12" style="fill:currentColor">
+    <line x1="60" y1="190" x2="610" y2="190" style="stroke:var(--muted)" stroke-width="1.5"/>
+    <line x1="60" y1="190" x2="60" y2="20" style="stroke:var(--muted)" stroke-width="1.5"/>
+    <polyline points="60,185 330,45 610,45" fill="none" style="stroke:var(--accent)" stroke-width="2.5"/>
+    <line x1="330" y1="45" x2="330" y2="190" style="stroke:var(--border)" stroke-dasharray="4 4"/>
+    <text x="330" y="207" text-anchor="middle" style="fill:var(--muted)">ridge ≈ 295 FLOP/byte</text>
+    <text x="600" y="207" text-anchor="end" style="fill:var(--muted)">arithmetic intensity (log)</text>
+    <text x="66" y="30" style="fill:var(--muted)">FLOP/s đạt được</text>
+    <circle cx="70" cy="180" r="5" style="fill:var(--accent)"/>
+    <text x="90" y="186">decode B=1 (I≈1)</text>
+    <circle cx="105" cy="162" r="5" style="fill:var(--accent)"/>
+    <text x="125" y="172">attention decode (I≈g=4)</text>
+    <circle cx="250" cy="86" r="5" style="fill:var(--accent)"/>
+    <text x="262" y="104">decode B=64 (I≈64)</text>
+    <circle cx="480" cy="45" r="5" style="fill:var(--accent)"/>
+    <text x="470" y="35" text-anchor="middle">prefill 2k token (I≈2000)</text>
+    <text x="168" y="116" style="fill:var(--muted)" transform="rotate(-27 168 116)">memory-bound</text>
+    <text x="470" y="65" style="fill:var(--muted)">compute-bound</text>
+  </g>
+</svg>
+
+<h4>Giới hạn trên của tốc độ decode</h4>
+<p>Ở batch 1, mỗi bước decode phải đọc toàn bộ weights từ HBM ít nhất một lần. Từ đó có một chặn trên rất hữu ích:</p>
+\[
+\text{tokens/s (batch 1)} \;\lesssim\; \frac{\text{bandwidth HBM}}{\text{bytes weights} + \text{bytes KV cache của sequence}}
+\]
+
+<div class="callout example"><div class="callout-title">Ví dụ số trên H100 (3.35 TB/s)</div>
+<ul>
+<li><b>8B, bf16</b>: weights ≈ 16 GB, nên \(3.35\text{e}12 / 16\text{e}9 \approx 209\) token/s là trần lý thuyết. Thực tế đạt khoảng 60–80% trần do overhead kernel và đọc KV.</li>
+<li><b>8B, FP8 hoặc INT8 weights</b>: 8 GB, trần ≈ 419 token/s. Đây là lý do quantization weights giúp decode nhanh gần gấp đôi dù tensor core không chạy nhanh hơn: ta đọc ít byte hơn.</li>
+<li><b>70B, bf16</b>: 140 GB, không vừa 1 GPU. Chạy TP=2 trên 2 H100 thì băng thông cộng gộp ≈ 6.7 TB/s, trần ≈ 48 token/s.</li>
+<li><b>MoE</b>: chỉ phải đọc weights của các expert được kích hoạt. Ở batch 1, model 671B tổng / 37B active (DeepSeek-V3) "giống" một model 37B về mặt băng thông. Khi batch lớn, các token khác nhau kích hoạt các expert khác nhau, nên gần như toàn bộ expert bị đọc. Lợi thế băng thông của MoE vì vậy giảm dần khi batch tăng.</li>
+</ul>
+</div>
+
+<h4>Ước lượng thời gian prefill</h4>
+<p>Prefill compute-bound nên dùng công thức FLOPs forward \(\approx 2 P n\) (\(P\) tham số, \(n\) token prompt; xem <a href="frontier-model-training-vi.html#t-flops">FLOPs accounting</a>):</p>
+\[
+t_{\text{prefill}} \approx \frac{2 P n}{\text{peak FLOP/s} \times \text{MFU}}
+\]
+<div class="callout example"><div class="callout-title">Ví dụ số</div>
+<p>8B, prompt 2000 token, H100 ở 50% MFU: \(2 \times 8\text{e}9 \times 2000 = 3.2\text{e}13\) FLOP. Chia cho \(989\text{e}12 \times 0.5 \approx 4.9\text{e}14\) FLOP/s được ≈ 0.065 s. Như vậy TTFT ≈ 65 ms (chưa tính hàng đợi). Cùng GPU đó decode 1 token mất ≈ 1/209 s ≈ 5 ms ở mức trần. Prefill 2000 token tốn thời gian xấp xỉ decode khoảng 13 token: prefill "rẻ" trên mỗi token hơn decode rất nhiều.</p>
+</div>
+
+<div class="callout warn"><div class="callout-title">Context rất dài thì attention chiếm ưu thế</div>
+<p>Công thức \(2Pn\) bỏ qua FLOPs của attention, vốn tăng theo \(n^2\). Với prompt 128k token, phần attention trong prefill trở nên đáng kể, và KV cache đọc mỗi bước decode có thể lớn hơn cả weights. Ví dụ ở mục KV cache ngay dưới đây cho thấy KV của một request 128k trên Llama-3-70B ≈ 40 GiB, xấp xỉ một nửa weights bf16.</p>
+</div>
+
+<h3 id="i-kv-size">KV cache — công thức kích thước và ví dụ</h3>
+
+<p>Với attention kiểu MHA/GQA/MQA, lưu ở \(b\) byte mỗi phần tử:</p>
+\[
+\text{KV}_{\text{token}} = 2 \times L \times n_{kv} \times d_h \times b
+\qquad\qquad
+\text{KV}_{\text{tổng}} = \text{KV}_{\text{token}} \times \sum_{r \in \text{batch}} c_r
+\]
+<ul>
+<li>Thừa số 2: một cho K, một cho V.</li>
+<li>\(L\): số layer; \(n_{kv}\): số KV head; \(d_h\): head dim; \(c_r\): độ dài hiện tại của request \(r\).</li>
+</ul>
+
+<table>
+<thead><tr><th>Model (cấu hình công khai)</th><th>\(L\)</th><th>\(n_{kv}\) × \(d_h\)</th><th>KV / token (bf16)</th><th>1 request 8k</th><th>1 request 128k</th></tr></thead>
+<tbody>
+<tr><td>Llama-3-8B (GQA)</td><td>32</td><td>8 × 128</td><td>128 KiB</td><td>1 GiB</td><td>16 GiB</td></tr>
+<tr><td>Llama-3-70B (GQA)</td><td>80</td><td>8 × 128</td><td>320 KiB</td><td>2.5 GiB</td><td>40 GiB</td></tr>
+<tr><td>Giả định 8B nếu dùng MHA (32 KV head)</td><td>32</td><td>32 × 128</td><td>512 KiB</td><td>4 GiB</td><td>64 GiB</td></tr>
+</tbody>
+</table>
+
+<p>Chi tiết về MLA, sliding window và các cách giảm KV ở tầng kiến trúc đã có trong <a href="frontier-model-training-vi.html#ar-kv-inference">Optimization — KV cache &amp; inference-side choices</a>. Ở đây chỉ nhấn mạnh hệ quả vận hành:</p>
+\[
+B_{\max} \approx \frac{\text{Mem}_{\text{GPU}} - \text{weights} - \text{activation tạm}}{\text{KV}_{\text{token}} \times c_{\text{trung bình}}}
+\]
+<p>Throughput decode tăng gần tuyến tính theo \(B\) cho đến khi chạm ridge. Vì vậy <b>mỗi byte KV tiết kiệm được là thêm request chạy đồng thời</b>. Cả chương <a href="#i-serving">Serving systems</a> về cơ bản xoay quanh việc quản lý vùng nhớ KV này cho khéo.</p>
+
+<h3 id="i-batching-theory">Batching làm tăng intensity — nhưng có giá</h3>
+
+<p>Gọi \(t_w\) là thời gian đọc weights một lần và \(t_{kv}(B)\) là thời gian đọc KV cache của cả batch. Một bước decode tốn khoảng:</p>
+\[
+t_{\text{step}}(B) \approx \max\Big( t_w + t_{kv}(B),\; \frac{2 P B}{\text{peak FLOP/s}} \Big),
+\qquad
+\text{throughput} = \frac{B}{t_{\text{step}}(B)}
+\]
+<ul>
+<li>Khi \(B\) nhỏ: \(t_{\text{step}} \approx t_w\) gần như không đổi, nên throughput tăng tuyến tính theo \(B\), còn latency mỗi token gần như giữ nguyên. Batch thêm request gần như "miễn phí".</li>
+<li>Khi \(B\) lớn: \(t_{kv}(B)\) và phần compute tăng lên, nên latency mỗi token bắt đầu tăng. Throughput tiếp tục tăng nhưng chậm dần.</li>
+<li>Vì vậy luôn có <b>đánh đổi latency ↔ throughput</b>. Chọn \(B\) là chọn một điểm trên đường cong này theo yêu cầu sản phẩm: chatbot cần TPOT thấp, xử lý batch offline thì cần throughput cao.</li>
+</ul>
+
+<div class="callout example"><div class="callout-title">Ví dụ số (8B bf16 trên H100, bỏ qua overhead)</div>
+<p>\(t_w = 16\text{ GB}/3.35\text{ TB/s} \approx 4.8\) ms. Mỗi request context 4k có KV ≈ 0.5 GiB, đọc mất ≈ 0.16 ms.</p>
+<ul>
+<li>B = 1: \(t \approx 4.9\) ms, throughput ≈ 205 tok/s.</li>
+<li>B = 32: \(t \approx 4.8 + 32 \times 0.16 \approx 10\) ms, throughput ≈ 3,200 tok/s, còn TPOT ≈ 10 ms (vẫn rất nhanh với người đọc).</li>
+<li>B = 128: \(t \approx 4.8 + 20.5 \approx 25\) ms, throughput ≈ 5,100 tok/s, TPOT ≈ 25 ms. Lúc này KV cache đã chiếm phần lớn thời gian. Chính vì vậy giảm KV (GQA, FP8 KV) lại tiếp tục tăng throughput.</li>
+</ul>
+<p>Các con số là ước lượng trần lý thuyết từ băng thông, chỉ để thấy hình dạng của đường cong, không phải số đo.</p>
+</div>
+
+<h3 id="i-metrics">Các chỉ số đo inference — TTFT, TPOT, throughput, goodput</h3>
+
+<table>
+<thead><tr><th>Chỉ số</th><th>Định nghĩa</th><th>Phụ thuộc chủ yếu vào</th></tr></thead>
+<tbody>
+<tr><td><b>TTFT</b> (time to first token)</td><td>Thời gian từ lúc gửi request đến khi nhận token đầu tiên</td><td>Thời gian chờ trong hàng đợi + prefill</td></tr>
+<tr><td><b>TPOT</b> (time per output token), hay <b>ITL</b> (inter-token latency)</td><td>\(\text{TPOT} = \dfrac{\text{E2E} - \text{TTFT}}{n_{\text{out}} - 1}\). ITL là khoảng cách giữa hai token liên tiếp; TPOT là trung bình của nó</td><td>Decode step time, tức batch size và độ dài KV</td></tr>
+<tr><td><b>E2E latency</b></td><td>\(\text{TTFT} + (n_{\text{out}} - 1) \times \text{TPOT}\)</td><td>Cả hai pha</td></tr>
+<tr><td><b>Throughput</b></td><td>Token output/s (hoặc request/s) của cả hệ thống</td><td>Batch size, hiệu quả scheduling</td></tr>
+<tr><td><b>Goodput</b></td><td>Số request/s <i>đạt SLO</i> (ví dụ TTFT &lt; 500 ms và TPOT &lt; 50 ms). Khái niệm này được DistServe phổ biến</td><td>Sự cân bằng giữa prefill và decode</td></tr>
+</tbody>
+</table>
+
+<div class="callout tip"><div class="callout-title">Ý chính: đo theo phân phối, không đo theo trung bình</div>
+<p>Luôn báo cáo P50/P90/P99 của TTFT và TPOT, kèm điều kiện tải (request rate, phân phối độ dài prompt/output). Một hệ thống có throughput cao nhưng P99 TTFT 10 giây vẫn là hệ thống tồi cho chatbot. Goodput gói gọn được đánh đổi này trong một con số: tăng batch làm tăng throughput, nhưng nếu nó làm TPOT vượt SLO thì goodput giảm.</p>
+</div>
+
+<div class="callout note"><div class="callout-title">Giải thích thêm: tốc độ đọc của con người</div>
+<p>Người đọc nhanh khoảng 5–10 từ/giây, tương đương cỡ 7–15 token/s. Với chatbot hiển thị dạng streaming, TPOT khoảng 30–50 ms (20–30 token/s) đã nhanh hơn tốc độ đọc. Hạ TPOT xuống thấp hơn nữa ít cải thiện trải nghiệm, nên hệ thống có thể dồn batch lớn hơn để tăng throughput. Ngược lại, với agent hoặc reasoning model sinh hàng chục nghìn token "suy nghĩ" trước khi trả lời, TPOT ảnh hưởng trực tiếp đến thời gian chờ, nên đáng tối ưu mạnh hơn.</p>
+</div>
+
+<h3 id="i-sampling">Sampling — chọn token tiếp theo từ logits</h3>
+
+<p>Mọi phương pháp sampling đều là phép biến đổi trên logits \(z \in \mathbb{R}^V\) trước khi lấy mẫu. Thứ tự áp dụng phổ biến trong các engine: penalty → temperature → lọc (top-k / top-p / min-p) → chuẩn hoá lại → sample.</p>
+
+<h4>Greedy và temperature</h4>
+\[
+\text{greedy: } x = \arg\max_i z_i
+\qquad\qquad
+p_i(T) = \frac{\exp(z_i / T)}{\sum_j \exp(z_j / T)}
+\]
+<ul>
+<li>\(T \to 0\): phân phối dồn vào token có logit lớn nhất, tức greedy.</li>
+<li>\(T = 1\): giữ nguyên phân phối model học được.</li>
+<li>\(T &gt; 1\): làm phẳng phân phối, đa dạng hơn nhưng dễ "lạc đề".</li>
+</ul>
+<div class="callout example"><div class="callout-title">Ví dụ số</div>
+<p>Logits \(z = (2, 1, 0)\). Với \(T=1\): \(p \approx (0.665, 0.245, 0.090)\). Với \(T = 0.5\) (tương đương logits \((4, 2, 0)\)): \(p \approx (0.867, 0.117, 0.016)\). Với \(T = 2\) (logits \((1, 0.5, 0)\)): \(p \approx (0.506, 0.307, 0.186)\).</p>
+</div>
+
+<h4>Top-k, top-p (nucleus), min-p</h4>
+<ul>
+<li><b>Top-k</b>: chỉ giữ \(k\) token có xác suất cao nhất, đặt các token còn lại về \(-\infty\). Nhược điểm: \(k\) cố định, trong khi độ "chắc chắn" của model thay đổi theo từng vị trí.</li>
+<li><b>Top-p / nucleus</b> (Holtzman et al. 2019): giữ tập nhỏ nhất \(S\) sao cho tổng xác suất đạt ngưỡng:
+\[ S = \text{tập nhỏ nhất (theo thứ tự giảm dần của } p_i\text{) sao cho } \sum_{i \in S} p_i \ge p \]
+Khi model chắc chắn, \(S\) chỉ có vài token. Khi model phân vân, \(S\) rộng ra.</li>
+<li><b>Min-p</b> (Nguyen et al. 2024): giữ token \(i\) nếu
+\[ p_i \ge p_{\min} \cdot \max_j p_j \]
+Ngưỡng tự co giãn theo token mạnh nhất. Nhờ vậy min-p giữ được chất lượng tốt hơn top-p khi dùng temperature cao.</li>
+</ul>
+
+<div class="callout example"><div class="callout-title">Ví dụ số: cùng phân phối, ba bộ lọc</div>
+<p>\(p = (0.50, 0.20, 0.15, 0.10, 0.05)\).</p>
+<ul>
+<li>Top-k với \(k=2\): giữ \(\{0.50, 0.20\}\), chuẩn hoá lại thành \((0.714, 0.286)\).</li>
+<li>Top-p với \(p=0.8\): cộng dồn 0.50, 0.70, 0.85 ≥ 0.8, nên giữ 3 token.</li>
+<li>Min-p với \(p_{\min}=0.3\): ngưỡng \(0.3 \times 0.5 = 0.15\), nên giữ 3 token (0.50, 0.20, 0.15). Nếu phân phối nhọn hơn, ví dụ \(\max = 0.9\), thì ngưỡng thành 0.27 và gần như chỉ còn 1 token.</li>
+</ul>
+</div>
+
+<h4>Penalty chống lặp</h4>
+<ul>
+<li><b>Repetition penalty</b> (CTRL, Keskar et al. 2019): với các token đã xuất hiện, \(z_i \leftarrow z_i/\theta\) nếu \(z_i &gt; 0\), và \(z_i \leftarrow z_i \cdot \theta\) nếu \(z_i \le 0\), với \(\theta &gt; 1\). Paper CTRL gợi ý \(\theta \approx 1.2\).</li>
+<li><b>Frequency / presence penalty</b> (kiểu OpenAI API):
+\[ z_i \leftarrow z_i - \alpha_{\text{freq}} \cdot \text{count}_i - \alpha_{\text{pres}} \cdot \mathbb{1}[\text{count}_i &gt; 0] \]
+Frequency phạt theo số lần token đã xuất hiện; presence phạt một lần nếu token đã xuất hiện.</li>
+</ul>
+<div class="callout warn"><div class="callout-title">Cẩn thận với code và reasoning</div>
+<p>Penalty chống lặp có thể phá code (biến, từ khoá phải lặp lại) và chuỗi suy luận toán. Với reasoning model, các lab thường khuyến nghị dùng cấu hình sampling riêng (ví dụ temperature khoảng 0.6, top-p 0.95) và cảnh báo rằng greedy dễ gây vòng lặp vô tận. Hãy đọc model card trước khi tự chỉnh.</p>
+</div>
+
+<h4>Beam search</h4>
+<p>Giữ \(k\) chuỗi ứng viên có tổng log-prob cao nhất ở mỗi bước. Vì tổng log-prob luôn âm và giảm theo độ dài, beam search thiên về chuỗi ngắn. Phổ biến là chia cho một <b>length penalty</b> (GNMT, Wu et al. 2016):</p>
+\[
+\text{score}(Y) = \frac{\log P(Y \mid X)}{\text{lp}(Y)}, \qquad \text{lp}(Y) = \frac{(5 + |Y|)^\alpha}{(5+1)^\alpha}
+\]
+<p>Beam search hợp với dịch máy hoặc tóm tắt có đáp án "đúng" tương đối hẹp. Với chat mở, nó dễ cho text nhạt và lặp, nên hầu như không dùng. Nó cũng nhân chi phí KV cache lên \(k\) lần, dù PagedAttention giảm được nhờ chia sẻ prefix.</p>
+
+<h3 id="i-structured">Structured / constrained decoding — ép output theo grammar</h3>
+
+<p>Nhiều ứng dụng cần output đúng định dạng: JSON theo schema, SQL, gọi function. Thay vì hy vọng model "ngoan", ta <b>che logits</b> (logit masking): ở mỗi bước, token nào làm output vi phạm grammar thì đặt logit về \(-\infty\).</p>
+\[
+z_i \leftarrow \begin{cases} z_i &amp; \text{nếu chuỗi hiện tại} + \text{token } i \text{ vẫn là tiền tố hợp lệ của grammar} \\ -\infty &amp; \text{ngược lại} \end{cases}
+\]
+<ul>
+<li><b>Regex / JSON schema</b> được biên dịch thành <b>finite-state machine</b> (FSM). Outlines (Willard &amp; Louf 2023) tính trước, với mỗi trạng thái FSM, tập token hợp lệ, nên việc mask gần như không tốn chi phí lúc chạy.</li>
+<li><b>Context-free grammar</b> (JSON lồng nhau tuỳ ý, ngôn ngữ lập trình) cần <b>pushdown automaton</b>, vì phải nhớ ngăn xếp ngoặc. XGrammar (2024) tách token thành hai loại: loại "không phụ thuộc ngữ cảnh" thì kiểm tra trước được, loại "phụ thuộc ngữ cảnh" thì kiểm tra lúc chạy. Cách này giảm chi phí mask đáng kể.</li>
+</ul>
+
+<div class="callout warn"><div class="callout-title">Bẫy: ranh giới token</div>
+<p>Grammar định nghĩa trên ký tự, còn model sinh theo token. Một token có thể chứa nhiều ký tự, ví dụ <code>"}</code> hoặc <code>",\n</code>. Bộ mask phải xét cả chuỗi ký tự của token, không chỉ ký tự đầu. Ngoài ra, ép quá chặt có thể kéo model ra khỏi phân phối nó quen, làm giảm chất lượng nội dung. Mẹo thực tế: để model "nghĩ" tự do trước, rồi mới ép format ở phần trả lời cuối; hoặc đưa schema vào prompt để phân phối của model vốn đã gần với grammar.</p>
+</div>
+
+<h3 id="i-opt-foundations">Optimization — những đòn bẩy cơ bản rút ra từ roofline</h3>
+<p>Từ phân tích trên có thể suy ra gần như mọi kỹ thuật ở các chương sau:</p>
+<table>
+<thead><tr><th>Nút thắt</th><th>Đòn bẩy</th><th>Chương</th></tr></thead>
+<tbody>
+<tr><td>Decode đọc weights (memory-bound)</td><td>Tăng batch (continuous batching); giảm byte weights (quantization W8/W4)</td><td><a href="#i-serving">Serving</a>, Quantization</td></tr>
+<tr><td>Decode đọc KV (memory-bound, batch không giúp)</td><td>GQA/MLA, FP8 KV, paged memory để tăng batch, prefix caching</td><td><a href="#i-serving">Serving</a></td></tr>
+<tr><td>Decode tuần tự theo thời gian</td><td>Speculative decoding: kiểm tra nhiều token trong một lần forward</td><td><a href="#i-spec">Speculative</a></td></tr>
+<tr><td>Prefill compute-bound làm chặn decode</td><td>Chunked prefill, tách prefill/decode ra máy khác</td><td><a href="#i-serving">Serving</a></td></tr>
+<tr><td>Overhead CPU khi launch kernel nhỏ</td><td>CUDA graphs, fused kernel</td><td><a href="#i-serving">Serving</a></td></tr>
+</tbody>
+</table>
+
+<div class="callout note"><div class="callout-title">Nguồn tham khảo</div>
+<ul>
+<li>NVIDIA, <i>H100 Tensor Core GPU datasheet</i> (2022–2023): số FLOP/s và băng thông HBM3.</li>
+<li>Pope et al., <i>Efficiently Scaling Transformer Inference</i>, Google, 2022 (arXiv:2211.05102): phân tích prefill/decode, memory-bound, chọn cách partition khi inference.</li>
+<li>Holtzman et al., <i>The Curious Case of Neural Text Degeneration</i>, 2019 (arXiv:1904.09751): nucleus (top-p) sampling.</li>
+<li>Fan et al., <i>Hierarchical Neural Story Generation</i>, 2018 (arXiv:1805.04833): top-k sampling.</li>
+<li>Nguyen et al., <i>Turning Up the Heat: Min-p Sampling for Creative and Coherent LLM Outputs</i>, 2024 (arXiv:2407.01082).</li>
+<li>Keskar et al., <i>CTRL: A Conditional Transformer Language Model for Controllable Generation</i>, Salesforce, 2019 (arXiv:1909.05858): repetition penalty.</li>
+<li>Wu et al., <i>Google's Neural Machine Translation System</i>, 2016 (arXiv:1609.08144): length penalty cho beam search.</li>
+<li>Willard &amp; Louf, <i>Efficient Guided Generation for Large Language Models</i> (Outlines), 2023 (arXiv:2307.09702).</li>
+<li>Dong et al., <i>XGrammar: Flexible and Efficient Structured Generation Engine for LLMs</i>, 2024 (arXiv:2411.15100).</li>
+<li>Zhong et al., <i>DistServe</i>, 2024 (arXiv:2401.09670): định nghĩa goodput theo SLO.</li>
+</ul>
+</div>
+</section>
+
+<section id="i-serving">
+<h2 id="i-serving-h">Serving systems — batching, memory và scheduling</h2>
+
+<div class="callout tip"><div class="callout-title">Đọc nhanh</div>
+<ul>
+<li><b>Continuous batching</b>: request xong thì rời batch ngay, request mới vào ngay ở bước kế tiếp, không ai phải chờ cả nhóm. Đây là thay đổi lớn nhất làm serving LLM rẻ đi.</li>
+<li><b>PagedAttention</b> chia KV cache thành các "trang" nhỏ giống bộ nhớ ảo của hệ điều hành, nên gần như không lãng phí vùng nhớ và chạy được nhiều request cùng lúc hơn.</li>
+<li><b>Prefix caching</b>: nhiều request chung phần đầu (system prompt, tài liệu, lịch sử chat) thì chỉ tính phần đó một lần rồi dùng lại.</li>
+<li>Prefill và decode tranh nhau GPU. Hai cách giải quyết là chia nhỏ prefill (<b>chunked prefill</b>) hoặc tách hai pha ra hai cụm máy khác nhau (<b>disaggregation</b>).</li>
+<li>Các engine phổ biến (vLLM, SGLang, TensorRT-LLM, llama.cpp…) đều cài các ý tưởng này. Khác biệt nằm ở phần cứng hỗ trợ, độ dễ dùng và mức tối ưu cho từng loại model.</li>
+</ul>
+</div>
+
+<p>Chương trước cho thấy decode memory-bound, và muốn dùng GPU hiệu quả thì phải chạy batch lớn. Nhưng request thật đến ngẫu nhiên, có prompt và output dài ngắn khác nhau, nên gom batch không đơn giản như khi train. <b>Serving system</b> (inference engine) là phần mềm giải bài toán đó: quản lý bộ nhớ KV, xếp lịch request và chọn kernel.</p>
+
+<h3 id="i-batching">Optimization — từ static batching đến continuous batching</h3>
+
+<h4>Static batching</h4>
+<p>Gom \(B\) request, chạy đến khi <i>request dài nhất</i> sinh xong, rồi mới nhận lô mới. Hai vấn đề:</p>
+<ul>
+<li>Request ngắn xong sớm nhưng slot của nó vẫn bị giữ (chạy padding) cho đến hết lô, nên GPU phí công.</li>
+<li>Request mới đến phải chờ cả lô hiện tại xong, nên TTFT tăng mạnh.</li>
+</ul>
+
+<h4>Dynamic batching</h4>
+<p>Gom request trong một cửa sổ thời gian (ví dụ 10 ms) hoặc đến khi đủ \(B\). Cách này tốt cho model không autoregressive (phân loại, embedding), nhưng với LLM vẫn còn vấn đề "chờ request dài nhất".</p>
+
+<h4>Continuous batching (iteration-level scheduling)</h4>
+<p>Orca (Yu et al., OSDI 2022) đổi đơn vị lập lịch từ <i>request</i> sang <i>iteration</i>, tức một bước forward:</p>
+<ul>
+<li>Sau <b>mỗi bước decode</b>, scheduler kiểm tra: sequence nào sinh EOS hoặc chạm max length thì rời batch ngay; nếu còn chỗ (bộ nhớ KV) thì nạp request mới vào.</li>
+<li>Request mới cần prefill, còn các request cũ đang decode. Orca dùng <b>selective batching</b>: các phép tính theo từng token (linear layers, MLP) được gộp lại thành một batch "phẳng" gồm mọi token. Riêng attention được tính riêng cho từng sequence, vì mỗi sequence có độ dài và KV cache khác nhau.</li>
+</ul>
+
+<svg viewBox="0 0 640 210" width="100%" role="img" aria-label="So sánh static batching và continuous batching theo thời gian">
+  <g font-family="sans-serif" font-size="12" style="fill:currentColor">
+    <text x="10" y="18" style="fill:var(--muted)">Static batching</text>
+    <rect x="110" y="8" width="300" height="14" style="fill:var(--accent)" opacity="0.85"/>
+    <rect x="110" y="26" width="120" height="14" style="fill:var(--accent)" opacity="0.85"/>
+    <rect x="230" y="26" width="180" height="14" style="fill:none;stroke:var(--muted)" stroke-dasharray="3 3"/>
+    <rect x="110" y="44" width="200" height="14" style="fill:var(--accent)" opacity="0.85"/>
+    <rect x="310" y="44" width="100" height="14" style="fill:none;stroke:var(--muted)" stroke-dasharray="3 3"/>
+    <rect x="410" y="26" width="160" height="14" style="fill:var(--accent)" opacity="0.45"/>
+    <text x="415" y="70" style="fill:var(--muted)">request mới chờ đến khi cả lô xong</text>
+    <text x="240" y="37" style="fill:var(--muted)">padding (phí)</text>
+
+    <text x="10" y="118" style="fill:var(--muted)">Continuous</text>
+    <rect x="110" y="108" width="300" height="14" style="fill:var(--accent)" opacity="0.85"/>
+    <rect x="110" y="126" width="120" height="14" style="fill:var(--accent)" opacity="0.85"/>
+    <rect x="232" y="126" width="160" height="14" style="fill:var(--accent)" opacity="0.45"/>
+    <rect x="392" y="126" width="150" height="14" style="fill:var(--accent)" opacity="0.25"/>
+    <rect x="110" y="144" width="200" height="14" style="fill:var(--accent)" opacity="0.85"/>
+    <rect x="312" y="144" width="220" height="14" style="fill:var(--accent)" opacity="0.45"/>
+    <text x="110" y="180" style="fill:var(--muted)">slot trống được lấp ngay ở bước decode kế tiếp → GPU luôn bận, TTFT thấp</text>
+    <line x1="110" y1="195" x2="600" y2="195" style="stroke:var(--muted)"/>
+    <text x="600" y="207" text-anchor="end" style="fill:var(--muted)">thời gian (bước decode) →</text>
+  </g>
+</svg>
+
+<div class="callout tip"><div class="callout-title">Ý chính</div>
+<p>Continuous batching là mặc định trong mọi engine hiện đại. Phiên bản này còn được gọi là <i>in-flight batching</i> (TensorRT-LLM) hay <i>iteration-level scheduling</i>. Thứ giới hạn batch lúc này không còn là "request dài nhất" nữa mà là <b>bộ nhớ KV còn trống</b>. Đó là lý do PagedAttention ra đời ngay sau đó.</p>
+</div>
+
+<h3 id="i-paged">Optimization — PagedAttention: KV cache như bộ nhớ ảo</h3>
+
+<p>Trước vLLM, các hệ thống thường cấp phát KV cache cho mỗi request thành một <b>vùng liền mạch</b> dài bằng max length, vì không biết trước output dài bao nhiêu. Paper vLLM (Kwon et al., SOSP 2023) phân tích ba kiểu lãng phí:</p>
+<ul>
+<li><b>Reserved</b>: chỗ giữ cho các token sẽ sinh sau này, chưa dùng tới.</li>
+<li><b>Internal fragmentation</b>: chỗ cấp theo max length nhưng request kết thúc sớm, không bao giờ dùng tới.</li>
+<li><b>External fragmentation</b>: các khoảng trống lẻ giữa những vùng liền mạch, cộng lại thì đủ chỗ nhưng không đủ liền một khối cho request mới.</li>
+</ul>
+<p>Paper ước tính các hệ thống trước đó chỉ dùng thực sự khoảng 20–40% bộ nhớ KV cho dữ liệu token.</p>
+
+<h4>Cơ chế</h4>
+<ul>
+<li>KV cache được chia thành các <b>block</b> kích thước cố định, ví dụ 16 token mỗi block. Mỗi block chứa K, V của 16 token liên tiếp cho mọi layer/head (hoặc mỗi layer có pool riêng, tuỳ cài đặt).</li>
+<li>Mỗi request có một <b>block table</b> (giống page table của hệ điều hành) ánh xạ block logic 0, 1, 2… sang block vật lý bất kỳ trong pool.</li>
+<li>Block chỉ được cấp khi cần: block cuối đầy thì cấp block mới. Lãng phí tối đa vì vậy chỉ là phần trống trong block cuối, dưới 16 token mỗi request. vLLM báo cáo lãng phí giảm xuống dưới khoảng 4%.</li>
+<li>Kernel attention phải đọc K, V theo block table, tức truy cập gián tiếp thay vì đọc một mảng liền. Overhead kernel được bù lại bằng việc tăng batch nhiều lần. vLLM báo cáo throughput tăng 2–4× so với các hệ thống cùng thời ở cùng mức latency.</li>
+</ul>
+
+<h4>Chia sẻ block và copy-on-write</h4>
+<p>Vì là ánh xạ gián tiếp, nhiều request có thể trỏ tới <i>cùng một block vật lý</i>:</p>
+<ul>
+<li><b>Parallel sampling</b> (sinh \(n\) câu trả lời cho cùng một prompt, ví dụ group trong GRPO): KV của prompt chỉ lưu một lần. Mỗi block có <b>reference count</b>.</li>
+<li>Khi một nhánh cần ghi vào block đang chia sẻ (block cuối chưa đầy), hệ thống mới <b>copy</b> block đó ra bản riêng (copy-on-write), giống <code>fork()</code> trong Unix.</li>
+<li>Beam search cũng hưởng lợi theo cách tương tự: các beam chung nhiều tiền tố.</li>
+</ul>
+
+<div class="callout example"><div class="callout-title">Ví dụ số: GRPO với group 16</div>
+<p>Prompt 1,000 token, sinh 16 response, mỗi response 4,000 token, model kiểu Llama-3-8B (128 KiB/token):</p>
+<ul>
+<li>Không chia sẻ: \(16 \times 5000 \times 128\text{ KiB} \approx 9.8\) GiB.</li>
+<li>Chia sẻ prompt: \(1000 \times 128\text{ KiB} + 16 \times 4000 \times 128\text{ KiB} \approx 0.12 + 7.8 \approx 7.9\) GiB, tiết kiệm khoảng 19%. Prompt càng dài so với response (ví dụ RAG, tài liệu dài) thì càng tiết kiệm nhiều.</li>
+</ul>
+</div>
+
+<h3 id="i-prefix-cache">Optimization — Prefix caching và RadixAttention</h3>
+
+<p>PagedAttention cho phép chia sẻ KV <i>trong</i> một nhóm request sinh cùng lúc. <b>Prefix caching</b> đi xa hơn: giữ lại KV của các request <i>đã xong</i> để request <i>sau</i> dùng lại nếu có cùng tiền tố. Các trường hợp điển hình:</p>
+<ul>
+<li>System prompt dài dùng chung cho mọi user.</li>
+<li>Chat nhiều lượt: lượt \(k+1\) chứa toàn bộ lượt 1..\(k\) làm tiền tố.</li>
+<li>Few-shot prompt, tài liệu RAG dùng lại, agent gọi tool nhiều vòng với cùng context.</li>
+</ul>
+
+<h4>Hai cách đánh chỉ mục</h4>
+<ul>
+<li><b>Hash theo block</b> (vLLM automatic prefix caching): mỗi block đầy được định danh bằng hash của <i>toàn bộ token từ đầu đến hết block đó</i>. Request mới tính hash từng block của prompt; block nào trùng hash thì dùng lại, không cần prefill.</li>
+<li><b>Radix tree</b> (SGLang, Zheng et al. 2023): lưu mọi chuỗi token đã tính KV thành một cây radix (cây tiền tố nén). Tìm tiền tố chung dài nhất là đi một đường trên cây. Khi hết bộ nhớ thì loại bỏ theo <b>LRU</b> từ lá vào gốc, giữ lại các tiền tố được dùng nhiều. Scheduler còn có thể ưu tiên chạy các request có tiền tố đang nằm trong cache (cache-aware scheduling) để tăng tỉ lệ trúng cache.</li>
+</ul>
+
+<div class="callout example"><div class="callout-title">Ví dụ số: chatbot có system prompt 2,000 token</div>
+<p>Mỗi request: system prompt 2,000 token + câu hỏi user 100 token. Không có prefix cache thì mỗi request prefill 2,100 token. Có cache thì chỉ prefill 100 token. Prefill gần như tuyến tính theo số token (khi context chưa quá dài), nên TTFT do prefill giảm khoảng 20 lần, và GPU được giải phóng cho decode. Đây là lý do các API thương mại tính giá rẻ hơn hẳn cho "cached input tokens".</p>
+</div>
+
+<div class="callout warn"><div class="callout-title">Prefix phải trùng chính xác từng token</div>
+<p>Chỉ cần đổi một token ở đầu (ví dụ chèn timestamp hoặc tên user vào system prompt), mọi block sau đó đều trượt cache. Nguyên tắc thiết kế prompt: <b>phần ổn định đặt trước, phần thay đổi đặt sau</b>. Với model có sliding window hoặc RoPE thì KV phụ thuộc vào vị trí tuyệt đối, nên tiền tố phải bắt đầu đúng từ token 0.</p>
+</div>
+
+<h3 id="i-chunked-prefill">Optimization — Chunked prefill và piggybacking</h3>
+
+<p>Với continuous batching, khi một request mới vào cần prefill 8,000 token, bước forward đó tốn nhiều thời gian hơn hẳn các bước decode thường. Mọi request đang decode phải chờ, nên ITL của họ có một cú "giật" lớn. Đây gọi là <b>generation stall</b>.</p>
+
+<p><b>Chunked prefill</b> (Sarathi, Agrawal et al. 2023; Sarathi-Serve, OSDI 2024) giải quyết bằng cách:</p>
+<ul>
+<li>Cắt prefill dài thành các <b>chunk</b>, ví dụ 512 token mỗi chunk. Mỗi iteration chỉ xử lý một chunk.</li>
+<li><b>Piggybacking</b>: ghép chunk prefill đó với các token decode của những request khác vào cùng một forward. Phần decode memory-bound "đi nhờ" phần prefill compute-bound: weights đã được đọc cho chunk prefill thì dùng luôn cho các token decode, nên decode gần như miễn phí.</li>
+<li>Kích thước chunk được chọn sao cho mỗi iteration có tổng số token ổn định (<i>token budget</i>), ví dụ 512–2048. Nhờ vậy thời gian mỗi bước đều và ITL ổn định.</li>
+</ul>
+
+\[
+\text{tokens trong 1 iteration} = \underbrace{c_{\text{chunk}}}_{\text{prefill}} + \underbrace{B_{\text{decode}}}_{\text{mỗi request 1 token}} \;\le\; \text{token budget}
+\]
+
+<div class="callout note"><div class="callout-title">Đánh đổi</div>
+<p>Chunk nhỏ cho ITL đều hơn, nhưng prefill chia làm nhiều bước nên TTFT của request mới tăng nhẹ. Mỗi chunk sau cũng phải đọc lại KV của các chunk trước, nên tổng chi phí attention tăng chút ít. Chunk lớn thì ngược lại. vLLM và SGLang đều bật chunked prefill mặc định ở nhiều cấu hình.</p>
+</div>
+
+<h3 id="i-disagg">Optimization — Tách prefill và decode (disaggregation)</h3>
+
+<p>Chunked prefill vẫn để hai pha <i>chung một GPU</i>, nên chúng vẫn can nhiễu nhau, và không thể chọn cấu hình song song riêng cho từng pha. Hướng <b>disaggregated serving</b> tách hẳn:</p>
+<ul>
+<li><b>Prefill instance</b>: chuyên chạy prefill. Cấu hình hướng compute, ví dụ TP lớn để giảm TTFT.</li>
+<li><b>Decode instance</b>: chuyên decode. Cấu hình hướng bộ nhớ để chứa batch lớn.</li>
+<li>Prefill xong thì <b>chuyển KV cache</b> qua mạng tốc độ cao (NVLink, InfiniBand/RDMA) sang decode instance.</li>
+</ul>
+
+<table>
+<thead><tr><th>Hệ thống</th><th>Ý tưởng chính</th></tr></thead>
+<tbody>
+<tr><td>DistServe (Zhong et al., OSDI 2024)</td><td>Tối ưu <b>goodput</b> theo SLO TTFT/TPOT; chọn số lượng và cấu hình song song riêng cho từng pha; đặt instance theo băng thông mạng</td></tr>
+<tr><td>Splitwise (Patel et al., ISCA 2024, Microsoft)</td><td>Chạy hai pha trên hai loại máy (có thể khác thế hệ GPU) để tối ưu chi phí và điện năng</td></tr>
+<tr><td>Mooncake (Qin et al. 2024, Moonshot AI / Kimi)</td><td>Kiến trúc "KV-cache-centric": KV cache là tài nguyên trung tâm, lưu phân tán trên DRAM/SSD của cả cụm, có scheduler quyết định tái dùng KV và nơi chạy prefill/decode</td></tr>
+</tbody>
+</table>
+
+<div class="callout tip"><div class="callout-title">Khi nào đáng tách?</div>
+<p>Khi tải lớn, prompt dài (RAG, agent, code) và SLO chặt cho cả TTFT lẫn TPOT. Với hệ thống nhỏ vài GPU, chi phí truyền KV và vận hành hai loại instance thường không đáng; chunked prefill là đủ. Các deployment lớn như DeepSeek-V3 dùng cấu hình riêng cho prefill và decode (xem phần MoE bên dưới).</p>
+</div>
+
+<h3 id="i-scheduling">Scheduling, preemption và các chính sách hàng đợi</h3>
+<p>Khi bộ nhớ KV đầy mà các request đang chạy vẫn cần thêm block để sinh tiếp, scheduler phải <b>preempt</b> (tạm đuổi) một số request. vLLM mô tả hai cách:</p>
+<ul>
+<li><b>Swap</b>: chuyển block KV của request bị đuổi sang CPU RAM, khi có chỗ thì chuyển lại. Tốn băng thông PCIe.</li>
+<li><b>Recompute</b>: bỏ hẳn KV; khi request được chạy lại thì prefill lại (prompt + phần đã sinh). Prefill compute-bound và nhanh, nên với sequence không quá dài, recompute thường rẻ hơn swap.</li>
+</ul>
+<p>Chính sách chọn request: mặc định là FCFS (đến trước phục vụ trước) và đuổi request đến sau cùng. Ngoài ra còn có các chính sách theo độ ưu tiên, theo SLO, hoặc dự đoán độ dài output (shortest-job-first) để giảm latency trung bình. Dự đoán độ dài output là bài toán khó, vì không biết trước model sẽ dừng ở đâu.</p>
+
+<div class="callout warn"><div class="callout-title">Dấu hiệu cấu hình sai</div>
+<p>Nếu log engine báo preemption liên tục thì batch đang quá lớn so với bộ nhớ KV. Hệ thống tốn công prefill lại hoặc swap qua lại, nên throughput thực <i>giảm</i>. Hãy giảm <code>max_num_seqs</code> (hoặc tham số tương đương), tăng tỉ lệ bộ nhớ GPU dành cho KV, dùng FP8 KV cache, hoặc thêm GPU.</p>
+</div>
+
+<h3 id="i-parallel-inference">Optimization — Parallelism khi inference</h3>
+
+<p>Khác với train (xem <a href="frontier-model-training-vi.html#s-5d-parallelism">5D parallelism</a>), inference không có gradient và optimizer state. Mục tiêu là vừa bộ nhớ và giảm latency.</p>
+<table>
+<thead><tr><th>Kiểu</th><th>Làm gì</th><th>Ưu</th><th>Nhược</th></tr></thead>
+<tbody>
+<tr><td><b>Tensor parallel (TP)</b></td><td>Chia mỗi ma trận weight theo cột/hàng ra \(t\) GPU; mỗi layer có all-reduce</td><td>Giảm latency mỗi token: mỗi GPU đọc \(1/t\) weights nên trần decode tăng gần \(t\) lần</td><td>All-reduce mỗi layer, nên chỉ hiệu quả trong một node có NVLink</td></tr>
+<tr><td><b>Pipeline parallel (PP)</b></td><td>Chia các layer ra nhiều GPU/node</td><td>Ít giao tiếp; dùng được qua nhiều node</td><td>Không giảm latency của một request; cần nhiều micro-batch để lấp bubble</td></tr>
+<tr><td><b>Data parallel (DP) / replica</b></td><td>Nhiều bản sao model, load balancer chia request</td><td>Đơn giản, scale throughput tuyến tính</td><td>Mỗi bản phải vừa bộ nhớ</td></tr>
+<tr><td><b>Expert parallel (EP)</b></td><td>Mỗi GPU giữ một phần expert của MoE; token được gửi qua all-to-all</td><td>Chứa được MoE khổng lồ; mỗi GPU đọc ít weights</td><td>All-to-all hai lần mỗi layer MoE; mất cân bằng tải giữa các expert</td></tr>
+</tbody>
+</table>
+
+<h4>DP attention cho MLA và GQA ít head</h4>
+<p>Khi dùng TP cho attention, mỗi GPU giữ một phần các KV head. Nhưng nếu model có ít KV head hơn số GPU (ví dụ 8 KV head mà TP=16), hoặc dùng MLA (một latent vector chung cho mọi head), thì KV cache bị <b>nhân bản</b> trên nhiều GPU, rất phí. Giải pháp mà SGLang dùng cho DeepSeek là <b>DP attention</b>: phần attention chạy theo kiểu data parallel (mỗi GPU xử lý một nhóm request riêng với KV riêng), còn phần MoE/MLP chạy theo EP hoặc TP. Hai phần nối với nhau bằng all-gather/all-to-all.</p>
+
+<h4>Ví dụ: DeepSeek-V3 serving</h4>
+<p>Technical report DeepSeek-V3 mô tả deployment tách prefill và decode:</p>
+<ul>
+<li><b>Prefill</b>: đơn vị triển khai tối thiểu là 4 node (32 GPU H800). Attention dùng TP4 kết hợp SP và DP8; MoE dùng EP32.</li>
+<li><b>Decode</b>: đơn vị tối thiểu 40 node (320 GPU). MoE dùng EP320, mỗi GPU chỉ giữ một expert; attention dùng TP4 + SP và DP80.</li>
+<li>Họ dùng thêm "redundant experts" (nhân bản các expert nóng) để cân bằng tải, và chồng hai micro-batch để che thời gian all-to-all bằng thời gian tính toán.</li>
+</ul>
+<p>Ví dụ này cho thấy với MoE cực lớn, EP rất rộng ở pha decode là cách để mỗi GPU chỉ đọc rất ít weights mà vẫn có batch lớn cho mỗi expert.</p>
+
+<h3 id="i-kernels">Optimization — CUDA graphs và kernel cho decode</h3>
+
+<h4>CUDA graphs</h4>
+<p>Một bước decode của model 8B có hàng trăm kernel nhỏ (mỗi layer gồm norm, QKV, RoPE, attention, out-proj, MLP…). Mỗi kernel chạy chỉ vài micro-giây, trong khi CPU launch một kernel cũng tốn vài micro-giây. Ở batch nhỏ, GPU vì vậy hay phải <b>chờ CPU</b>. <b>CUDA graphs</b> ghi lại toàn bộ chuỗi kernel một lần, sau đó "phát lại" cả chuỗi bằng một lệnh. Vì graph cần shape cố định, các engine capture sẵn graph cho một số batch size (ví dụ 1, 2, 4, 8, … 256) rồi pad batch thực tế lên size gần nhất.</p>
+
+<h4>Kernel attention cho decode</h4>
+<ul>
+<li><b>Vấn đề</b>: FlashAttention gốc song song hoá theo batch × head × block query. Khi decode, mỗi sequence chỉ có 1 query, nên batch nhỏ không đủ việc để lấp hết các SM của GPU, trong khi context dài thì một SM phải quét toàn bộ KV một mình.</li>
+<li><b>Flash-Decoding</b> (Dao et al., 2023): chia KV theo chiều độ dài thành nhiều đoạn (<b>split-KV</b>). Mỗi đoạn được một thread block xử lý song song và tạo ra kết quả cục bộ kèm log-sum-exp. Bước cuối gộp các kết quả bằng đúng phép rescale của online softmax (xem <a href="frontier-model-training-vi.html#ar-flashattention">FlashAttention</a>). Cách này tăng tốc rõ rệt với context dài và batch nhỏ.</li>
+<li><b>FlashInfer</b> (Ye et al. 2025): thư viện kernel attention cho serving, hỗ trợ KV dạng paged/ragged, nhiều biến thể (GQA, MLA, cascade attention cho tiền tố chung), và lập lịch tải cân bằng. Được dùng trong SGLang, vLLM và các engine khác.</li>
+<li><b>Fused kernels</b>: gộp RMSNorm + residual add, gộp RoPE vào QKV, sampling kernel chạy trên GPU (top-k/top-p không cần sort toàn bộ vocab). Mục tiêu là giảm số lần đọc/ghi HBM và số lần launch kernel.</li>
+</ul>
+
+<h3 id="i-engines">Bức tranh các inference engine</h3>
+
+<table>
+<thead><tr><th>Engine</th><th>Điểm mạnh</th><th>Phù hợp khi</th></tr></thead>
+<tbody>
+<tr><td><b>vLLM</b> (UC Berkeley, mã nguồn mở)</td><td>PagedAttention, continuous batching, prefix caching, chunked prefill, nhiều phương pháp quantization và speculative decoding; hỗ trợ rất nhiều model và phần cứng (NVIDIA, AMD, TPU…); API tương thích OpenAI</td><td>Mặc định "an toàn" cho serving GPU nói chung; dùng làm inference trong nhiều framework RL</td></tr>
+<tr><td><b>SGLang</b> (LMSYS, mã nguồn mở)</td><td>RadixAttention, structured output nhanh, tối ưu mạnh cho DeepSeek/MoE (DP attention, EP), ngôn ngữ frontend cho chương trình LLM nhiều bước</td><td>Agent/chat nhiều lượt, nhiều tiền tố chung; MoE lớn; RL rollout</td></tr>
+<tr><td><b>TensorRT-LLM</b> (NVIDIA)</td><td>Kernel tối ưu sâu cho GPU NVIDIA, FP8/FP4, in-flight batching; thường dùng kèm Triton Inference Server hoặc NVIDIA Dynamo</td><td>Cần hiệu năng tối đa trên phần cứng NVIDIA và chấp nhận quy trình build phức tạp hơn</td></tr>
+<tr><td><b>TGI</b> (Hugging Face)</td><td>Tích hợp hệ sinh thái Hugging Face, continuous batching, dễ deploy</td><td>Đã dùng sẵn hạ tầng Hugging Face</td></tr>
+<tr><td><b>llama.cpp</b> / <b>Ollama</b></td><td>C/C++ thuần, chạy CPU/GPU tiêu dùng/Apple Silicon; định dạng GGUF với nhiều mức quantization (Q4_K_M, Q8_0…); Ollama là lớp tiện dụng phía trên</td><td>Chạy local, laptop, edge; một user hoặc tải nhỏ</td></tr>
+<tr><td><b>MLX / mlx-lm</b> (Apple)</td><td>Framework mảng cho Apple Silicon, tận dụng unified memory</td><td>Chạy và fine-tune trên Mac</td></tr>
+</tbody>
+</table>
+
+<div class="callout warn"><div class="callout-title">So sánh benchmark giữa các engine</div>
+<p>Các engine cập nhật hàng tuần, nên benchmark công bố nhanh chóng lỗi thời, và mỗi bên thường chọn workload có lợi cho mình. Hãy tự benchmark với <b>phân phối prompt/output giống production</b>, cùng cấu hình quantization, và đo goodput theo SLO của bạn. Không nên chỉ nhìn throughput tối đa.</p>
+</div>
+
+<div class="callout tip"><div class="callout-title">Checklist deploy nhanh</div>
+<ol>
+<li>Chọn độ chính xác: bf16 nếu đủ bộ nhớ; FP8 weights + FP8 KV trên Hopper trở lên thường gần như không mất chất lượng.</li>
+<li>Model vừa một GPU thì dùng DP replica. Không vừa thì dùng TP trong node; vẫn không vừa thì thêm PP hoặc EP qua nhiều node.</li>
+<li>Bật prefix caching, và sắp xếp prompt để phần ổn định đứng trước.</li>
+<li>Đặt <code>max_model_len</code> sát nhu cầu thật, vì max length lớn làm giảm số request đồng thời có thể lập lịch.</li>
+<li>Theo dõi: tỉ lệ dùng KV cache, số lần preemption, tỉ lệ trúng prefix cache, P99 TTFT/TPOT.</li>
+<li>Cân nhắc speculative decoding nếu tải thấp và cần latency thấp (xem chương sau).</li>
+</ol>
+</div>
+
+<div class="callout note"><div class="callout-title">Nguồn tham khảo</div>
+<ul>
+<li>Yu et al., <i>Orca: A Distributed Serving System for Transformer-Based Generative Models</i>, OSDI 2022.</li>
+<li>Kwon et al., <i>Efficient Memory Management for Large Language Model Serving with PagedAttention</i> (vLLM), SOSP 2023 (arXiv:2309.06180).</li>
+<li>Zheng et al., <i>SGLang: Efficient Execution of Structured Language Model Programs</i>, 2023 (arXiv:2312.07104).</li>
+<li>Agrawal et al., <i>SARATHI: Efficient LLM Inference by Piggybacking Decodes with Chunked Prefills</i>, 2023 (arXiv:2308.16369); <i>Taming Throughput-Latency Tradeoff in LLM Inference with Sarathi-Serve</i>, OSDI 2024 (arXiv:2403.02310).</li>
+<li>Zhong et al., <i>DistServe: Disaggregating Prefill and Decoding for Goodput-optimized LLM Serving</i>, OSDI 2024 (arXiv:2401.09670).</li>
+<li>Patel et al., <i>Splitwise: Efficient Generative LLM Inference Using Phase Splitting</i>, ISCA 2024 (arXiv:2311.18677).</li>
+<li>Qin et al., <i>Mooncake: A KVCache-centric Disaggregated Architecture for LLM Serving</i>, Moonshot AI, 2024 (arXiv:2407.00079).</li>
+<li>Dao, Haziza, Massa, Sizov, <i>Flash-Decoding for long-context inference</i>, blog, 10/2023.</li>
+<li>Ye et al., <i>FlashInfer: Efficient and Customizable Attention Engine for LLM Inference Serving</i>, 2025 (arXiv:2501.01005).</li>
+<li>DeepSeek-AI, <i>DeepSeek-V3 Technical Report</i>, 2024 (arXiv:2412.19437): mục Inference and Deployment.</li>
+<li>Tài liệu chính thức của vLLM, SGLang, TensorRT-LLM, llama.cpp.</li>
+</ul>
+</div>
+</section>
+
+<section id="i-spec">
+<h2 id="i-spec-h">Speculative decoding và các cách giải mã nhanh</h2>
+
+<div class="callout tip"><div class="callout-title">Đọc nhanh</div>
+<ul>
+<li>Ý tưởng: một model nhỏ, nhanh (<b>draft</b>) đoán trước vài token, rồi model lớn (<b>target</b>) kiểm tra tất cả trong <i>một</i> lần chạy. Đoán đúng bao nhiêu thì tiết kiệm bấy nhiêu bước.</li>
+<li>Với cách chấp nhận/từ chối đúng chuẩn, output có <b>phân phối giống hệt</b> khi chỉ dùng model lớn. Chất lượng không đổi, chỉ nhanh hơn.</li>
+<li>Kỹ thuật này có lợi vì decode bị nghẽn ở đọc bộ nhớ: kiểm tra 5 token tốn gần bằng thời gian sinh 1 token.</li>
+<li>Có nhiều cách tạo bản nháp: model nhỏ riêng, thêm "đầu dự đoán" vào chính model lớn (Medusa, EAGLE, MTP), hoặc chép lại đoạn text đã có trong prompt.</li>
+<li>Khi server đã chạy batch rất lớn (GPU hết rảnh), speculative decoding ít lợi, thậm chí làm chậm.</li>
+</ul>
+</div>
+
+<p>Decode tuần tự là giới hạn cơ bản: muốn token \(t+1\) phải có token \(t\). Nhưng theo <a href="#i-prefill-decode">phân tích roofline</a>, ở batch nhỏ mỗi bước decode dùng chưa tới 1% sức tính của GPU. Nếu đưa vào model lớn \(\gamma+1\) token cùng lúc, thời gian forward gần như không đổi so với 1 token, vì vẫn chỉ đọc weights một lần. Speculative decoding khai thác chính chỗ "sức tính thừa" đó.</p>
+
+<h3 id="i-spec-algo">Thuật toán draft–verify</h3>
+
+<p>Ký hiệu \(p(\cdot \mid \text{prefix})\) là phân phối của target model (lớn), \(q(\cdot \mid \text{prefix})\) là của draft model (nhỏ). Một vòng lặp:</p>
+<ol>
+<li><b>Draft</b>: draft model sinh tuần tự \(\gamma\) token \(\tilde x_1, \dots, \tilde x_\gamma\), lưu lại \(q_i = q(\tilde x_i \mid \cdot)\). Chi phí là \(\gamma\) lần forward của model nhỏ.</li>
+<li><b>Verify</b>: target model chạy <b>một</b> forward trên prefix \(+\, \tilde x_1..\tilde x_\gamma\). Do causal mask, ta nhận được cùng lúc \(p(\cdot \mid \text{prefix})\), \(p(\cdot \mid \text{prefix}, \tilde x_1)\), …, \(p(\cdot \mid \text{prefix}, \tilde x_{1..\gamma})\), tổng cộng \(\gamma + 1\) phân phối.</li>
+<li><b>Accept/reject</b> lần lượt từ \(i = 1\): chấp nhận \(\tilde x_i\) với xác suất
+\[ \min\!\Big(1, \frac{p(\tilde x_i)}{q(\tilde x_i)}\Big) \]
+Nếu bị từ chối tại vị trí \(i\): sample một token thay thế từ <b>phân phối dư</b> (residual)
+\[ p'(x) = \frac{\max\big(0,\; p(x) - q(x)\big)}{\sum_{x'} \max\big(0,\; p(x') - q(x')\big)} \]
+rồi dừng vòng lặp.</li>
+<li>Nếu cả \(\gamma\) token đều được chấp nhận: sample thêm một token "thưởng" từ \(p(\cdot \mid \text{prefix}, \tilde x_{1..\gamma})\), vì phân phối này đã tính sẵn.</li>
+<li>Bỏ phần KV cache của các token bị loại (rollback), rồi lặp lại.</li>
+</ol>
+<p>Mỗi vòng sinh ra ít nhất 1 token (kể cả khi từ chối ngay token đầu) và nhiều nhất \(\gamma + 1\) token.</p>
+
+<h4>Chứng minh: phân phối output được bảo toàn chính xác</h4>
+<p>Xét một vị trí. Draft đề xuất \(x \sim q\). Xác suất để <i>token cuối cùng</i> là \(x\):</p>
+\[
+P(\text{ra } x) = \underbrace{q(x) \cdot \min\Big(1, \frac{p(x)}{q(x)}\Big)}_{\text{đề xuất } x \text{ và được chấp nhận}} \;+\; \underbrace{P(\text{từ chối}) \cdot p'(x)}_{\text{bị từ chối rồi sample lại ra } x}
+\]
+<ul>
+<li>Số hạng đầu: \(q(x)\min(1, p(x)/q(x)) = \min\big(q(x), p(x)\big)\).</li>
+<li>Xác suất từ chối: \(P(\text{từ chối}) = 1 - \sum_x \min(q(x), p(x)) = \sum_x \big(p(x) - \min(p(x), q(x))\big) = \sum_x \max\big(0, p(x) - q(x)\big)\).</li>
+<li>Nhân với \(p'(x)\): mẫu số của \(p'\) triệt tiêu, còn lại đúng \(\max(0, p(x) - q(x))\).</li>
+</ul>
+\[
+P(\text{ra } x) = \min(p(x), q(x)) + \max(0, p(x) - q(x)) = p(x) \quad \blacksquare
+\]
+<p>Do đó output của speculative sampling có <b>cùng phân phối</b> với sample trực tiếp từ target model, bất kể draft model tệ đến đâu. Draft tệ chỉ làm chậm, không làm sai. Với greedy decoding, quy tắc đơn giản hơn: chấp nhận \(\tilde x_i\) nếu nó trùng \(\arg\max p\).</p>
+
+<div class="callout note"><div class="callout-title">Giải thích thêm: trực giác của quy tắc min(1, p/q)</div>
+<p>Nếu draft đánh giá token \(x\) <i>thấp hơn hoặc bằng</i> target (\(q(x) \le p(x)\)), thì luôn chấp nhận: draft đề xuất \(x\) ít hơn mức "đáng có", nên không có rủi ro dư. Nếu draft <i>đề xuất quá tay</i> (\(q(x) &gt; p(x)\)), thì chỉ chấp nhận với tỉ lệ \(p/q\) để cắt phần dư. Phần xác suất bị "thiếu" ở những token draft đánh giá thấp được bù lại qua phân phối dư \(p'\). Đây chính là rejection sampling quen thuộc, áp dụng theo từng token.</p>
+</div>
+
+<h3 id="i-spec-speedup">Tăng tốc kỳ vọng và cách chọn γ</h3>
+
+<p>Định nghĩa <b>acceptance rate</b> \(\alpha\) là xác suất trung bình một token draft được chấp nhận:</p>
+\[
+\alpha = \mathbb{E}\Big[\sum_x \min\big(p(x), q(x)\big)\Big] = 1 - \mathbb{E}\big[\text{TV}(p, q)\big]
+\]
+<p>(TV là total variation distance: draft càng giống target thì \(\alpha\) càng gần 1.) Giả sử các vị trí độc lập với cùng \(\alpha\). Số token sinh ra trong một vòng với \(\gamma\) token nháp (Leviathan et al. 2022):</p>
+\[
+\mathbb{E}[\text{tokens/vòng}] = 1 + \alpha + \alpha^2 + \dots + \alpha^\gamma = \frac{1 - \alpha^{\gamma+1}}{1 - \alpha}
+\]
+<p>Gọi \(c\) là tỉ lệ chi phí một forward của draft so với target (ví dụ 0.05). Chi phí một vòng ≈ \(\gamma c + 1\) (đơn vị: một forward target, coi verify \(\gamma+1\) token tốn như 1 forward nhờ memory-bound). Hệ số tăng tốc wall-clock:</p>
+\[
+\text{speedup} \approx \frac{1 - \alpha^{\gamma+1}}{(1 - \alpha)(\gamma c + 1)}
+\]
+
+<div class="callout example"><div class="callout-title">Ví dụ số với c = 0.05</div>
+<table>
+<thead><tr><th>\(\alpha\)</th><th>\(\gamma\)</th><th>Tokens/vòng</th><th>Chi phí/vòng</th><th>Speedup</th></tr></thead>
+<tbody>
+<tr><td>0.6</td><td>2</td><td>1.96</td><td>1.10</td><td>≈ 1.78×</td></tr>
+<tr><td>0.6</td><td>4</td><td>2.31</td><td>1.20</td><td>≈ 1.92×</td></tr>
+<tr><td>0.6</td><td>8</td><td>2.47</td><td>1.40</td><td>≈ 1.77×</td></tr>
+<tr><td>0.8</td><td>4</td><td>3.36</td><td>1.20</td><td>≈ 2.80×</td></tr>
+<tr><td>0.8</td><td>8</td><td>4.33</td><td>1.40</td><td>≈ 3.09×</td></tr>
+</tbody>
+</table>
+<p>Nhận xét: với \(\alpha\) thấp, tăng \(\gamma\) nhanh chóng vô ích, vì xác suất cả chuỗi dài được chấp nhận giảm theo hàm mũ. \(\alpha\) cao thì \(\gamma\) lớn mới đáng. Trong thực tế \(\alpha\) thay đổi theo nội dung: code và text lặp lại có \(\alpha\) cao, văn sáng tạo ở temperature cao có \(\alpha\) thấp. Vì vậy nhiều hệ thống chọn \(\gamma\) động (ví dụ EAGLE-2 chọn cây nháp theo độ tự tin của draft).</p>
+</div>
+
+<div class="callout warn"><div class="callout-title">Giả định "verify γ+1 token tốn như 1 token"</div>
+<p>Giả định này chỉ đúng khi target đang memory-bound, tức batch nhỏ. Với batch \(B\), mỗi bước verify xử lý \(B(\gamma+1)\) token. Khi \(B(\gamma+1)\) vượt quá khoảng ridge (vài trăm token trên H100), verify bắt đầu compute-bound và tốn thời gian tỉ lệ với số token. Lúc đó các token nháp bị từ chối là compute bị phí thật sự. Xem mục <a href="#i-spec-when">khi nào speculative decoding không có lợi</a>.</p>
+</div>
+
+<h3 id="i-spec-variants">Các biến thể tạo bản nháp</h3>
+
+<h4>Draft model riêng</h4>
+<p>Dùng một model nhỏ cùng tokenizer, cùng họ (ví dụ Llama-3.2-1B làm draft cho Llama-3.1-70B). Dễ triển khai, không cần train thêm. Nhược điểm: phải giữ thêm một model và KV cache của nó, và \(\alpha\) bị giới hạn bởi khoảng cách năng lực giữa hai model. Chất lượng nháp có thể cải thiện bằng cách <b>distill draft từ target</b> (ví dụ DistillSpec, Zhou et al. 2023).</p>
+
+<h4>Medusa — nhiều đầu dự đoán trên chính target</h4>
+<p>Medusa (Cai et al. 2024) gắn thêm \(K\) <b>decoding head</b> nhỏ lên hidden state cuối của target. Head thứ \(k\) dự đoán token ở vị trí \(t + k + 1\) (head gốc dự đoán \(t+1\)). Các ứng viên từ các head được tổ hợp thành <b>cây</b> (tree), rồi kiểm tra toàn bộ cây trong một forward bằng <b>tree attention</b>: một attention mask đặc biệt để mỗi nhánh chỉ nhìn thấy tổ tiên của nó.</p>
+<ul>
+<li>Ưu: không cần model riêng; head train nhanh, có thể giữ target đóng băng (Medusa-1) hoặc train chung (Medusa-2).</li>
+<li>Nhược: mỗi head dự đoán độc lập từ cùng một hidden state, nên càng xa thì càng kém chính xác. Medusa cũng thường dùng tiêu chí chấp nhận "typical acceptance" xấp xỉ, không bảo toàn phân phối chính xác như rejection sampling chuẩn.</li>
+</ul>
+
+<h4>EAGLE / EAGLE-2 / EAGLE-3 — draft ở mức feature</h4>
+<ul>
+<li><b>EAGLE</b> (Li et al. 2024): draft là một mạng rất nhỏ (khoảng một lớp decoder) nhận <b>hidden feature</b> của target ở bước trước, cùng với embedding của token vừa sample, để dự đoán feature tiếp theo, rồi dùng LM head của target để ra token. Dự đoán ở tầng feature dễ hơn ở tầng token, và việc đưa token đã sample vào giúp giải quyết sự bất định do sampling. Kết quả là \(\alpha\) cao hơn Medusa.</li>
+<li><b>EAGLE-2</b> (2024): cây nháp <b>động</b>: mở rộng những nhánh mà draft tự tin (dựa vào xác suất của draft, vốn xấp xỉ tốt acceptance rate), thay vì dùng cây tĩnh.</li>
+<li><b>EAGLE-3</b> (2025): bỏ ràng buộc dự đoán feature, chuyển sang dự đoán token trực tiếp và kết hợp feature từ nhiều tầng của target (thấp, giữa, cao). Train với kỹ thuật "training-time test" để draft quen với việc dùng output của chính nó. Paper báo cáo hiệu quả tăng khi tăng dữ liệu train draft.</li>
+</ul>
+
+<h4>MTP heads (DeepSeek-V3)</h4>
+<p>DeepSeek-V3 dùng <b>Multi-Token Prediction</b> (MTP) làm objective phụ <i>khi train</i>: thêm module dự đoán token thứ \(t+2\) (một module MTP có transformer block riêng, dùng chung embedding và output head với model chính, nối tuần tự để giữ chuỗi nhân quả). Khi inference, module MTP có thể bỏ đi, hoặc dùng lại làm draft cho speculative decoding. Report DeepSeek-V3 cho biết acceptance rate của token dự đoán thứ hai khoảng <b>85–90%</b>, giúp tốc độ sinh (TPS) tăng khoảng <b>1.8×</b>. Đây là ví dụ đẹp về việc một quyết định khi train phục vụ trực tiếp inference.</p>
+
+<h4>Không cần model nháp: n-gram, prompt lookup, lookahead</h4>
+<ul>
+<li><b>Prompt lookup decoding</b> (Saxena, 2023): tìm n-gram cuối cùng của output trong <i>prompt</i>; nếu thấy thì đề xuất các token đi sau nó trong prompt làm nháp. Rất hiệu quả cho tác vụ chép lại nhiều: sửa code, tóm tắt trích dẫn, RAG, trả lời dựa trên tài liệu. Chi phí draft gần như bằng 0.</li>
+<li><b>N-gram / suffix-based drafting</b>: tổng quát hơn, tra n-gram từ prompt, output trước đó hoặc một kho văn bản.</li>
+<li><b>Lookahead decoding</b> (Fu et al. 2024): dùng phương pháp lặp Jacobi để target tự sinh song song nhiều n-gram ứng viên, lưu vào một n-gram pool, rồi verify các ứng viên phù hợp. Không cần draft model hay train thêm.</li>
+</ul>
+
+<table>
+<thead><tr><th>Phương pháp</th><th>Cần train thêm?</th><th>Bộ nhớ thêm</th><th>Bảo toàn phân phối</th><th>Mạnh nhất khi</th></tr></thead>
+<tbody>
+<tr><td>Draft model riêng</td><td>Không (distill thì tốt hơn)</td><td>Model + KV của draft</td><td>Có (rejection sampling)</td><td>Có sẵn model nhỏ cùng họ</td></tr>
+<tr><td>Medusa</td><td>Có (các head)</td><td>Nhỏ</td><td>Tuỳ tiêu chí chấp nhận</td><td>Không muốn giữ model thứ hai</td></tr>
+<tr><td>EAGLE-2/3</td><td>Có (draft nhỏ)</td><td>Nhỏ</td><td>Có</td><td>Cần tăng tốc cao cho chat chung</td></tr>
+<tr><td>MTP (DeepSeek-V3)</td><td>Có sẵn từ pre-training</td><td>Một module</td><td>Có</td><td>Model đã được train với MTP</td></tr>
+<tr><td>Prompt lookup / n-gram</td><td>Không</td><td>Gần như 0</td><td>Có</td><td>Output chép nhiều từ input</td></tr>
+</tbody>
+</table>
+
+<h3 id="i-spec-when">Optimization — Khi nào speculative decoding không có lợi</h3>
+<ul>
+<li><b>Batch lớn / tải cao</b>: như đã nói, khi tổng token mỗi bước vượt ridge thì verify không còn "miễn phí". Token nháp bị từ chối trở thành compute bị phí, làm giảm throughput tổng. Nhiều engine vì vậy tắt speculation hoặc giảm \(\gamma\) khi batch lớn. Một số nghiên cứu (ví dụ MagicDec, 2024) chỉ ra rằng với context rất dài, decode vẫn memory-bound do đọc KV, nên speculation vẫn có lợi ngay cả ở batch vừa.</li>
+<li><b>Temperature cao, nội dung sáng tạo</b>: \(\alpha\) thấp, nên lợi ít.</li>
+<li><b>Draft quá đắt</b>: \(c\) lớn (draft có kích thước khoảng 1/5 target trở lên) thì mẫu số \(\gamma c + 1\) ăn hết lợi ích.</li>
+<li><b>Bộ nhớ</b>: draft model và KV của nó chiếm chỗ của KV target, nên batch tối đa giảm.</li>
+<li><b>Độ phức tạp hệ thống</b>: rollback KV, tree attention, tương tác với CUDA graphs và chunked prefill. Lỗi cài đặt ở đây có thể làm thay đổi phân phối output một cách âm thầm. Hãy kiểm tra bằng cách so sánh output greedy có và không có speculation: chúng phải trùng nhau (sai khác số học nhỏ là có thể chấp nhận).</li>
+</ul>
+
+<div class="callout tip"><div class="callout-title">Ý chính</div>
+<p>Speculative decoding đổi compute thừa lấy latency thấp hơn. Nó lý tưởng cho tải thấp và vừa, cho latency-sensitive (chat, agent tương tác, reasoning dài một user), và cho tác vụ có nhiều nội dung lặp lại. Với batch offline cực lớn chỉ cần throughput, hãy đo trước khi bật.</p>
+</div>
+
+<div class="callout note"><div class="callout-title">Nguồn tham khảo</div>
+<ul>
+<li>Leviathan, Kalman, Matias, <i>Fast Inference from Transformers via Speculative Decoding</i>, Google, 2022 (arXiv:2211.17192).</li>
+<li>Chen et al., <i>Accelerating Large Language Model Decoding with Speculative Sampling</i>, DeepMind, 2023 (arXiv:2302.01318).</li>
+<li>Cai et al., <i>Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads</i>, 2024 (arXiv:2401.10774).</li>
+<li>Li et al., <i>EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty</i>, 2024 (arXiv:2401.15077); <i>EAGLE-2</i>, 2024 (arXiv:2406.16858); <i>EAGLE-3</i>, 2025 (arXiv:2503.01840).</li>
+<li>Fu et al., <i>Break the Sequential Dependency of LLM Inference Using Lookahead Decoding</i>, 2024 (arXiv:2402.02057).</li>
+<li>Saxena, <i>Prompt Lookup Decoding</i>, GitHub, 2023.</li>
+<li>Zhou et al., <i>DistillSpec: Improving Speculative Decoding via Knowledge Distillation</i>, 2023 (arXiv:2310.08461).</li>
+<li>Chen et al., <i>MagicDec: Breaking the Latency-Throughput Tradeoff for Long Context Generation with Speculative Decoding</i>, 2024 (arXiv:2408.11049).</li>
+<li>DeepSeek-AI, <i>DeepSeek-V3 Technical Report</i>, 2024 (arXiv:2412.19437): mục Multi-Token Prediction và đánh giá speculative decoding.</li>
+</ul>
+</div>
+</section>
+
+<section id="i-quant">
+<h2 id="i-quant-h">Quantization — nén weights, activations và KV cache</h2>
+
+<div class="callout tip"><div class="callout-title">Đọc nhanh</div>
+<ul>
+<li>Quantization là lưu các con số của model bằng ít bit hơn (ví dụ 4 bit thay vì 16 bit), giống như làm tròn số để tờ giấy ghi được nhiều hơn.</li>
+<li>Model nhỏ đi 2–4 lần, nên chạy được trên GPU rẻ hơn và sinh chữ nhanh hơn, vì khi sinh chữ GPU chủ yếu bận <i>đọc</i> weights từ bộ nhớ.</li>
+<li>Khó nhất là vài con số "khổng lồ bất thường" (outliers): chúng làm hỏng phép làm tròn của mọi số còn lại. Các phương pháp nổi tiếng (LLM.int8, SmoothQuant, AWQ, GPTQ, xoay Hadamard) đều là các mẹo xử lý outliers hoặc bù lỗi làm tròn.</li>
+<li>Quy tắc thực dụng: chạy local/batch nhỏ thì dùng 4-bit chỉ cho weights; chạy server batch lớn trên GPU đời mới thì dùng FP8 cho cả weights lẫn activations.</li>
+<li>Luôn đo chất lượng sau khi nén bằng benchmark thật (nhất là reasoning và context dài), đừng chỉ nhìn perplexity.</li>
+</ul>
+</div>
+
+<p>Khi <b>train</b>, ta cần độ chính xác cao để gradient nhỏ không bị mất (xem <a href="frontier-model-training-vi.html#s-mixed-precision">mixed precision</a> trong file training). Khi <b>inference</b>, weights đã cố định, ta chỉ cần forward pass cho ra kết quả "gần đúng đủ tốt". Đây là lý do inference chịu được độ chính xác thấp hơn nhiều: 8 bit gần như không mất gì, 4 bit mất rất ít nếu làm cẩn thận, 2–3 bit thì bắt đầu đau.</p>
+
+<p>Lợi ích đến từ hai nơi:</p>
+<ul>
+<li><b>Bộ nhớ</b>: model 70B ở BF16 cần 140 GB chỉ cho weights — không vừa một GPU 80 GB. Ở 4-bit chỉ còn ~35 GB.</li>
+<li><b>Tốc độ decode</b>: sinh từng token một (batch nhỏ) là bài toán <b>memory-bound</b> — mỗi token mới phải đọc <i>toàn bộ</i> weights từ HBM một lần, còn phép nhân lại rất ít (xem <a href="frontier-model-training-vi.html#t-roofline">roofline</a>). Đọc ít byte hơn ⇒ nhanh hơn gần tỉ lệ thuận.</li>
+</ul>
+
+<h3 id="i2-basics">Quantization cơ bản — scale, zero-point và lỗi làm tròn</h3>
+
+<p>Ý tưởng: thay mỗi số thực \( x \) bằng một số nguyên \( q \) trong khoảng nhỏ (ví dụ \( [-128, 127] \) với INT8), cùng với một hệ số <b>scale</b> \( s \) dùng chung cho cả một nhóm số. Khi cần dùng lại, nhân ngược ra.</p>
+
+<h4>Uniform affine quantization</h4>
+\[
+\begin{aligned}
+q &amp;= \text{clamp}\!\left(\operatorname{round}\!\left(\frac{x}{s}\right) + z,\; q_{\min},\; q_{\max}\right) \\
+\hat x &amp;= s\,(q - z)
+\end{aligned}
+\]
+<table class="symtab">
+<thead><tr><th>Ký hiệu</th><th>Ý nghĩa</th></tr></thead>
+<tbody>
+<tr><td>\( x \)</td><td>giá trị gốc (weight hoặc activation, dạng float)</td></tr>
+<tr><td>\( q \)</td><td>số nguyên được lưu (ví dụ INT8: \( q_{\min}=-128, q_{\max}=127 \); UINT8: 0…255; INT4: −8…7)</td></tr>
+<tr><td>\( s \)</td><td><b>scale</b> — "kích thước một nấc" trên lưới số nguyên</td></tr>
+<tr><td>\( z \)</td><td><b>zero-point</b> — số nguyên tương ứng với giá trị thực 0</td></tr>
+<tr><td>\( \hat x \)</td><td>giá trị sau khi <b>dequantize</b> — xấp xỉ của \( x \)</td></tr>
+</tbody>
+</table>
+
+<ul>
+<li><b>Symmetric</b> (đối xứng): \( z = 0 \), \( s = \max|x| / q_{\max} \). Đơn giản, nhân ma trận nhanh vì không phải xử lý zero-point. Thường dùng cho <b>weights</b> (phân phối gần đối xứng quanh 0).</li>
+<li><b>Asymmetric</b> (bất đối xứng): \( s = (x_{\max} - x_{\min}) / (q_{\max} - q_{\min}) \), \( z = q_{\min} - \operatorname{round}(x_{\min}/s) \). Tận dụng hết lưới khi dữ liệu lệch về một phía (ví dụ activation sau ReLU/SiLU phần lớn dương).</li>
+</ul>
+
+<svg viewBox="0 0 640 150" width="100%" role="img" aria-label="Lưới quantization đều: giá trị thực được làm tròn về nấc gần nhất">
+  <g font-family="sans-serif" font-size="12" style="fill:currentColor">
+    <line x1="30" y1="70" x2="610" y2="70" style="stroke:var(--muted)" stroke-width="1.5"/>
+    <g style="stroke:var(--accent)" stroke-width="2">
+      <line x1="50" y1="60" x2="50" y2="80"/><line x1="120" y1="60" x2="120" y2="80"/><line x1="190" y1="60" x2="190" y2="80"/>
+      <line x1="260" y1="60" x2="260" y2="80"/><line x1="330" y1="60" x2="330" y2="80"/><line x1="400" y1="60" x2="400" y2="80"/>
+      <line x1="470" y1="60" x2="470" y2="80"/><line x1="540" y1="60" x2="540" y2="80"/>
+    </g>
+    <text x="50" y="98" text-anchor="middle">−4</text><text x="120" y="98" text-anchor="middle">−3</text><text x="190" y="98" text-anchor="middle">−2</text>
+    <text x="260" y="98" text-anchor="middle">−1</text><text x="330" y="98" text-anchor="middle">0</text><text x="400" y="98" text-anchor="middle">1</text>
+    <text x="470" y="98" text-anchor="middle">2</text><text x="540" y="98" text-anchor="middle">3</text>
+    <circle cx="427" cy="45" r="5" style="fill:var(--accent)"/>
+    <line x1="427" y1="50" x2="402" y2="64" style="stroke:var(--accent)" stroke-width="1.5"/>
+    <text x="440" y="40">x = 1.38·s → round → q = 1</text>
+    <text x="400" y="125" text-anchor="middle" style="fill:var(--muted)">khoảng cách giữa hai nấc = s</text>
+    <text x="30" y="30" style="fill:var(--muted)">lỗi làm tròn luôn nằm trong [−s/2, s/2]</text>
+  </g>
+</svg>
+
+<div class="callout example"><div class="callout-title">Ví dụ số — INT8 và INT4 symmetric</div>
+<p>Một nhóm weights: \( w = [0.123,\; -0.871,\; 0.502,\; 1.27] \). \( \max|w| = 1.27 \).</p>
+<p><b>INT8</b> (\( q_{\max} = 127 \)): \( s = 1.27/127 = 0.01 \).</p>
+<ul>
+<li>\( 0.123/0.01 = 12.3 \to 12 \to \hat w = 0.12 \) (lỗi 0.003)</li>
+<li>\( -0.871 \to -87.1 \to -87 \to -0.87 \) (lỗi 0.001)</li>
+<li>\( 0.502 \to 50.2 \to 50 \to 0.50 \) (lỗi 0.002)</li>
+<li>\( 1.27 \to 127 \to 1.27 \) (lỗi 0)</li>
+</ul>
+<p><b>INT4</b> (dùng \( q_{\max} = 7 \) cho đối xứng): \( s = 1.27/7 \approx 0.1814 \).</p>
+<ul>
+<li>\( 0.123/0.1814 = 0.68 \to 1 \to 0.181 \) (lỗi 0.058, gần 50% giá trị gốc!)</li>
+<li>\( -0.871 \to -4.80 \to -5 \to -0.907 \) (lỗi 0.036)</li>
+<li>\( 0.502 \to 2.77 \to 3 \to 0.544 \) (lỗi 0.042)</li>
+<li>\( 1.27 \to 7 \to 1.27 \)</li>
+</ul>
+<p>Lỗi tối đa = \( s/2 \): INT8 là 0.005, INT4 là 0.091 — lớn hơn ~18 lần. Mỗi bit bớt đi làm nấc to gấp đôi.</p>
+</div>
+
+<div class="callout example"><div class="callout-title">Ví dụ số — khi nào cần asymmetric</div>
+<p>Activation nằm trong \( [-1, 5] \). Symmetric INT8: \( s = 5/127 \approx 0.0394 \) — nửa âm của lưới (−127…−26) gần như bỏ phí. Asymmetric UINT8: \( s = 6/255 \approx 0.0235 \), \( z = \operatorname{round}(1/0.0235) \approx 43 \). Nấc nhỏ hơn ~1.67 lần ⇒ lỗi nhỏ hơn tương ứng.</p>
+</div>
+
+<h4>Phân tích lỗi</h4>
+<p>Nếu giá trị phân bố "đều" trong mỗi nấc, lỗi làm tròn \( e = x - \hat x \) xấp xỉ phân phối đều trên \( [-s/2, s/2] \), nên</p>
+\[
+\mathbb{E}[e^2] = \frac{s^2}{12}.
+\]
+<p>Với \( b \) bit và khoảng giá trị cố định, \( s \propto 2^{-b} \), nên mỗi bit thêm vào giảm năng lượng lỗi 4 lần (≈ 6 dB SQNR). Điều quan trọng hơn: <b>\( s \) bị quyết định bởi giá trị lớn nhất trong nhóm</b>. Chỉ cần một outlier lớn gấp 100 lần các số khác, \( s \) to gấp 100 lần, và đa số giá trị "bình thường" bị làm tròn về 0 hoặc ±1 nấc. Đây là gốc rễ của hầu hết khó khăn trong LLM quantization.</p>
+
+<p>Thêm một điểm: thứ ta thật sự quan tâm không phải lỗi trên từng weight mà là lỗi trên <b>output của layer</b> \( \lVert WX - \hat W X \rVert \). Một lỗi nhỏ trên weight nhân với activation lớn vẫn thành lỗi lớn. Đây là ý tưởng chung của GPTQ và AWQ ở dưới: <i>quantize có nhìn vào activation</i>.</p>
+
+<h3 id="i2-granularity">Granularity — một scale cho bao nhiêu số?</h3>
+<p>Scale dùng chung càng ít số thì càng "vừa khít" với nhóm đó (ít bị outlier kéo giãn), nhưng phải lưu nhiều scale hơn.</p>
+<table>
+<thead><tr><th>Granularity</th><th>Một scale cho</th><th>Chi phí lưu scale</th><th>Ghi chú</th></tr></thead>
+<tbody>
+<tr><td>Per-tensor</td><td>cả ma trận</td><td>~0</td><td>đơn giản nhất; dễ bị outlier phá</td></tr>
+<tr><td>Per-channel (per-row)</td><td>mỗi output channel của weight</td><td>rất nhỏ</td><td>mặc định cho weights INT8; scale nhân được ra sau matmul</td></tr>
+<tr><td>Per-token</td><td>mỗi hàng activation (mỗi token)</td><td>nhỏ, tính lúc chạy (dynamic)</td><td>phổ biến cho activations W8A8</td></tr>
+<tr><td>Per-group (ví dụ group 128)</td><td>mỗi 128 weights liên tiếp trong một hàng</td><td>16 bit / 128 = 0.125 bit/weight (nếu scale FP16)</td><td>chuẩn cho 4-bit weight-only (GPTQ/AWQ)</td></tr>
+<tr><td>Micro-block (MX, NVFP4)</td><td>16–32 phần tử</td><td>8 bit / 16–32 phần tử</td><td>được phần cứng mới hỗ trợ trực tiếp</td></tr>
+</tbody>
+</table>
+<p>Vì vậy "4-bit group 128" thực ra tốn khoảng 4.125–4.25 bit/weight (thêm zero-point nếu asymmetric).</p>
+
+<h3 id="i2-wa">Weight-only vs weight-activation — W4A16, W8A8, W4A8</h3>
+<p>Ký hiệu <b>W</b><i>x</i><b>A</b><i>y</i>: weights <i>x</i> bit, activations <i>y</i> bit.</p>
+<ul>
+<li><b>Weight-only (W4A16, W8A16)</b>: weights lưu ở 4/8 bit, nhưng trước khi nhân được <b>dequantize về FP16/BF16 ngay trong kernel</b>, phép nhân vẫn làm ở 16 bit. Lợi ích: giảm byte đọc từ bộ nhớ → tốt cho decode batch nhỏ. Không tăng FLOPs, thậm chí thêm chút chi phí dequantize.</li>
+<li><b>Weight-activation (W8A8 INT8/FP8, W4A4)</b>: cả hai đầu vào matmul đều ở bit thấp → dùng được tensor core INT8/FP8, <b>tăng throughput tính toán</b> (FP8 trên H100 gấp ~2 lần BF16). Lợi ích lớn khi batch lớn (compute-bound). Khó hơn vì activation có outliers và thay đổi theo từng input.</li>
+<li><b>W4A8</b>: lai — weight 4 bit để tiết kiệm bộ nhớ, activation 8 bit để dùng tensor core 8 bit (weight được nâng lên 8 bit trong kernel).</li>
+</ul>
+
+<h3 id="i2-outliers">Outliers trong activation và LLM.int8()</h3>
+<p>Dettmers et al. (2022) quan sát: khi model đủ lớn (khoảng từ 6.7B tham số trở lên trong các model họ khảo sát), activation xuất hiện <b>outlier features</b> — một số rất ít <b>chiều (feature dimension) cố định</b> mang giá trị lớn hơn bình thường hàng chục lần, và xuất hiện nhất quán ở hầu hết các token và nhiều layer. Nếu bỏ đi các chiều này, chất lượng model sụp đổ — tức là chúng mang thông tin quan trọng, không phải nhiễu.</p>
+
+<div class="callout example"><div class="callout-title">Ví dụ số — một outlier phá cả vector</div>
+<p>Activation \( x = [0.5,\; -1.2,\; 0.8,\; 60] \), per-tensor INT8: \( s = 60/127 \approx 0.472 \).</p>
+<ul>
+<li>\( 0.5 \to 1.06 \to 1 \to 0.472 \)</li>
+<li>\( -1.2 \to -2.54 \to -3 \to -1.417 \) (lỗi 18%)</li>
+<li>\( 0.8 \to 1.69 \to 2 \to 0.945 \) (lỗi 18%)</li>
+</ul>
+<p>Các giá trị bình thường chỉ còn 2–3 nấc để biểu diễn — gần như mất hết độ phân giải.</p>
+</div>
+
+<p><b>LLM.int8()</b> xử lý bằng <b>mixed-precision decomposition</b>:</p>
+\[
+XW = \underbrace{X_{:,O}\,W_{O,:}}_{\text{FP16, vài chiều outlier}} \;+\; \underbrace{X_{:,\bar O}\,W_{\bar O,:}}_{\text{INT8, phần còn lại}}
+\]
+<ul>
+<li>\( O \): tập các cột (feature dimension) có giá trị vượt ngưỡng (bài báo dùng ngưỡng 6.0).</li>
+<li>Phần INT8 dùng <b>vector-wise quantization</b>: scale riêng cho mỗi hàng của \( X \) và mỗi cột của \( W \).</li>
+</ul>
+<p>Kết quả: INT8 inference gần như không mất chất lượng tới cỡ 175B. Nhược điểm: phải tách ma trận lúc chạy nên chậm hơn FP16 trong nhiều cấu hình — nó chủ yếu là giải pháp <i>bộ nhớ</i>, không phải tốc độ. Thư viện <code>bitsandbytes</code> cài đặt phương pháp này.</p>
+
+<h3 id="i2-smoothquant">SmoothQuant — chuyển "độ khó" từ activation sang weight</h3>
+<p>Quan sát của Xiao et al. (2022): activation khó quantize (outliers theo chiều), weights thì dễ (phân phối mượt). Ý tưởng: nhân một hệ số vào từng chiều để "san bằng":</p>
+\[
+Y = XW = \big(X\,\operatorname{diag}(s)^{-1}\big)\big(\operatorname{diag}(s)\,W\big) = \hat X \hat W
+\]
+<p>Phép biến đổi này <b>không đổi kết quả toán học</b>, và \( \operatorname{diag}(s)^{-1} \) có thể gộp sẵn vào LayerNorm/RMSNorm phía trước (offline), nên không tốn chi phí lúc chạy. Hệ số mỗi kênh \( j \):</p>
+\[
+s_j = \frac{\max |X_j|^{\alpha}}{\max |W_j|^{1-\alpha}}
+\]
+<ul>
+<li>\( \max|X_j| \): độ lớn tối đa của activation ở kênh \( j \) (đo trên một ít calibration data).</li>
+<li>\( \max|W_j| \): độ lớn tối đa của weights ở hàng tương ứng.</li>
+<li>\( \alpha \): "migration strength" — bao nhiêu độ khó chuyển sang weight. \( \alpha = 0.5 \) chia đều; model có outliers nặng hơn cần \( \alpha \) lớn hơn.</li>
+</ul>
+<div class="callout example"><div class="callout-title">Ví dụ số</div>
+<p>Kênh \( j \): \( \max|X_j| = 60 \), \( \max|W_j| = 0.5 \), \( \alpha = 0.5 \): \( s_j = \sqrt{60}/\sqrt{0.5} \approx 7.75/0.707 \approx 10.95 \). Sau biến đổi: \( \max|\hat X_j| = 60/10.95 \approx 5.5 \) và \( \max|\hat W_j| = 0.5 \times 10.95 \approx 5.5 \). Cả hai cùng "khó vừa phải" thay vì một bên cực khó.</p>
+</div>
+<p>SmoothQuant cho phép W8A8 INT8 (dùng tensor core INT8 thật sự) với chất lượng gần FP16 trên các model đến cỡ 175B, và mẹo "chia lại scale giữa activation và weight" được dùng lại trong nhiều phương pháp sau này (AWQ, các phương pháp W4A8).</p>
+
+<h3 id="i2-gptq">GPTQ — quantize từng cột và bù lỗi bằng thông tin bậc hai</h3>
+<p>Round-to-nearest (RTN) quantize mỗi weight độc lập. GPTQ (Frantar et al., 2022) hỏi: <i>sau khi làm tròn một weight, ta có thể chỉnh các weight <b>chưa</b> quantize để bù lại lỗi không?</i></p>
+
+<h4>Bài toán</h4>
+<p>Với mỗi layer có weight \( W \) và input calibration \( X \) (các cột là các token), tìm \( \hat W \) đã quantize sao cho output gần nhất:</p>
+\[
+\hat W = \arg\min_{\hat W} \big\lVert WX - \hat W X \big\rVert_2^2
+\]
+<p>Bài toán tách được theo từng hàng \( w \) của \( W \). Với mỗi hàng, đây là hàm bậc hai có Hessian</p>
+\[
+H = 2XX^\top
+\]
+<p>(kích thước \( d_{in} \times d_{in} \)). \( H \) cho biết "các input dimension tương quan với nhau thế nào" — nếu hai chiều luôn đi cùng nhau, lỗi ở chiều này có thể bù bằng chiều kia.</p>
+
+<h4>Công thức cập nhật (từ Optimal Brain Surgeon)</h4>
+<p>Họ phương pháp OBS (Hassibi &amp; Stork, 1993) → OBQ (Frantar &amp; Alistarh, 2022) cho công thức: khi quantize weight thứ \( q \) (trong tập \( F \) các weight chưa quantize), lượng cập nhật tối ưu cho các weight còn lại là</p>
+\[
+\delta_F = -\,\frac{w_q - \operatorname{quant}(w_q)}{\big[H_F^{-1}\big]_{qq}}\;\big(H_F^{-1}\big)_{:,q}
+\]
+<p>và lỗi tăng thêm do quantize \( w_q \) là</p>
+\[
+\Delta E_q = \frac{\big(w_q - \operatorname{quant}(w_q)\big)^2}{\big[H_F^{-1}\big]_{qq}}.
+\]
+<ul>
+<li>\( w_q - \operatorname{quant}(w_q) \): lỗi làm tròn của weight vừa quantize.</li>
+<li>\( (H_F^{-1})_{:,q} \): cột \( q \) của nghịch đảo Hessian — chỉ ra "hướng" để phân phối lỗi sang các weight khác sao cho output thay đổi ít nhất.</li>
+<li>Sau mỗi bước, bỏ hàng/cột \( q \) khỏi \( H^{-1} \) (cập nhật bằng một bước khử Gauss).</li>
+</ul>
+<p>Trực giác: nếu input chiều 3 và chiều 7 thường tương quan dương, và ta làm tròn weight chiều 3 <i>lên</i> một chút, thì chỉnh weight chiều 7 <i>xuống</i> một chút để output gần như không đổi.</p>
+
+<h4>Ba mẹo khiến GPTQ nhanh</h4>
+<ol>
+<li><b>Cùng một thứ tự cho mọi hàng</b>: OBQ chọn weight "dễ nhất" trước cho từng hàng → mỗi hàng một \( H^{-1} \) riêng, rất chậm. GPTQ thấy rằng quantize theo thứ tự cột cố định (trái sang phải) cho kết quả gần như tương đương với model lớn. Vì \( H \) chỉ phụ thuộc \( X \) (giống nhau cho mọi hàng), chuỗi cập nhật \( H^{-1} \) được dùng chung → cả ma trận được xử lý song song theo hàng.</li>
+<li><b>Lazy batch updates</b>: xử lý một khối 128 cột, gom các cập nhật lại và áp cho phần còn lại của ma trận một lần — tăng tỉ lệ compute/memory trên GPU.</li>
+<li><b>Cholesky reformulation</b>: lặp nhiều lần cập nhật \( H^{-1} \) gây sai số số học ở model lớn; GPTQ tính trước các hàng cần thiết bằng phân rã Cholesky của \( H^{-1} \), kèm <b>dampening</b> (cộng một lượng nhỏ, khoảng 1% trung bình đường chéo, vào đường chéo \( H \)) để ổn định.</li>
+</ol>
+<p>Kết quả: quantize model cỡ 175B xuống 3–4 bit trong khoảng vài giờ trên một GPU, chất lượng tốt hơn rõ rệt so với RTN ở 3–4 bit. Một tuỳ chọn hay gặp là <code>act_order</code> (desc_act): quantize các cột có activation lớn trước, thường tốt hơn chút nhưng làm kernel phức tạp hơn khi kết hợp với group.</p>
+
+<div class="callout warn"><div class="callout-title">Calibration data quan trọng</div>
+<p>GPTQ và AWQ đều cần vài trăm mẫu calibration (thường 128 chuỗi × 2048 token). Nếu calibration chỉ là văn bản tiếng Anh từ C4 mà bạn dùng model cho code hoặc tiếng Việt, chất lượng trên miền đó có thể giảm nhiều hơn. Hãy chọn calibration giống phân phối sử dụng thật.</p>
+</div>
+
+<h3 id="i2-awq">AWQ — bảo vệ các kênh "quan trọng" bằng scaling</h3>
+<p>AWQ (Lin et al., 2023) bắt đầu từ một quan sát: chỉ khoảng <b>1% weights "salient"</b> quyết định phần lớn chất lượng, và cách tìm chúng tốt nhất là nhìn <b>độ lớn activation</b> của kênh input, không phải độ lớn của chính weight. Giữ 1% kênh này ở FP16 đã phục hồi phần lớn chất lượng — nhưng mixed precision thì kernel khó. AWQ thay bằng scaling.</p>
+
+<h4>Vì sao scaling giảm lỗi?</h4>
+<p>Với quantizer \( Q(w) = \Delta \cdot \operatorname{round}(w/\Delta) \), \( \Delta = \max|w| / 2^{N-1} \). Nhân weight salient với \( s &gt; 1 \) và chia input tương ứng cho \( s \):</p>
+\[
+Q(w \cdot s)\,\frac{x}{s}
+\]
+<p>Lỗi làm tròn của \( w \cdot s \) vẫn cỡ \( \Delta'/2 \), nhưng sau khi chia cho \( s \), lỗi lên output giảm còn \( \frac{\Delta'}{\Delta}\cdot\frac{1}{s} \) lần so với trước. Vì chỉ scale một vài kênh, \( \max|w| \) của cả nhóm thường không đổi, nên \( \Delta' \approx \Delta \) → lỗi của kênh quan trọng giảm ~\( s \) lần. Nhưng nếu \( s \) quá lớn, kênh đó trở thành max của nhóm → \( \Delta \) tăng → các kênh khác chịu thiệt.</p>
+
+<h4>Tìm scale</h4>
+\[
+s = s_X^{\alpha}, \qquad \alpha^* = \arg\min_{\alpha \in [0,1]} \big\lVert Q\big(W\operatorname{diag}(s)\big)\big(\operatorname{diag}(s)^{-1}X\big) - WX \big\rVert
+\]
+<p>\( s_X \) là độ lớn trung bình activation theo từng kênh; \( \alpha \) được tìm bằng grid search (ví dụ 20 điểm) trên calibration data. Không có backprop, không cập nhật weight kiểu GPTQ → nhanh, ít overfit calibration hơn. Như SmoothQuant, \( \operatorname{diag}(s)^{-1} \) được gộp vào layer phía trước.</p>
+<p>Trong thực tế, AWQ và GPTQ cho chất lượng 4-bit gần nhau; AWQ thường nhỉnh hơn khi calibration lệch miền, GPTQ đôi khi tốt hơn ở 3-bit. Cả hai đều là định dạng checkpoint phổ biến nhất trên Hugging Face cho 4-bit weight-only trên GPU.</p>
+
+<h3 id="i2-rotation">Rotation — QuIP#, QuaRot, SpinQuant: xoay để outliers "tan" ra</h3>
+<p>Thay vì né outliers, nhóm phương pháp này <b>xoay không gian</b> để không còn outlier. Với ma trận trực giao \( R \) (\( RR^\top = I \)):</p>
+\[
+WX = (WR)(R^\top X)
+\]
+<p>Kết quả không đổi, nhưng \( R^\top X \) là một tổ hợp tuyến tính "trộn đều" mọi chiều. Một outlier lớn ở một chiều bị chia nhỏ ra mọi chiều — giống như đổ một ly nước đá vào bể: nhiệt độ cả bể chỉ giảm một chút. Ma trận <b>Hadamard</b> (các phần tử ±1/√d, nhân nhanh trong \( O(d\log d) \)) là lựa chọn phổ biến; thêm dấu ngẫu nhiên ("randomized Hadamard") để chắc chắn trộn đều.</p>
+
+<div class="callout example"><div class="callout-title">Ví dụ số — Hadamard 4×4</div>
+<p>\( x = [0, 0, 0, 8] \) (một outlier). \( H_4 = \frac{1}{2}\begin{bmatrix}1&amp;1&amp;1&amp;1\\1&amp;-1&amp;1&amp;-1\\1&amp;1&amp;-1&amp;-1\\1&amp;-1&amp;-1&amp;1\end{bmatrix} \). \( H_4 x = [4, -4, -4, 4] \). Max giảm từ 8 xuống 4, và mọi phần tử bằng nhau về độ lớn — không còn outlier. Với \( d = 4096 \), một outlier giảm tới \( \sqrt{4096} = 64 \) lần.</p>
+</div>
+
+<ul>
+<li><b>QuIP / QuIP#</b> (Chee et al., 2023; Tseng et al., 2024): dùng khái niệm <b>incoherence</b> — xoay weights và Hessian bằng ma trận trực giao ngẫu nhiên (QuIP# dùng randomized Hadamard) để không có phần tử nào nổi trội; QuIP# thêm <b>vector quantization</b> trên lattice E8 để làm 2-bit khả dụng.</li>
+<li><b>QuaRot</b> (Ashkboos et al., 2024): xoay cả hidden state trong residual stream (gộp sẵn vào weights nhờ tính bất biến của RMSNorm dưới phép xoay) và thêm vài phép Hadamard "online" ở chỗ không gộp được → quantize được <b>weights, activations và KV cache đều ở 4-bit</b> (W4A4KV4) với chất lượng mất ít.</li>
+<li><b>SpinQuant</b> (Liu et al., Meta, 2024): thay vì Hadamard ngẫu nhiên, <b>học</b> ma trận xoay (tối ưu trên đa tạp trực giao bằng Cayley SGD), vì các phép xoay ngẫu nhiên khác nhau cho kết quả chênh nhau đáng kể.</li>
+</ul>
+
+<h3 id="i2-fp-formats">FP8, MXFP4, NVFP4 — số thực bit thấp thay cho số nguyên</h3>
+<p>INT có các nấc cách đều; <b>FP (floating point)</b> có nấc dày gần 0 và thưa ở xa — hợp với phân phối hình chuông của weights/activations hơn, và xử lý outlier tốt hơn nhờ dải động rộng.</p>
+<table>
+<thead><tr><th>Định dạng</th><th>Cấu trúc</th><th>Giá trị lớn nhất</th><th>Scale</th><th>Phần cứng</th></tr></thead>
+<tbody>
+<tr><td>FP8 E4M3</td><td>1 sign, 4 exponent, 3 mantissa</td><td>±448</td><td>per-tensor / per-channel / per-token</td><td>Hopper (H100), Ada, Blackwell</td></tr>
+<tr><td>FP8 E5M2</td><td>1, 5, 2</td><td>±57344</td><td>như trên</td><td>chủ yếu cho gradient khi train</td></tr>
+<tr><td>MXFP4 (OCP Microscaling)</td><td>phần tử E2M1 (4 bit)</td><td>±6 trước khi nhân scale</td><td>1 scale E8M0 (lũy thừa của 2) cho mỗi block 32 phần tử</td><td>Blackwell</td></tr>
+<tr><td>NVFP4</td><td>phần tử E2M1</td><td>±6 trước khi nhân scale</td><td>1 scale FP8 E4M3 cho mỗi block 16 phần tử + 1 scale FP32 per-tensor</td><td>Blackwell</td></tr>
+</tbody>
+</table>
+<ul>
+<li><b>FP8 W8A8</b> (weights per-channel, activations per-token tính động) hiện là lựa chọn "an toàn" cho serving trên H100: chất lượng thường gần như không đổi so với BF16, throughput tăng nhờ tensor core FP8 và bộ nhớ giảm một nửa. Một số model được phát hành sẵn checkpoint FP8 (ví dụ DeepSeek-V3 được train bằng FP8 nên phát hành weights FP8).</li>
+<li><b>MXFP4</b>: <b>gpt-oss</b> của OpenAI (2025) phát hành weights của các lớp MoE ở MXFP4, nhờ đó gpt-oss-120b chạy được trên một GPU 80 GB và gpt-oss-20b chạy trong khoảng 16 GB bộ nhớ.</li>
+<li>Scale theo block nhỏ (16–32 phần tử) là điều giúp 4-bit FP dùng được: mỗi block có "thước đo" riêng nên một outlier chỉ ảnh hưởng 16–32 phần tử láng giềng. NVFP4 dùng block nhỏ hơn và scale chính xác hơn (FP8 thay vì chỉ lũy thừa của 2) nên thường giữ chất lượng tốt hơn MXFP4.</li>
+</ul>
+
+<h3 id="i2-kv-quant">KV cache quantization — khi context dài chiếm hết bộ nhớ</h3>
+<p>Với context dài và batch lớn, <b>KV cache</b> có thể lớn hơn cả weights.</p>
+<div class="callout example"><div class="callout-title">Ví dụ số — KV cache của model 70B kiểu Llama</div>
+<p>80 layer, GQA 8 KV head, head dim 128, BF16 (2 byte). Mỗi token:</p>
+\[
+2\,(\text{K và V}) \times 80 \times 8 \times 128 \times 2\ \text{byte} = 327{,}680\ \text{byte} \approx 0.31\ \text{MB}
+\]
+<p>Một chuỗi 8192 token ≈ 2.5 GB. Batch 32 chuỗi như vậy ≈ 80 GB — bằng một GPU H100. KV FP8 giảm một nửa; KV 4-bit giảm 4 lần.</p>
+</div>
+<p><b>KIVI</b> (Liu et al., 2024) quan sát cấu trúc outlier của KV: <b>Key có outliers theo kênh</b> (một số channel luôn lớn, tương tự activation), còn <b>Value không có pattern kênh rõ ràng</b> và sai số của nó bị "trộn" qua attention weights theo từng token. Do đó:</p>
+<ul>
+<li>Key quantize <b>per-channel</b> (mỗi channel một scale, gom theo nhóm token).</li>
+<li>Value quantize <b>per-token</b>.</li>
+<li>Giữ một cửa sổ token gần nhất ở full precision (vì per-channel cần gom đủ một nhóm token mới tính được scale, và token gần thường quan trọng nhất).</li>
+</ul>
+<p>Với cách này KIVI đạt KV cache 2-bit với chất lượng mất ít trên các model họ thử. Trong production phổ biến nhất hiện nay là <b>FP8 KV cache</b> (vLLM, SGLang, TensorRT-LLM đều hỗ trợ) vì gần như không mất chất lượng và cần ít thay đổi kernel.</p>
+
+<h3 id="i2-qat">PTQ vs QAT — quantize sau hay train cùng quantization</h3>
+<ul>
+<li><b>PTQ (post-training quantization)</b>: model đã train xong, chỉ dùng chút calibration data. Mọi phương pháp ở trên (RTN, GPTQ, AWQ, SmoothQuant, QuaRot) đều là PTQ. Rẻ (phút đến giờ), nhưng ở bit rất thấp (≤3) bắt đầu mất chất lượng rõ.</li>
+<li><b>QAT (quantization-aware training)</b>: trong lúc train/fine-tune, forward pass dùng weight đã "fake-quantize" (quantize rồi dequantize ngay), để model học cách chịu đựng lỗi làm tròn. Hàm round có đạo hàm bằng 0 hầu khắp nơi, nên backward dùng <b>straight-through estimator (STE)</b>: coi \( \partial\,\operatorname{round}(x)/\partial x \approx 1 \).</li>
+</ul>
+\[
+\text{forward: } \hat w = s\cdot\operatorname{clamp}(\operatorname{round}(w/s)),\qquad \text{backward: } \frac{\partial L}{\partial w} \approx \frac{\partial L}{\partial \hat w}\ \ (\text{nếu } w \text{ trong khoảng clamp})
+\]
+<p>QAT đắt hơn nhiều (cần chạy training thêm), nhưng cho chất lượng 4-bit gần như bằng bản gốc. Ví dụ: Google phát hành các checkpoint Gemma 3 dạng QAT int4; LLM-QAT (Liu et al., 2023) dùng chính model sinh dữ liệu để distill trong lúc QAT khi không có dữ liệu train gốc.</p>
+
+<h3 id="i2-formats">Định dạng trong thực tế — GGUF, GPTQ/AWQ checkpoint, NF4</h3>
+<table>
+<thead><tr><th>Định dạng / công cụ</th><th>Dùng cho</th><th>Đặc điểm</th></tr></thead>
+<tbody>
+<tr><td><b>GGUF</b> (llama.cpp, Ollama, LM Studio)</td><td>CPU, Apple Silicon, GPU tiêu dùng</td><td>Một file chứa weights + tokenizer + metadata. Các "k-quants" (Q4_K_M, Q5_K_M, Q6_K, Q8_0…) dùng super-block chứa nhiều sub-block, mỗi sub-block có scale riêng được quantize lại; hậu tố S/M/L cho biết bao nhiêu tensor quan trọng được giữ ở bit cao hơn. Q4_K_M tốn khoảng 4.5–5 bit/weight hiệu dụng. Có thêm "imatrix" — dùng thống kê activation (giống ý tưởng AWQ) để quyết định weight nào cần chính xác hơn.</td></tr>
+<tr><td><b>GPTQ / AWQ checkpoint</b></td><td>vLLM, SGLang, TGI, Transformers trên GPU</td><td>Thường W4A16 group 128. Chạy nhanh nhờ kernel chuyên dụng (ví dụ Marlin cho INT4×FP16).</td></tr>
+<tr><td><b>bitsandbytes NF4</b></td><td>QLoRA fine-tuning, load nhanh không cần calibration</td><td>NormalFloat 4-bit: 16 mức được đặt theo quantile của phân phối chuẩn (weights gần chuẩn nên mỗi mức được dùng đều), block 64, có <b>double quantization</b> (quantize luôn cả các scale) để tiết kiệm thêm. Tiện nhưng inference chậm hơn GPTQ/AWQ với kernel tối ưu.</td></tr>
+<tr><td><b>FP8 (compressed-tensors, ModelOpt…)</b></td><td>Serving trên Hopper/Blackwell</td><td>W8A8, thường tạo bằng llm-compressor hoặc NVIDIA ModelOpt.</td></tr>
+</tbody>
+</table>
+
+<h3 id="i2-memory-table">Bảng tính bộ nhớ và tốc độ cho model 70B</h3>
+<p>Chỉ tính weights (chưa tính KV cache, activation, overhead của framework). Tốc độ decode trên lý thuyết lấy giới hạn băng thông: mỗi token đọc toàn bộ weights một lần, H100 SXM có băng thông HBM khoảng 3.35 TB/s.</p>
+<table>
+<thead><tr><th>Định dạng</th><th>Bit/weight hiệu dụng</th><th>Bộ nhớ weights</th><th>Vừa phần cứng nào</th><th>Trần decode batch 1 trên H100 (lý thuyết)</th></tr></thead>
+<tbody>
+<tr><td>BF16</td><td>16</td><td>140 GB</td><td>2× GPU 80 GB</td><td>~24 token/s (nếu 1 GPU đủ chứa)</td></tr>
+<tr><td>FP8 / INT8</td><td>8</td><td>70 GB</td><td>1× 80 GB (ít chỗ cho KV cache)</td><td>~48 token/s</td></tr>
+<tr><td>INT4 group 128</td><td>~4.25</td><td>~37 GB</td><td>1× 48 GB, hoặc 2× 24 GB</td><td>~90 token/s</td></tr>
+<tr><td>3-bit</td><td>~3.25</td><td>~28 GB</td><td>1× 32 GB</td><td>~115 token/s</td></tr>
+<tr><td>2-bit (QuIP# / AQLM…)</td><td>~2–2.25</td><td>~18–20 GB</td><td>1× 24 GB</td><td>~170 token/s</td></tr>
+</tbody>
+</table>
+<p>Cột cuối là <b>cận trên</b> (\( 3.35\text{ TB/s} \div \text{bytes} \)); thực tế thấp hơn vì kernel không đạt 100% băng thông, có thêm chi phí dequantize, attention và KV cache. Lưu ý: bit càng thấp, kernel dequantize càng phức tạp (đặc biệt vector quantization 2-bit), nên tốc độ thực tế không tăng tuyến tính.</p>
+
+<h3 id="i2-eval">Đánh giá chất lượng sau quantization</h3>
+<ul>
+<li><b>Perplexity</b> (WikiText-2, C4): rẻ, nhạy, tốt để so sánh nhanh các cấu hình. Nhưng perplexity tăng 0.1 không cho biết model sẽ mất bao nhiêu điểm trên bài toán thật.</li>
+<li><b>Downstream benchmarks</b>: MMLU, GSM8K/MATH, HumanEval, benchmark long-context. Quantization thường làm hại <b>reasoning nhiều bước và generation dài</b> nhiều hơn trắc nghiệm ngắn, vì lỗi nhỏ tích lũy qua hàng nghìn token.</li>
+<li><b>Flips và KL divergence</b>: Dutta et al. (2024, "Accuracy is Not All You Need") chỉ ra accuracy tổng có thể giữ nguyên trong khi nhiều câu "lật" từ đúng sang sai và ngược lại — model đã thay đổi hành vi nhiều hơn con số accuracy cho thấy. Họ đề xuất đo tỉ lệ flip và KL divergence giữa phân phối token của model gốc và model nén.</li>
+<li><b>Đánh giá trên ngôn ngữ/miền của bạn</b>: các ngôn ngữ ít tài nguyên (như tiếng Việt) và code thường nhạy với quantization hơn tiếng Anh thông thường.</li>
+</ul>
+
+<h3 id="i2-opt-choose">Optimization — chọn scheme theo phần cứng và batch size</h3>
+<p>Câu hỏi then chốt: lúc chạy, bạn bị giới hạn bởi <b>băng thông bộ nhớ</b> hay <b>compute</b>? (xem <a href="frontier-model-training-vi.html#t-roofline">roofline</a>)</p>
+<table>
+<thead><tr><th>Tình huống</th><th>Nút thắt</th><th>Lựa chọn tốt</th><th>Lý do</th></tr></thead>
+<tbody>
+<tr><td>Chạy local, chat 1 người, batch 1–4</td><td>băng thông bộ nhớ</td><td>W4A16 (AWQ/GPTQ trên GPU; GGUF Q4_K_M–Q5_K_M trên CPU/Mac)</td><td>đọc ít byte nhất; compute dư thừa nên chi phí dequantize "miễn phí"</td></tr>
+<tr><td>Server, batch lớn, H100/H200</td><td>compute</td><td>FP8 W8A8 + FP8 KV cache</td><td>tensor core FP8 tăng FLOPs; W4A16 ở batch lớn có thể chậm hơn FP16 vì phải dequantize mà không được lợi về băng thông</td></tr>
+<tr><td>Server trên A100 (không có FP8)</td><td>compute</td><td>INT8 W8A8 (SmoothQuant) hoặc W4A16 nếu batch vừa phải</td><td>A100 có tensor core INT8</td></tr>
+<tr><td>Blackwell (B200/GB200)</td><td>compute + bộ nhớ</td><td>NVFP4 / MXFP4</td><td>tensor core FP4 native</td></tr>
+<tr><td>Context rất dài / nhiều user đồng thời</td><td>dung lượng KV cache</td><td>FP8 KV cache (hoặc thấp hơn nếu kiểm chứng kỹ)</td><td>KV cache vượt cả weights</td></tr>
+<tr><td>MoE lớn (DeepSeek-V3, gpt-oss…)</td><td>dung lượng weights của experts</td><td>quantize experts mạnh tay (4-bit), giữ attention/router ở độ chính xác cao hơn</td><td>experts chiếm phần lớn tham số nhưng mỗi token chỉ dùng vài expert</td></tr>
+</tbody>
+</table>
+
+<div class="callout tip"><div class="callout-title">Ý chính</div>
+<ul>
+<li>Lỗi quantization bị chi phối bởi giá trị lớn nhất trong nhóm → mọi phương pháp tốt đều xử lý outliers: tách riêng (LLM.int8), san bằng (SmoothQuant, AWQ), xoay (QuaRot), hoặc dùng block nhỏ (MX/NVFP4, group 128).</li>
+<li>GPTQ bù lỗi bằng Hessian \( 2XX^\top \); AWQ bảo vệ kênh có activation lớn bằng scaling. Cả hai đều cần calibration data giống thực tế.</li>
+<li>Weight-only giúp decode batch nhỏ; weight-activation (FP8) giúp serving batch lớn.</li>
+<li>Đo bằng benchmark thật, flip rate và KL — không chỉ perplexity.</li>
+</ul>
+</div>
+
+<div class="callout note"><div class="callout-title">Nguồn tham khảo</div>
+<ul>
+<li>Dettmers et al. — <i>LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale</i>, 2022, arXiv:2208.07339.</li>
+<li>Xiao et al. (MIT, NVIDIA) — <i>SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models</i>, 2022, arXiv:2211.10438.</li>
+<li>Frantar, Ashkboos, Hoefler, Alistarh — <i>GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers</i>, 2022, arXiv:2210.17323.</li>
+<li>Frantar &amp; Alistarh — <i>Optimal Brain Compression</i> (OBQ), NeurIPS 2022; Hassibi &amp; Stork — <i>Optimal Brain Surgeon</i>, 1993.</li>
+<li>Lin et al. (MIT) — <i>AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration</i>, 2023, arXiv:2306.00978.</li>
+<li>Chee et al. — <i>QuIP: 2-Bit Quantization of Large Language Models With Guarantees</i>, 2023, arXiv:2307.13304; Tseng et al. — <i>QuIP#</i>, 2024, arXiv:2402.04396.</li>
+<li>Ashkboos et al. — <i>QuaRot: Outlier-Free 4-Bit Inference in Rotated LLMs</i>, 2024, arXiv:2404.00456.</li>
+<li>Liu et al. (Meta) — <i>SpinQuant: LLM Quantization with Learned Rotations</i>, 2024, arXiv:2405.16406.</li>
+<li>Liu et al. — <i>KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache</i>, 2024, arXiv:2402.02750.</li>
+<li>Dettmers et al. — <i>QLoRA: Efficient Finetuning of Quantized LLMs</i> (NF4, double quantization), 2023, arXiv:2305.14314.</li>
+<li>Liu et al. — <i>LLM-QAT: Data-Free Quantization Aware Training for Large Language Models</i>, 2023, arXiv:2305.17888.</li>
+<li>Dutta et al. (Microsoft) — <i>Accuracy is Not All You Need</i>, 2024, arXiv:2407.09141.</li>
+<li>Open Compute Project — <i>OCP Microscaling Formats (MX) Specification v1.0</i>, 2023; Micikevicius et al. — <i>FP8 Formats for Deep Learning</i>, 2022, arXiv:2209.05433.</li>
+<li>OpenAI — <i>gpt-oss-120b &amp; gpt-oss-20b Model Card</i>, 2025.</li>
+</ul>
+</div>
+</section>
+
+<section id="i-compress">
+<h2 id="i-compress-h">Pruning và distillation — làm model nhỏ hơn</h2>
+
+<div class="callout tip"><div class="callout-title">Đọc nhanh</div>
+<ul>
+<li>Quantization giữ nguyên số tham số nhưng lưu mỗi số bằng ít bit hơn. Pruning thì <i>bỏ hẳn</i> một phần tham số; distillation thì train một model nhỏ bắt chước model lớn.</li>
+<li>Bỏ từng weight lẻ tẻ (unstructured) giữ chất lượng tốt nhưng GPU khó chạy nhanh hơn; bỏ cả khối (head, neuron, layer) thì chạy nhanh thật nhưng làm hỏng model nhiều hơn, nên phải train lại.</li>
+<li>Distillation: model nhỏ học theo "xác suất mềm" của model lớn (ví dụ "70% là mèo, 25% là hổ") — giàu thông tin hơn đáp án cứng "mèo".</li>
+<li>Công thức hiện đại cho model nhỏ chất lượng cao: pruning model lớn → distillation để phục hồi (Minitron, Llama 3.2 1B/3B), rẻ hơn nhiều so với train từ đầu.</li>
+</ul>
+</div>
+
+<p>Ba cách chính để có model "rẻ" hơn khi chạy:</p>
+<ul>
+<li><b>Quantization</b> (<a href="#i-quant-h">chương trước</a>): cùng kiến trúc, ít bit hơn.</li>
+<li><b>Pruning</b>: xóa tham số (đặt về 0 hoặc cắt hẳn khỏi kiến trúc).</li>
+<li><b>Distillation</b>: train model nhỏ (student) để bắt chước model lớn (teacher).</li>
+</ul>
+<p>Chúng bổ sung cho nhau: một quy trình thường gặp là prune → distill để phục hồi → quantize khi deploy.</p>
+
+<h3 id="i2-unstructured">Unstructured pruning — magnitude, SparseGPT, Wanda</h3>
+
+<h4>Magnitude pruning</h4>
+<p>Cách đơn giản nhất: xóa các weight có \( |w| \) nhỏ nhất. Hoạt động tốt với CNN và model nhỏ, nhưng với LLM lớn thì kém ngay cả ở 50% sparsity khi không train lại. Lý do giống quantization: weight nhỏ nhân với activation khổng lồ (outlier feature) vẫn có đóng góp lớn. <b>Độ quan trọng của weight phụ thuộc vào input của nó</b>.</p>
+
+<h4>SparseGPT</h4>
+<p>SparseGPT (Frantar &amp; Alistarh, 2023) là "anh em" của GPTQ: cùng mục tiêu theo từng layer</p>
+\[
+\min_{\text{mask } M,\ \hat W}\ \big\lVert WX - (M \odot \hat W)X \big\rVert_2^2
+\]
+<p>và cùng công cụ OBS: khi xóa một weight (đặt về 0 thay vì làm tròn), cập nhật các weight còn lại theo \( H^{-1} \) (với \( H = 2XX^\top \)) để bù lỗi. Công thức giống hệt <a href="#i2-gptq">GPTQ</a>, chỉ thay \( \operatorname{quant}(w_q) \) bằng 0. SparseGPT cắt được các model cỡ 175B xuống 50–60% unstructured sparsity trong một lượt (one-shot, không train lại), chạy vài giờ trên một GPU, với perplexity tăng rất ít. Nó cũng kết hợp được với quantization cùng lúc.</p>
+
+<h4>Wanda — Pruning by Weights and activations</h4>
+<p>Wanda (Sun et al., 2023) đơn giản hóa đến mức tối đa: không cập nhật weight, không cần Hessian. Điểm quan trọng của weight \( W_{ij} \) (output \( i \), input \( j \)):</p>
+\[
+S_{ij} = |W_{ij}| \cdot \lVert X_j \rVert_2
+\]
+<ul>
+<li>\( \lVert X_j \rVert_2 \): chuẩn L2 của kênh input \( j \) trên các token calibration — kênh có activation lớn thì weight nối vào nó quan trọng hơn.</li>
+<li>So sánh và cắt <b>trong từng hàng output</b> (mỗi neuron output giữ cùng một tỉ lệ weight), thay vì so sánh toàn layer — điều này hóa ra quan trọng với LLM.</li>
+</ul>
+<div class="callout example"><div class="callout-title">Ví dụ số — magnitude vs Wanda (cắt 50%)</div>
+<p>Một hàng weight \( w = [0.5,\; -0.1,\; 0.05,\; 0.3] \), chuẩn activation các kênh \( \lVert X_j\rVert = [1,\; 20,\; 30,\; 0.5] \).</p>
+<ul>
+<li><b>Magnitude</b>: cắt \( -0.1 \) và \( 0.05 \) (nhỏ nhất).</li>
+<li><b>Wanda</b>: điểm \( = [0.5,\; 2.0,\; 1.5,\; 0.15] \) → cắt \( 0.3 \) (điểm 0.15) và \( 0.5 \) (điểm 0.5).</li>
+</ul>
+<p>Đóng góp thực tế vào output \( |w_j|\cdot\lVert X_j\rVert \) chính là điểm Wanda: hai weight magnitude định cắt lại đóng góp nhiều nhất (2.0 và 1.5). Magnitude pruning đã cắt nhầm.</p>
+</div>
+<p>Wanda đạt chất lượng gần SparseGPT ở 50% sparsity với chi phí thấp hơn nhiều (chỉ một lượt forward để lấy thống kê activation).</p>
+
+<h3 id="i2-24-sparsity">Semi-structured 2:4 sparsity — và thực tế về tốc độ</h3>
+<p>Vấn đề của unstructured sparsity: các số 0 nằm rải rác, GPU không biết bỏ qua chúng hiệu quả. Ma trận 50% số 0 vẫn nhân chậm như ma trận dày, trừ khi sparsity rất cao (&gt;90%) và dùng kernel đặc biệt.</p>
+<p><b>2:4 sparsity</b>: trong mỗi nhóm 4 weight liên tiếp, đúng 2 weight bằng 0. Từ thế hệ Ampere (A100), NVIDIA có <b>sparse tensor cores</b> hỗ trợ trực tiếp pattern này: lưu 2 giá trị khác 0 + metadata 2 bit chỉ vị trí, phép nhân trên lý thuyết nhanh gấp 2.</p>
+<ul>
+<li><b>Chất lượng</b>: 2:4 là ràng buộc chặt hơn unstructured 50% (không được chọn tự do weight nào giữ), nên mất chất lượng nhiều hơn rõ rệt khi không train lại. SparseGPT và Wanda đều hỗ trợ chế độ N:M.</li>
+<li><b>Tốc độ thực tế</b>: chỉ phần matmul được tăng tốc, và chỉ khi matmul là nút thắt compute. Với decode batch nhỏ (memory-bound), lợi ích chủ yếu đến từ việc đọc ít byte hơn (~0.56× kích thước dày, tính cả metadata). Tăng tốc end-to-end thường thấp hơn nhiều so với 2×. Vì vậy trong thực tế 2:4 ít phổ biến hơn quantization nhiều.</li>
+</ul>
+
+<h3 id="i2-structured">Structured pruning — cắt head, neuron, layer</h3>
+<p>Structured pruning xóa cả <b>đơn vị kiến trúc</b>: attention head, neuron trong FFN (giảm intermediate size), kênh embedding (giảm hidden size), hoặc cả layer. Kết quả là một model <b>dày nhưng nhỏ hơn</b> — chạy nhanh ngay trên mọi phần cứng và mọi framework, không cần kernel đặc biệt. Cái giá: phá hỏng model nhiều hơn, gần như luôn phải <b>train lại</b> (thường bằng distillation).</p>
+
+<h4>LLM-Pruner</h4>
+<p>Ma et al. (2023): xây <b>đồ thị phụ thuộc</b> giữa các cấu trúc (cắt một neuron FFN thì phải cắt cột tương ứng ở up-proj và hàng ở down-proj), tính độ quan trọng dựa trên gradient (xấp xỉ Taylor bậc nhất của thay đổi loss khi bỏ nhóm đó), cắt, rồi phục hồi nhanh bằng LoRA trên lượng dữ liệu nhỏ. Rẻ, nhưng ở tỉ lệ cắt lớn chất lượng giảm đáng kể vì lượng dữ liệu phục hồi quá ít.</p>
+
+<h4>Sheared LLaMA</h4>
+<p>Xia et al. (2023):</p>
+<ul>
+<li><b>Targeted structured pruning</b>: chỉ định trước kiến trúc đích (ví dụ đúng hình dạng của một model 1.3B/2.7B có sẵn) và học các mask (với ràng buộc Lagrange) để model lớn co về đúng hình dạng đó.</li>
+<li><b>Dynamic batch loading</b>: trong lúc train tiếp, tăng tỉ trọng các domain dữ liệu mà model bị suy giảm nhiều nhất (so với loss tham chiếu) — vì pruning làm hỏng các domain không đều nhau.</li>
+<li>Từ LLaMA2-7B tạo ra Sheared-LLaMA 1.3B và 2.7B với khoảng 50B token train tiếp — một phần nhỏ so với chi phí train từ đầu, mà vẫn tốt hơn các model cùng cỡ được train từ đầu thời đó.</li>
+</ul>
+
+<h4>Minitron (NVIDIA)</h4>
+<p>Muralidharan et al. (2024) nghiên cứu có hệ thống "prune rồi distill" khi nén Nemotron-4 15B thành 8B và 4B:</p>
+<ul>
+<li><b>Importance estimation bằng activation</b>: chạy forward trên một tập calibration nhỏ (cỡ 1024 mẫu), đo độ lớn activation của từng head, neuron FFN và kênh embedding; với độ sâu thì đo mức suy giảm khi bỏ layer. Chỉ cần forward, không cần gradient.</li>
+<li><b>Width tốt hơn depth</b> ở các cỡ họ thử: cắt chiều rộng (neuron, head, hidden size) rồi distill phục hồi tốt hơn cắt bớt layer.</li>
+<li><b>Phục hồi bằng distillation</b>: loss KL trên logits của teacher (model gốc) cho kết quả tốt hơn train lại bằng nhãn cứng thông thường.</li>
+<li>Kết quả: model 8B/4B cạnh tranh với các model cùng cỡ train từ đầu, nhưng mỗi model con chỉ cần ít token hơn tới khoảng 40 lần.</li>
+<li>Bản áp dụng cho Llama 3.1 (Llama-3.1-Minitron) thêm bước <b>teacher correction</b>: fine-tune nhẹ teacher trên dữ liệu dùng để distill, vì không có dữ liệu train gốc của teacher và lệch phân phối làm giảm hiệu quả distill.</li>
+</ul>
+
+<h3 id="i2-layer-drop">Bỏ bớt layer — các lớp sâu có thừa không?</h3>
+<p>Một số nghiên cứu năm 2024 thấy nhiều layer ở nửa sau của LLM khá "dư":</p>
+<ul>
+<li><b>ShortGPT</b> (Men et al., 2024) định nghĩa <b>Block Influence</b> = \( 1 - \cos(h_{\text{in}}, h_{\text{out}}) \) trung bình qua các token: layer nào gần như không làm thay đổi hidden state (cosine giữa input và output gần 1) thì bỏ được.</li>
+<li><b>The Unreasonable Ineffectiveness of the Deeper Layers</b> (Gromov et al., 2024): bỏ một khối layer liên tiếp có hidden state đầu vào và đầu ra giống nhau nhất, rồi "chữa lành" bằng QLoRA một chút. Với các model lớn họ thử, bỏ được một tỉ lệ đáng kể layer (tới khoảng một nửa với model lớn nhất) mà điểm benchmark trả lời câu hỏi kiểu trắc nghiệm giảm ít.</li>
+</ul>
+<div class="callout warn"><div class="callout-title">Đừng vội kết luận "layer sâu vô dụng"</div>
+<p>Các benchmark dạng trắc nghiệm/QA ngắn ít nhạy. Các tác vụ sinh văn bản dài, reasoning nhiều bước và các khả năng tinh tế thường suy giảm rõ hơn khi bỏ layer. Kết quả này chủ yếu cho thấy model đang dùng độ sâu chưa hiệu quả, và là gợi ý để pruning theo chiều sâu kết hợp với train lại, chứ không phải bỏ layer miễn phí.</p>
+</div>
+
+<h3 id="i2-kd-theory">Knowledge distillation — lý thuyết</h3>
+<p>Hinton, Vinyals &amp; Dean (2015): thay vì học từ nhãn "one-hot" (chỉ đúng một đáp án), student học từ <b>toàn bộ phân phối xác suất</b> của teacher. Phân phối này chứa "dark knowledge": teacher nghĩ "mèo" có xác suất 0.7, "hổ" 0.25, "ô tô" 0.0001 — cho student biết mèo giống hổ hơn giống ô tô.</p>
+
+<h4>Temperature</h4>
+\[
+p_i^{(T)} = \frac{\exp(z_i / T)}{\sum_j \exp(z_j / T)}
+\]
+<p>\( z \): logits, \( T \): temperature. \( T &gt; 1 \) làm phân phối "mềm" hơn, khuếch đại khác biệt giữa các lựa chọn xác suất thấp.</p>
+<div class="callout example"><div class="callout-title">Ví dụ số</div>
+<p>Logits \( z = [5, 2, 1] \).</p>
+<ul>
+<li>\( T = 1 \): \( e^5 = 148.4,\ e^2 = 7.39,\ e^1 = 2.72 \) → \( p \approx [0.936,\; 0.047,\; 0.017] \). Gần như one-hot.</li>
+<li>\( T = 4 \): \( e^{1.25} = 3.49,\ e^{0.5} = 1.65,\ e^{0.25} = 1.28 \) → \( p \approx [0.543,\; 0.257,\; 0.200] \). Thấy rõ lựa chọn 2 được teacher đánh giá cao hơn lựa chọn 3.</li>
+</ul>
+</div>
+
+<h4>Loss và hệ số \( T^2 \)</h4>
+\[
+\mathcal{L} = \alpha\,\mathrm{CE}\big(y,\ p_s^{(1)}\big) \;+\; (1-\alpha)\,T^2\,\mathrm{KL}\big(p_t^{(T)} \,\big\Vert\, p_s^{(T)}\big)
+\]
+<ul>
+<li>\( p_t, p_s \): phân phối của teacher, student. \( y \): nhãn thật. \( \alpha \): trọng số giữa hai loss.</li>
+<li>Vì sao nhân \( T^2 \)? Gradient của phần KL theo logit student là \( \frac{1}{T}\big(p_{s,i}^{(T)} - p_{t,i}^{(T)}\big) \). Khi \( T \) lớn, \( p^{(T)} \approx \frac{1}{N}\big(1 + z_i/T\big) \) nên hiệu hai xác suất cũng tỉ lệ với \( 1/T \) → gradient tổng cộng nhỏ đi cỡ \( 1/T^2 \). Nhân \( T^2 \) giữ độ lớn gradient không đổi khi thay \( T \), nên không phải tune lại learning rate.</li>
+</ul>
+<p>Với LLM, distillation diễn ra ở <b>từng vị trí token</b>: tại mỗi bước, so phân phối next-token của student với teacher trên toàn vocab (hoặc top-k của teacher để tiết kiệm lưu trữ). Điều kiện: teacher và student phải <b>dùng chung tokenizer</b> (hoặc phải có thủ thuật căn chỉnh vocab).</p>
+
+<h4>Forward KL vs reverse KL</h4>
+<table>
+<thead><tr><th></th><th>Forward KL \( \mathrm{KL}(p_t \Vert q_\theta) \)</th><th>Reverse KL \( \mathrm{KL}(q_\theta \Vert p_t) \)</th></tr></thead>
+<tbody>
+<tr><td>Kỳ vọng lấy theo</td><td>phân phối teacher</td><td>phân phối student</td></tr>
+<tr><td>Hành vi</td><td><b>mode-covering</b>: student phải gán xác suất cho mọi thứ teacher cho là có thể</td><td><b>mode-seeking</b>: student tập trung vào một vài "đỉnh" của teacher, bỏ qua phần còn lại</td></tr>
+<tr><td>Rủi ro với student nhỏ</td><td>student không đủ sức → phân phối "dàn trải", sinh ra token vô nghĩa ở vùng teacher ít xác suất</td><td>kém đa dạng hơn nhưng câu trả lời chắc chắn và đúng hơn</td></tr>
+<tr><td>Ví dụ dùng</td><td>KD cổ điển, token-level KD trên dữ liệu có sẵn</td><td>MiniLLM (Gu et al., 2023); on-policy distillation</td></tr>
+</tbody>
+</table>
+
+<h4>Sequence-level KD và on-policy distillation</h4>
+<ul>
+<li><b>Sequence-level KD</b> (Kim &amp; Rush, 2016): cho teacher sinh câu trả lời hoàn chỉnh, rồi SFT student trên đó. Đây chính là cách hầu hết các model nhỏ "distill reasoning" từ DeepSeek-R1 hay Qwen3 lớn (xem <a href="frontier-model-training-vi.html#e-sft">SFT</a> trong file training). Chỉ cần text, không cần logits, không cần chung tokenizer.</li>
+<li><b>Lệch phân phối (exposure bias)</b>: student học trên câu do teacher viết, nhưng khi chạy thật lại phải tiếp tục từ câu do <i>chính nó</i> viết, kể cả khi đã mắc lỗi. Nó chưa bao giờ học cách sửa lỗi của chính mình.</li>
+<li><b>On-policy distillation / GKD</b> (Agarwal et al., 2023): student tự sinh chuỗi, teacher chấm xác suất từng token trên chính chuỗi đó, loss là divergence từng token (thường reverse KL). Student học "từ lỗi của chính mình", giống RL nhưng với tín hiệu dày đặc ở từng token thay vì một reward cuối câu. Cách này được dùng ngày càng nhiều trong post-training model nhỏ (Qwen3 dùng on-policy distillation cho các model nhỏ trong họ của mình).</li>
+</ul>
+
+<h3 id="i2-kd-practice">Logit distillation trong pre-training — các ví dụ thực tế</h3>
+<ul>
+<li><b>Gemma 2</b> (Google DeepMind, 2024): các model 2B và 9B được pre-train bằng knowledge distillation (học phân phối next-token của một model lớn hơn) thay vì chỉ next-token prediction, còn bản 27B train từ đầu theo cách thông thường. Lập luận: với lượng token cố định, tín hiệu phân phối đầy đủ giàu thông tin hơn nhãn one-hot, giống như "train được nhiều token hơn" với cùng dữ liệu.</li>
+<li><b>Llama 3.2 1B và 3B</b> (Meta, 2024): tạo ra bằng cách prune từ Llama 3.1 8B, rồi dùng logits của Llama 3.1 8B và 70B làm mục tiêu cấp token trong pre-training để phục hồi chất lượng.</li>
+<li><b>Minitron</b> (ở trên): prune + distill từ Nemotron/Llama 3.1.</li>
+</ul>
+<div class="callout warn"><div class="callout-title">Chi phí ẩn của logit distillation</div>
+<p>Phải chạy forward của teacher trên mọi token train (online), hoặc lưu sẵn logits (offline). Lưu full vocab cho hàng nghìn tỉ token là bất khả thi (vocab 128k × 2 byte = 256 KB/token), nên thường chỉ lưu top-k (ví dụ vài chục token) xác suất cao nhất, hoặc chạy teacher online — tốn compute đáng kể, nhất là khi teacher lớn hơn student nhiều lần.</p>
+</div>
+
+<h3 id="i2-opt-decision">Optimization — nên quantize, prune, distill hay train model nhỏ?</h3>
+<table>
+<thead><tr><th>Cách</th><th>Chi phí làm</th><th>Giảm bộ nhớ</th><th>Tăng tốc thật</th><th>Rủi ro chất lượng</th><th>Khi nào dùng</th></tr></thead>
+<tbody>
+<tr><td>PTQ 8-bit (FP8/INT8)</td><td>phút–giờ, không cần train</td><td>2×</td><td>có (batch lớn với FP8/INT8 tensor core; batch nhỏ nhờ ít byte)</td><td>rất thấp</td><td>gần như luôn nên làm khi serving</td></tr>
+<tr><td>PTQ 4-bit weight-only</td><td>giờ</td><td>~3.5–4×</td><td>có ở batch nhỏ; ít/âm ở batch lớn</td><td>thấp–vừa (reasoning dài nhạy hơn)</td><td>chạy local, GPU ít bộ nhớ</td></tr>
+<tr><td>QAT 4-bit</td><td>một đợt fine-tune</td><td>~4×</td><td>như trên</td><td>thấp</td><td>khi PTQ 4-bit mất quá nhiều và có ngân sách train</td></tr>
+<tr><td>Unstructured sparsity 50%</td><td>giờ (SparseGPT/Wanda)</td><td>ít (cần format sparse)</td><td>hầu như không trên GPU</td><td>vừa</td><td>nghiên cứu; CPU/phần cứng chuyên dụng</td></tr>
+<tr><td>2:4 sparsity</td><td>giờ + nên fine-tune</td><td>~1.8×</td><td>hạn chế, chỉ ở phần matmul</td><td>vừa–cao nếu không train lại</td><td>khi đã tối ưu xong các thứ khác</td></tr>
+<tr><td>Structured prune + distill</td><td>chục–trăm tỉ token</td><td>tùy kiến trúc đích (2–4×)</td><td>có, trên mọi phần cứng</td><td>thấp sau khi distill đủ</td><td>tạo cả một họ model nhỏ từ model lớn sẵn có</td></tr>
+<tr><td>Distill vào model nhỏ (SFT / on-policy)</td><td>vừa (sinh data từ teacher + train)</td><td>tùy cỡ student</td><td>có</td><td>student có trần năng lực thấp hơn</td><td>chuyển một năng lực cụ thể (reasoning, tool use) sang model rẻ</td></tr>
+<tr><td>Train model nhỏ từ đầu</td><td>rất cao</td><td>tùy cỡ</td><td>có</td><td>—</td><td>khi không có teacher phù hợp hoặc cần kiến trúc/tokenizer mới</td></tr>
+</tbody>
+</table>
+<p>Thứ tự thực dụng: <b>FP8/INT8 trước</b> (gần như miễn phí) → <b>4-bit</b> nếu thiếu bộ nhớ → nếu vẫn quá chậm/đắt thì chuyển sang <b>model nhỏ hơn</b> được tạo bằng prune + distill hoặc distill năng lực cụ thể. Các cách này cộng dồn được: một model Minitron vẫn có thể quantize 4-bit khi deploy.</p>
+
+<div class="callout tip"><div class="callout-title">Ý chính</div>
+<ul>
+<li>Độ quan trọng của weight = độ lớn weight × độ lớn activation (Wanda); SparseGPT còn bù lỗi bằng Hessian như GPTQ.</li>
+<li>Unstructured sparsity giữ chất lượng nhưng khó tăng tốc trên GPU; structured pruning tăng tốc thật nhưng phải train lại.</li>
+<li>Distillation với temperature truyền "dark knowledge"; nhân \( T^2 \) để giữ độ lớn gradient. Forward KL dàn trải, reverse KL tập trung.</li>
+<li>Prune + distill (Minitron, Llama 3.2) tạo model nhỏ tốt với chi phí thấp hơn nhiều so với train từ đầu.</li>
+</ul>
+</div>
+
+<div class="callout note"><div class="callout-title">Nguồn tham khảo</div>
+<ul>
+<li>Frantar &amp; Alistarh — <i>SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot</i>, 2023, arXiv:2301.00774.</li>
+<li>Sun, Liu, Bair, Kolter — <i>A Simple and Effective Pruning Approach for Large Language Models</i> (Wanda), 2023, arXiv:2306.11695.</li>
+<li>Mishra et al. (NVIDIA) — <i>Accelerating Sparse Deep Neural Networks</i> (2:4 sparsity trên Ampere), 2021, arXiv:2104.08378.</li>
+<li>Ma, Fang, Wang — <i>LLM-Pruner: On the Structural Pruning of Large Language Models</i>, 2023, arXiv:2305.11627.</li>
+<li>Xia, Gao, Zeng, Chen — <i>Sheared LLaMA: Accelerating Language Model Pre-training via Structured Pruning</i>, 2023, arXiv:2310.06694.</li>
+<li>Muralidharan et al. (NVIDIA) — <i>Compact Language Models via Pruning and Knowledge Distillation</i> (Minitron), 2024, arXiv:2407.14679; Sreenivas et al. — <i>LLM Pruning and Distillation in Practice: The Minitron Approach</i>, 2024, arXiv:2408.11796.</li>
+<li>Men et al. — <i>ShortGPT: Layers in Large Language Models are More Redundant Than You Expect</i>, 2024, arXiv:2403.03853.</li>
+<li>Gromov et al. — <i>The Unreasonable Ineffectiveness of the Deeper Layers</i>, 2024, arXiv:2403.17887.</li>
+<li>Hinton, Vinyals, Dean — <i>Distilling the Knowledge in a Neural Network</i>, 2015, arXiv:1503.02531.</li>
+<li>Kim &amp; Rush — <i>Sequence-Level Knowledge Distillation</i>, 2016, arXiv:1606.07947.</li>
+<li>Gu et al. — <i>MiniLLM: Knowledge Distillation of Large Language Models</i>, 2023, arXiv:2306.08543.</li>
+<li>Agarwal et al. (Google DeepMind) — <i>On-Policy Distillation of Language Models: Learning from Self-Generated Mistakes</i> (GKD), 2023, arXiv:2306.13649.</li>
+<li>Gemma Team — <i>Gemma 2: Improving Open Language Models at a Practical Size</i>, 2024, arXiv:2408.00118.</li>
+<li>Meta — <i>Llama 3.2: Revolutionizing edge AI and vision with open, customizable models</i> (blog), 09/2024.</li>
+</ul>
+</div>
+</section>
+
+<section id="i-deploy">
+<h2 id="i-deploy-h">Deploy thực tế — chọn phần cứng, cấu hình và vận hành</h2>
+
+<div class="callout tip"><div class="callout-title">Đọc nhanh</div>
+<ul>
+<li>Trước khi thuê GPU, hãy cộng xem cần bao nhiêu bộ nhớ: phần chứa model + phần "trí nhớ ngắn hạn" (KV cache) cho tất cả người dùng cùng lúc + một ít dư phòng.</li>
+<li>Chạy nhiều request cùng lúc thì rẻ hơn trên mỗi token nhưng mỗi người dùng sẽ thấy chậm hơn một chút — phải chọn điểm cân bằng theo yêu cầu sản phẩm.</li>
+<li>Giá mỗi triệu token = tiền thuê GPU mỗi giờ chia cho số token GPU sinh ra mỗi giờ. Tăng throughput là cách giảm giá trực tiếp nhất.</li>
+<li>Khi vận hành, theo dõi hàng đợi, độ đầy của KV cache, thời gian ra token đầu tiên và tốc độ sinh token — không phải CPU.</li>
+<li>Model nhỏ đã nén (4-bit) có thể chạy trên laptop/Mac; tốc độ khi đó gần như do băng thông bộ nhớ quyết định.</li>
+</ul>
+</div>
+
+<p>Các chương trước nói về <i>cơ chế</i>: vì sao decode bị memory-bound, KV cache tốn bao nhiêu, quantization và speculative decoding hoạt động ra sao. Chương này ghép tất cả lại thành câu hỏi thực tế mà người deploy phải trả lời: <b>với model X, lưu lượng Y và yêu cầu latency Z, cần bao nhiêu GPU loại nào, cấu hình engine ra sao, chi phí mỗi triệu token là bao nhiêu, và theo dõi hệ thống bằng chỉ số gì?</b></p>
+
+<h3 id="i3-sizing">Sizing một deployment — cộng bộ nhớ từng bước</h3>
+
+<p>Bộ nhớ GPU khi serve chia thành bốn phần:</p>
+\[
+M_{\text{GPU}} \;\ge\; \underbrace{M_{\text{weights}}}_{\text{model}} \;+\; \underbrace{M_{\text{KV}}}_{\text{KV cache}} \;+\; \underbrace{M_{\text{act}}}_{\text{activation tạm}} \;+\; \underbrace{M_{\text{overhead}}}_{\text{CUDA context, graphs, NCCL...}}
+\]
+
+<table class="symtab">
+<thead><tr><th>Thành phần</th><th>Công thức</th><th>Ghi chú</th></tr></thead>
+<tbody>
+<tr><td>\(M_{\text{weights}}\)</td><td>\(N_{\text{params}} \times \text{bytes/param}\)</td><td>bf16 = 2 byte, fp8/int8 = 1 byte, int4 ≈ 0.5 byte (cộng thêm scale/zero-point, thực tế ~0.55–0.6 byte)</td></tr>
+<tr><td>\(M_{\text{KV}}\) mỗi token</td><td>\(2 \times L \times n_{kv} \times d_{head} \times \text{bytes}\)</td><td>2 = K và V; \(L\) = số layer; \(n_{kv}\) = số KV head (GQA)</td></tr>
+<tr><td>\(M_{\text{KV}}\) tổng</td><td>\(\text{KV/token} \times \sum_{\text{req}} (\text{prompt} + \text{output})\)</td><td>tổng số token đang "sống" trong tất cả request chạy đồng thời</td></tr>
+<tr><td>\(M_{\text{act}}\)</td><td>tỉ lệ với <code>max_num_batched_tokens</code></td><td>chủ yếu là buffer cho prefill; thường vài GB</td></tr>
+<tr><td>\(M_{\text{overhead}}\)</td><td>~1–3 GB mỗi GPU</td><td>CUDA context, CUDA graphs, buffer giao tiếp</td></tr>
+</tbody>
+</table>
+
+<p>Engine như vLLM làm ngược lại: bạn khai báo <code>--gpu-memory-utilization</code> (VD 0.9 = được dùng 90% VRAM), engine load weights, chạy thử một batch "giả" để đo activation peak, rồi <b>toàn bộ phần còn lại được cấp cho KV cache</b>. Log khởi động sẽ in ra số block / số token KV cache tối đa — đó là con số quyết định bạn phục vụ được bao nhiêu người cùng lúc.</p>
+
+<h4>Ví dụ 1 — model 8B (cấu hình kiểu Llama-3-8B) trên 1 GPU</h4>
+<p>Llama-3-8B: \(L = 32\), \(n_{kv} = 8\), \(d_{head} = 128\).</p>
+\[
+\text{KV/token} = 2 \times 32 \times 8 \times 128 \times 2\ \text{byte} = 131{,}072\ \text{byte} = 128\ \text{KiB}
+\]
+<table>
+<thead><tr><th>Kịch bản</th><th>Weights</th><th>Còn cho KV (ước lượng)</th><th>Số token KV</th><th>Ý nghĩa</th></tr></thead>
+<tbody>
+<tr><td>GPU 24 GB, bf16, util 0.9</td><td>~16 GB</td><td>21.6 − 16 − ~1.5 ≈ 4 GB</td><td>≈ 32K token</td><td>~4 request × 8K context, hoặc ~16 request × 2K</td></tr>
+<tr><td>GPU 24 GB, int4 (AWQ/GPTQ)</td><td>~5.5 GB</td><td>≈ 14.5 GB</td><td>≈ 118K token</td><td>gấp ~3.5 lần số người dùng đồng thời</td></tr>
+<tr><td>GPU 24 GB, int4 + KV fp8</td><td>~5.5 GB</td><td>≈ 14.5 GB</td><td>≈ 236K token</td><td>KV fp8 = 64 KiB/token</td></tr>
+<tr><td>GPU 80 GB, bf16, util 0.9</td><td>~16 GB</td><td>72 − 16 − ~3 ≈ 53 GB</td><td>≈ 430K token</td><td>~50 request × 8K, đủ cho batch decode lớn</td></tr>
+</tbody>
+</table>
+
+<div class="callout example"><div class="callout-title">Ví dụ số — vì sao quantize weights lại tăng throughput trên GPU nhỏ</div>
+<p>Trên GPU 24 GB, bf16 chỉ để lại ~32K token KV. Nếu workload trung bình 2K token/request thì batch decode tối đa ~16. Quantize int4 giải phóng ~10 GB → ~118K token → batch ~59. Vì decode memory-bound, batch tăng ~3.7× thì throughput (token/s tổng) cũng tăng gần tương ứng, trong khi mỗi bước decode đọc ít weights hơn nên còn nhanh hơn. Đây là lý do trên GPU tiêu dùng, int4 thường là lựa chọn mặc định.</p>
+</div>
+
+<h4>Ví dụ 2 — model 70B (kiểu Llama-3-70B) với tensor parallelism</h4>
+<p>Llama-3-70B: \(L = 80\), \(n_{kv} = 8\), \(d_{head} = 128\) → KV/token \(= 2 \times 80 \times 8 \times 128 \times 2 = 327{,}680\) byte = 320 KiB.</p>
+<table>
+<thead><tr><th>Cấu hình</th><th>Weights tổng</th><th>Tổng VRAM (util 0.9)</th><th>KV còn lại (ước)</th><th>Nhận xét</th></tr></thead>
+<tbody>
+<tr><td>2×80 GB, bf16, TP=2</td><td>~140 GB</td><td>144 GB</td><td>gần như 0</td><td><b>Không khả thi</b> trong thực tế — không còn chỗ cho KV</td></tr>
+<tr><td>4×80 GB, bf16, TP=4</td><td>~140 GB</td><td>288 GB</td><td>~140 GB → ~450K token</td><td>Cấu hình "chuẩn" cho bf16</td></tr>
+<tr><td>2×80 GB, fp8, TP=2</td><td>~70 GB</td><td>144 GB</td><td>~68 GB → ~220K token (KV bf16)</td><td>Rẻ hơn một nửa số GPU; chất lượng fp8 thường gần như không đổi</td></tr>
+<tr><td>1×80 GB, fp8</td><td>~70 GB</td><td>72 GB</td><td>~0</td><td>Load được nhưng gần như không phục vụ được ai</td></tr>
+<tr><td>1×80 GB, int4</td><td>~38 GB</td><td>72 GB</td><td>~31 GB → ~100K token</td><td>Khả thi cho lưu lượng vừa; kiểm tra kỹ chất lượng</td></tr>
+</tbody>
+</table>
+
+<div class="callout note"><div class="callout-title">Giải thích thêm: TP chia cả weights lẫn KV cache</div>
+<p>Với tensor parallelism, mỗi GPU giữ \(1/\text{TP}\) weights và \(1/\text{TP}\) số KV head (nếu \(n_{kv} \ge \text{TP}\)). Nếu \(\text{TP} > n_{kv}\) (VD TP=16 với 8 KV head), KV head phải được <b>nhân bản</b> trên nhiều GPU → tốn bộ nhớ KV hơn tính toán đơn giản. Đây là một lý do TP cho model GQA thường dừng ở 8. TP cũng cần all-reduce sau mỗi attention và mỗi MLP, nên chỉ nên dùng trong một node có NVLink; giữa các node, ưu tiên pipeline parallelism hoặc chạy nhiều replica độc lập.</p>
+</div>
+
+<h4>Ví dụ 3 — MoE lớn: gpt-oss-120b và DeepSeek-V3</h4>
+<ul>
+<li><b>gpt-oss-120b</b> (OpenAI, 2025): ~117B tham số tổng, ~5.1B active mỗi token. Phần MoE weights được phát hành ở định dạng <b>MXFP4</b> (~4.25 bit/param tính cả scale), nhờ đó toàn bộ model <b>vừa một GPU 80 GB</b> như OpenAI công bố. Bản 20b vừa trong ~16 GB. Bài học: với MoE, <i>tổng</i> tham số quyết định bộ nhớ, <i>active</i> tham số quyết định compute và băng thông đọc mỗi token.</li>
+<li><b>DeepSeek-V3/R1</b>: 671B tổng, 37B active. Weights fp8 ≈ 671 GB → không vừa 8×H100 80 GB (640 GB) khi còn cần KV cache; thường chạy trên 8×H200 (141 GB/GPU) hoặc 2 node 8×H100. Report DeepSeek-V3 mô tả deployment thật của họ: prefill tối thiểu <b>4 node / 32 GPU</b>, decode tối thiểu <b>40 node / 320 GPU</b> với expert parallelism lớn — cho thấy MoE cực lớn được tối ưu cho throughput ở quy mô cụm, không phải cho một node.</li>
+</ul>
+
+<div class="callout warn"><div class="callout-title">Lưu ý</div>
+<p>KV cache của DeepSeek-V3 dùng MLA nên mỗi token rất nhỏ so với GQA cùng cỡ — đừng áp công thức \(2 L n_{kv} d_{head}\) cho MLA. Với MLA, KV/token \(= L \times (d_c + d_h^R) \times \text{bytes}\) (latent nén + phần RoPE tách riêng). Luôn đọc <code>config.json</code> của model trước khi tính.</p>
+</div>
+
+<h3 id="i3-latency-throughput">Throughput vs latency — chọn batch size và concurrency</h3>
+
+<p>Các chỉ số chuẩn:</p>
+<table>
+<thead><tr><th>Chỉ số</th><th>Định nghĩa</th><th>Phụ thuộc chủ yếu vào</th></tr></thead>
+<tbody>
+<tr><td><b>TTFT</b> (time to first token)</td><td>thời gian từ lúc gửi request đến token đầu tiên</td><td>thời gian chờ trong queue + prefill (compute-bound, tỉ lệ độ dài prompt)</td></tr>
+<tr><td><b>TPOT / ITL</b> (time per output token / inter-token latency)</td><td>khoảng cách giữa hai token liên tiếp</td><td>decode step (memory-bound), batch size, prefill của request khác chen vào</td></tr>
+<tr><td><b>E2E latency</b></td><td>\(\text{TTFT} + (n_{out}-1)\cdot\text{TPOT}\)</td><td>cả hai</td></tr>
+<tr><td><b>Throughput</b></td><td>token/s tổng (input + output, hoặc chỉ output)</td><td>batch size, hiệu suất kernel</td></tr>
+<tr><td><b>Goodput</b></td><td>số request/s <i>đạt SLO</i> (VD TTFT &lt; 1 s và TPOT &lt; 50 ms)</td><td>chỉ số đúng để tối ưu (DistServe)</td></tr>
+</tbody>
+</table>
+
+<p><b>Little's law</b> nối các đại lượng này: \(\text{concurrency} = \text{throughput}_{\text{req/s}} \times \text{latency}_{\text{s}}\). Nếu mỗi request trung bình 10 s và bạn cần 20 request/s, hệ thống phải giữ ~200 request đồng thời — tức KV cache phải chứa đủ 200 request.</p>
+
+<h4>Hình dạng đường cong</h4>
+<p>Một decode step đọc toàn bộ weights (\(M_w\) byte) và KV của các request trong batch. Với batch \(B\):</p>
+\[
+t_{\text{step}}(B) \approx \max\!\left(\frac{M_w + B\cdot M_{kv,\text{req}}}{\text{BW}},\; \frac{2 N_{\text{active}} \cdot B}{\text{FLOPS}}\right), \qquad \text{throughput} = \frac{B}{t_{\text{step}}(B)}
+\]
+<ul>
+<li>\(B\) nhỏ: \(t_{\text{step}}\) gần như không đổi (bị chi phối bởi đọc weights) → throughput tăng <b>gần tuyến tính</b> theo \(B\), TPOT gần như không đổi. Đây là vùng "tăng batch là miễn phí".</li>
+<li>\(B\) lớn: phần đọc KV cache và phần compute bắt đầu chiếm ưu thế → TPOT tăng nhanh, throughput bão hoà.</li>
+</ul>
+
+<figure>
+<svg viewBox="0 0 640 260" width="100%" role="img" aria-label="Đường cong throughput và TPOT theo batch size">
+  <g font-family="sans-serif" font-size="12">
+    <line x1="60" y1="220" x2="600" y2="220" style="stroke:var(--muted)" stroke-width="1.5"/>
+    <line x1="60" y1="220" x2="60" y2="20" style="stroke:var(--muted)" stroke-width="1.5"/>
+    <text x="330" y="250" text-anchor="middle" style="fill:var(--muted)">batch size B (log)</text>
+    <path d="M60,210 C160,170 240,90 330,62 C420,40 500,36 600,34" fill="none" style="stroke:var(--accent)" stroke-width="2.5"/>
+    <text x="470" y="28" style="fill:var(--accent)">throughput (token/s tổng)</text>
+    <path d="M60,190 C200,189 300,186 380,175 C460,160 530,120 600,60" fill="none" style="stroke:var(--note)" stroke-width="2.5" stroke-dasharray="6 4"/>
+    <text x="300" y="160" style="fill:var(--note)">TPOT (ms/token)</text>
+    <line x1="380" y1="20" x2="380" y2="220" style="stroke:var(--border)" stroke-dasharray="3 3"/>
+    <text x="385" y="210" style="fill:var(--muted)">điểm "gãy": vượt qua đây</text>
+    <text x="385" y="196" style="fill:var(--muted)">TPOT tăng nhanh</text>
+    <text x="70" y="88" style="fill:var(--muted)">vùng memory-bound:</text>
+    <text x="70" y="103" style="fill:var(--muted)">tăng B gần như miễn phí</text>
+  </g>
+</svg>
+<figcaption>Hình minh hoạ định tính (không phải số đo): throughput tăng gần tuyến tính rồi bão hoà, TPOT phẳng rồi tăng vọt. Điểm vận hành tốt nằm ngay trước chỗ gãy, sao cho TPOT vẫn dưới SLO.</figcaption>
+</figure>
+
+<div class="callout example"><div class="callout-title">Ví dụ số — trần tốc độ batch 1</div>
+<p>8B bf16 (16 GB) trên H100 SXM (HBM3 ~3.35 TB/s): mỗi decode step tối thiểu phải đọc 16 GB → \(16 / 3350 \approx 4.8\) ms → trần ~<b>210 token/s</b> cho một người dùng, dù GPU có ~990 TFLOPS bf16 dense. Thực tế đạt ~60–80% trần do overhead kernel. Với batch 32, step chỉ chậm hơn chút (đọc thêm KV) nhưng sinh 32 token → throughput tổng gấp ~25–30 lần.</p>
+</div>
+
+<h4>Các núm vặn chính trong engine</h4>
+<table>
+<thead><tr><th>Núm (tên kiểu vLLM)</th><th>Tác dụng</th><th>Tăng lên thì</th></tr></thead>
+<tbody>
+<tr><td><code>--max-num-seqs</code></td><td>số request tối đa trong một batch decode</td><td>throughput ↑, TPOT ↑, cần nhiều KV hơn</td></tr>
+<tr><td><code>--max-num-batched-tokens</code></td><td>tổng token (prefill + decode) mỗi step; điều khiển chunk size của chunked prefill</td><td>TTFT ↓ (prefill nhanh hơn) nhưng TPOT của các request đang decode bị "giật" hơn</td></tr>
+<tr><td><code>--max-model-len</code></td><td>context tối đa mỗi request</td><td>hỗ trợ prompt dài hơn, nhưng request dài chiếm nhiều KV → ít concurrency</td></tr>
+<tr><td><code>--gpu-memory-utilization</code></td><td>phần VRAM engine được phép dùng</td><td>nhiều KV hơn; quá cao dễ OOM khi có process khác</td></tr>
+<tr><td><code>--kv-cache-dtype fp8</code></td><td>lưu KV ở fp8</td><td>gấp đôi số token KV; cần kiểm tra chất lượng (đặc biệt long context)</td></tr>
+</tbody>
+</table>
+
+<h3 id="i3-launch-examples">Ví dụ cấu hình — vLLM, SGLang, llama.cpp</h3>
+
+<p><b>vLLM</b> (OpenAI-compatible server):</p>
+<pre><code># 70B fp8 trên 2 GPU, context 32K, bật prefix caching
+vllm serve meta-llama/Llama-3.3-70B-Instruct \
+  --tensor-parallel-size 2 \
+  --quantization fp8 \
+  --max-model-len 32768 \
+  --gpu-memory-utilization 0.92 \
+  --max-num-seqs 128 \
+  --enable-prefix-caching \
+  --kv-cache-dtype fp8 \
+  --port 8000
+
+# Gọi thử
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "meta-llama/Llama-3.3-70B-Instruct",
+       "messages": [{"role": "user", "content": "Xin chào"}]}'</code></pre>
+
+<p><b>SGLang</b>:</p>
+<pre><code>python -m sglang.launch_server \
+  --model-path Qwen/Qwen2.5-7B-Instruct \
+  --tp 1 \
+  --context-length 32768 \
+  --mem-fraction-static 0.85 \
+  --port 30000</code></pre>
+
+<p><b>llama.cpp</b> (máy cá nhân, model GGUF):</p>
+<pre><code># -ngl 99: đẩy toàn bộ layer lên GPU/Metal; -c: context
+llama-server -m qwen2.5-7b-instruct-q4_k_m.gguf -c 8192 -ngl 99 --port 8080</code></pre>
+
+<div class="callout warn"><div class="callout-title">Lưu ý</div>
+<p>Tên flag thay đổi theo phiên bản engine. Luôn kiểm tra bằng <code>vllm serve --help</code> / <code>python -m sglang.launch_server --help</code> với đúng version bạn cài, và pin version trong Dockerfile để tránh hành vi thay đổi âm thầm khi nâng cấp.</p>
+</div>
+
+<h3 id="i3-cost">Chi phí mỗi triệu token — công thức và ví dụ</h3>
+
+\[
+\text{Cost}_{\$/1\text{M tok}} = \frac{\text{giá GPU}_{\$/\text{h}} \times n_{\text{GPU}}}{\text{throughput}_{\text{tok/s}} \times 3600} \times 10^{6}
+\]
+<ul>
+<li>\(\text{giá GPU}_{\$/\text{h}}\): giá thuê một GPU mỗi giờ (cloud on-demand, reserved, hoặc khấu hao nếu mua).</li>
+<li>\(n_{\text{GPU}}\): số GPU của một replica.</li>
+<li>\(\text{throughput}\): token/s <b>bền vững ở mức tải thật</b> (không phải số benchmark đỉnh).</li>
+</ul>
+
+<div class="callout example"><div class="callout-title">Ví dụ số (giá giả định để minh hoạ)</div>
+<p>Giả sử thuê GPU 80 GB giá $2.50/h. Model 8B chạy 1 GPU đạt 3,000 output token/s ở batch lớn:</p>
+\[
+\frac{2.5 \times 1}{3000 \times 3600} \times 10^6 \approx \$0.23\ \text{/ 1M output token}
+\]
+<p>Nhưng nếu lưu lượng thật chỉ đủ lấp 20% công suất (GPU rảnh 80% thời gian), chi phí thực tế là \(0.23 / 0.2 \approx \$1.16\) / 1M token. <b>Utilization</b> thường quan trọng hơn mọi tối ưu kernel. Model 70B fp8 trên 2 GPU đạt 1,500 token/s → \(\frac{5}{1500 \times 3600}\times10^6 \approx \$0.93\) / 1M token ở full tải.</p>
+</div>
+
+<div class="callout tip"><div class="callout-title">Ý chính</div>
+<p>Input token (prefill) rẻ hơn output token nhiều lần vì prefill compute-bound và xử lý song song cả prompt; đó là lý do API thương mại tính giá input thấp hơn output. Khi tính chi phí, tách riêng hai phần theo tỉ lệ input:output thật của workload (RAG/agent thường rất "nặng input").</p>
+</div>
+
+<h3 id="i3-autoscaling">Optimization — autoscaling, routing và load balancing</h3>
+
+<h4>Autoscaling theo tín hiệu đúng</h4>
+<ul>
+<li><b>Đừng scale theo CPU/GPU utilization</b>: GPU luôn "100%" khi có bất kỳ batch nào. Tín hiệu tốt hơn: <b>số request đang chờ trong queue</b>, <b>tỉ lệ KV cache đã dùng</b>, và <b>p95 TTFT</b> so với SLO.</li>
+<li><b>Cold start</b> là vấn đề lớn: tải 140 GB weights từ object storage có thể mất vài phút. Giải pháp: cache weights trên local NVMe, dùng định dạng load nhanh (safetensors, load song song), giữ một pool replica "ấm", scale sớm (dự báo theo giờ trong ngày) thay vì phản ứng muộn.</li>
+<li><b>Scale-to-zero</b> chỉ hợp lý khi chấp nhận latency khởi động vài phút (batch job, môi trường dev).</li>
+</ul>
+
+<h4>Prefix-aware routing</h4>
+<p>Prefix caching (xem chương serving) chỉ có lợi khi request có prefix chung <i>đến đúng replica đang giữ prefix đó</i>. Load balancer round-robin phá vỡ điều này: với 8 replica, xác suất trúng cache giảm ~8 lần. <b>Cache-aware routing</b> băm prefix (system prompt, tài liệu RAG, lịch sử hội thoại) để gửi request về replica có khả năng đã cache, đồng thời cân bằng tải để không dồn hết vào một replica. Router của SGLang và các dự án như llm-d, vLLM production-stack đều triển khai ý tưởng này.</p>
+
+<div class="callout example"><div class="callout-title">Ví dụ số</div>
+<p>Chatbot có system prompt 3,000 token, câu hỏi trung bình 200 token. Nếu cache trúng, prefill chỉ còn 200 token thay vì 3,200 → TTFT giảm ~16 lần ở phần prefill và GPU rảnh compute cho request khác. Với hội thoại nhiều lượt, gửi các lượt của cùng một session về cùng replica (session affinity) có tác dụng tương tự.</p>
+</div>
+
+<h4>Phân loại request</h4>
+<p>Request dài (prompt 100K token) và request ngắn chen nhau trong một replica làm TPOT của mọi người "giật". Các hệ thống lớn thường tách pool: pool cho long-context, pool cho chat ngắn, pool cho batch offline (ưu tiên thấp, lấp chỗ trống). Đây cũng là tinh thần của <b>prefill/decode disaggregation</b> ở quy mô cụm.</p>
+
+<h3 id="i3-multi-lora">Optimization — serve nhiều LoRA adapter trên một base model</h3>
+<p>Nếu bạn fine-tune hàng trăm biến thể bằng LoRA (mỗi khách hàng một adapter), deploy mỗi adapter thành một model riêng là lãng phí: base model giống nhau. <b>S-LoRA</b> và <b>Punica</b> chỉ ra cách serve hàng nghìn adapter trên một base:</p>
+<ul>
+<li>Base weights dùng chung; với mỗi request, output = \(xW + x A_i B_i \cdot \frac{\alpha}{r}\) với \((A_i, B_i)\) là adapter của request đó.</li>
+<li>Kernel đặc biệt (Punica gọi là <b>SGMV</b> — segmented gather matrix-vector) tính phần LoRA cho một batch chứa <i>nhiều adapter khác nhau</i> cùng lúc, nên vẫn batch được.</li>
+<li>Adapter được lưu ở CPU memory và nạp lên GPU theo nhu cầu (paging như KV cache trong S-LoRA).</li>
+</ul>
+<pre><code># vLLM: bật LoRA, tối đa 8 adapter cùng lúc trong một batch
+vllm serve meta-llama/Llama-3.1-8B-Instruct \
+  --enable-lora \
+  --max-loras 8 \
+  --max-lora-rank 64 \
+  --lora-modules sql-lora=/adapters/sql support-lora=/adapters/support
+# Request chọn adapter qua trường "model": "sql-lora"</code></pre>
+
+<div class="callout tip"><div class="callout-title">Ý chính</div>
+<p>Overhead LoRA khi serve nhỏ (rank thấp) nhưng không bằng 0. Nếu chỉ có 1–2 adapter và lưu lượng cao, <b>merge</b> adapter vào weights (\(W' = W + BA\cdot\alpha/r\)) để có tốc độ y như base model.</p>
+</div>
+
+<h3 id="i3-long-context-serving">Long-context serving — những gì thay đổi khi context lên 128K+</h3>
+<ul>
+<li><b>KV cache chiếm hết bộ nhớ</b>: một request 128K token với Llama-3-8B cần \(128\text{K} \times 128\ \text{KiB} = 16\) GiB KV — bằng cả weights. Concurrency giảm mạnh; KV fp8 và model dùng GQA/MLA/sliding window trở nên quan trọng.</li>
+<li><b>Prefill dài chặn decode</b>: prefill 128K token có thể mất nhiều giây; không có chunked prefill, mọi request khác đứng im. Bật chunked prefill và giới hạn <code>max_num_batched_tokens</code> hợp lý.</li>
+<li><b>Attention trong decode tốn băng thông</b>: mỗi token mới phải đọc toàn bộ KV của request. Ở 128K, đọc KV có thể vượt đọc weights → TPOT tăng theo độ dài. Kernel kiểu Flash-Decoding chia KV theo chiều sequence để song song hoá.</li>
+<li><b>Prefix caching cực kỳ đáng giá</b> cho workload hỏi nhiều câu trên cùng tài liệu dài.</li>
+<li><b>Kiểm tra chất lượng ở độ dài thật</b>: quantization (đặc biệt KV) có thể không ảnh hưởng ở 4K nhưng làm giảm recall ở 100K.</li>
+</ul>
+
+<h3 id="i3-moe-serving">Optimization — serve MoE</h3>
+<ul>
+<li><b>Bộ nhớ theo tổng tham số, tốc độ theo active</b>: MoE 120B/5B active cần bộ nhớ của 120B nhưng mỗi token chỉ đọc ~5B weights (ở batch nhỏ) → decode nhanh như model ~5–10B nếu weights vừa bộ nhớ nhanh.</li>
+<li><b>Batch lớn làm "mất" lợi thế sparse về băng thông</b>: khi batch đủ lớn, gần như mọi expert đều được ít nhất một token chọn → mỗi step đọc gần hết weights. Lợi thế còn lại là compute (FLOPs/token thấp).</li>
+<li><b>Expert parallelism (EP)</b>: chia expert lên nhiều GPU; token được gửi tới GPU giữ expert qua all-to-all. Khi EP lớn, mỗi GPU giữ ít expert → nhiều bộ nhớ cho KV. vLLM có <code>--enable-expert-parallel</code>; SGLang hỗ trợ EP và <b>DP attention</b> (attention chạy data-parallel, MoE chạy expert-parallel — hữu ích với MLA vì KV nhỏ không nên chia theo TP).</li>
+<li><b>Expert load imbalance</b>: expert "hot" làm GPU giữ nó thành nút cổ chai. DeepSeek dùng <b>redundant experts</b> (nhân bản expert hot lên nhiều GPU) và công bố EPLB (expert-parallel load balancer) để sắp xếp lại định kỳ theo thống kê tải.</li>
+<li><b>Giao tiếp</b>: all-to-all giữa các node đắt; các thư viện như DeepEP tối ưu dispatch/combine, và overlap giao tiếp với tính toán bằng cách chia batch thành hai micro-batch chạy xen kẽ.</li>
+</ul>
+
+<h3 id="i3-edge">On-device và edge — laptop, Mac, điện thoại</h3>
+<p>Trên máy cá nhân, batch gần như luôn là 1 → decode <b>hoàn toàn memory-bound</b>. Trần tốc độ:</p>
+\[
+\text{token/s} \;\lesssim\; \frac{\text{băng thông bộ nhớ (GB/s)}}{\text{dung lượng weights đọc mỗi token (GB)}}
+\]
+<div class="callout example"><div class="callout-title">Ví dụ số</div>
+<ul>
+<li>Mac M2 Ultra (unified memory ~800 GB/s), model 70B ở Q4 (~40 GB): trần ≈ 800 / 40 = <b>~20 token/s</b>.</li>
+<li>Cùng máy, model 8B Q4 (~4.7 GB): trần ≈ 170 token/s; thực tế thấp hơn do overhead.</li>
+<li>PC có RTX 4090 (24 GB, ~1 TB/s): 8B Q4 nằm gọn trong VRAM → rất nhanh. Model 70B Q4 không vừa → phải <b>offload</b> một phần layer sang RAM CPU (băng thông DDR5 dual-channel chỉ ~60–90 GB/s) → tốc độ bị kéo xuống theo phần nằm ở CPU.</li>
+</ul>
+<p>Điểm mạnh của Apple silicon là <b>unified memory dung lượng lớn</b>: GPU dùng trực tiếp 64–192 GB RAM, nên chạy được model mà GPU rời phải chia nhiều card. Điểm yếu là compute thấp hơn GPU datacenter → prefill prompt dài chậm.</p>
+</div>
+
+<table>
+<thead><tr><th>Công cụ</th><th>Định dạng</th><th>Ghi chú</th></tr></thead>
+<tbody>
+<tr><td><b>llama.cpp</b></td><td>GGUF (Q4_K_M, Q5_K_M, Q8_0...)</td><td>C/C++, chạy CPU/CUDA/Metal/Vulkan; <code>-ngl</code> chọn số layer đưa lên GPU; nền tảng của Ollama, LM Studio</td></tr>
+<tr><td><b>MLX / mlx-lm</b></td><td>MLX safetensors (4/8-bit)</td><td>framework của Apple cho Apple silicon; có cả fine-tune LoRA</td></tr>
+<tr><td><b>Ollama</b></td><td>GGUF</td><td>đóng gói llama.cpp thành dịch vụ có model registry</td></tr>
+<tr><td><b>ExecuTorch, MLC-LLM</b></td><td>riêng</td><td>hướng tới điện thoại / trình duyệt</td></tr>
+</tbody>
+</table>
+
+<div class="callout note"><div class="callout-title">Giải thích thêm: các mức quant GGUF</div>
+<p>Tên như <code>Q4_K_M</code>: "Q4" = ~4 bit/weight, "K" = k-quant (quantize theo block với scale theo super-block), "M" = medium (một số tensor quan trọng như attention V / FFN down được giữ ở bit cao hơn). Kinh nghiệm cộng đồng: Q4_K_M là điểm cân bằng phổ biến; Q5/Q6 gần như không phân biệt được với fp16 trên đa số tác vụ; dưới 4 bit chất lượng giảm rõ với model nhỏ.</p>
+</div>
+
+<h3 id="i3-observability">Observability — theo dõi gì khi chạy production</h3>
+<table>
+<thead><tr><th>Nhóm</th><th>Chỉ số</th><th>Dấu hiệu bất thường</th></tr></thead>
+<tbody>
+<tr><td>Tải</td><td>request đang chạy / đang chờ (vLLM expose dạng Prometheus, VD <code>vllm:num_requests_running</code>, <code>vllm:num_requests_waiting</code>)</td><td>waiting tăng liên tục → thiếu capacity</td></tr>
+<tr><td>Bộ nhớ</td><td>% KV cache đã dùng, số lần <b>preemption</b> (request bị đẩy ra rồi tính lại)</td><td>KV ~100% + preemption tăng → giảm <code>max-num-seqs</code> hoặc thêm GPU</td></tr>
+<tr><td>Latency</td><td>p50/p95/p99 TTFT (VD <code>vllm:time_to_first_token_seconds</code>), TPOT, E2E</td><td>p99 TTFT vọt → queue hoặc prefill dài chặn</td></tr>
+<tr><td>Hiệu quả</td><td>throughput token/s, prefix cache hit rate, độ dài accept trung bình của speculative decoding</td><td>hit rate thấp → kiểm tra routing</td></tr>
+<tr><td>Chất lượng</td><td>tỉ lệ lỗi format (JSON hỏng), tỉ lệ bị cắt do <code>max_tokens</code>, phản hồi người dùng, eval định kỳ</td><td>tăng sau khi đổi quant/engine version</td></tr>
+<tr><td>Phần cứng</td><td>nhiệt độ, ECC error, XID error (NVIDIA), NCCL timeout</td><td>GPU lỗi gây treo cả replica TP</td></tr>
+</tbody>
+</table>
+
+<h3 id="i3-checklist">Production checklist</h3>
+<ol>
+<li><b>Xác định SLO</b>: p95 TTFT, p95 TPOT, throughput mục tiêu, phân phối độ dài input/output thật (lấy từ log, không đoán).</li>
+<li><b>Sizing</b> theo công thức ở trên; chọn precision (bf16 → fp8 → int4) theo ngân sách bộ nhớ và kết quả eval.</li>
+<li><b>Eval chất lượng</b> bản quantized so với bản gốc trên benchmark + bộ prompt nội bộ (xem chương Evaluation).</li>
+<li><b>Load test</b> với phân phối request thật (độ dài, tốc độ đến dạng Poisson/bursty), quét <code>max-num-seqs</code> và chunk size, vẽ đường throughput–latency và chọn điểm vận hành.</li>
+<li><b>Bật</b> prefix caching, chunked prefill; cân nhắc speculative decoding nếu batch nhỏ và cần TPOT thấp.</li>
+<li><b>Routing</b>: cache-aware, session affinity; tách pool long-context nếu cần.</li>
+<li><b>Autoscaling</b> theo queue/KV usage; giảm cold start (weights trên NVMe local, pool ấm).</li>
+<li><b>Giới hạn & an toàn</b>: rate limit, giới hạn <code>max_tokens</code>, timeout, kiểm tra input quá dài, guardrail.</li>
+<li><b>Observability</b>: dashboard các chỉ số ở trên, alert theo SLO, log mẫu request để debug.</li>
+<li><b>Pin version</b> engine + driver + CUDA; canary rollout khi nâng cấp, so sánh output và latency trước/sau.</li>
+</ol>
+
+<div class="callout note"><div class="callout-title">Nguồn tham khảo</div>
+<ul>
+<li>Kwon et al., "Efficient Memory Management for Large Language Model Serving with PagedAttention" (vLLM), SOSP 2023, arXiv:2309.06180.</li>
+<li>Zheng et al., "SGLang: Efficient Execution of Structured Language Model Programs", 2023/2024, arXiv:2312.07104.</li>
+<li>Zhong et al., "DistServe: Disaggregating Prefill and Decoding for Goodput-optimized LLM Serving", OSDI 2024, arXiv:2401.09670.</li>
+<li>Sheng et al., "S-LoRA: Serving Thousands of Concurrent LoRA Adapters", 2023, arXiv:2311.03285.</li>
+<li>Chen et al., "Punica: Multi-Tenant LoRA Serving", 2023, arXiv:2310.18547.</li>
+<li>DeepSeek-AI, "DeepSeek-V3 Technical Report", 2024, arXiv:2412.19437 (phần Inference and Deployment).</li>
+<li>OpenAI, gpt-oss-120b &amp; gpt-oss-20b model card, 2025.</li>
+<li>Meta, "The Llama 3 Herd of Models", 2024, arXiv:2407.21783 (cấu hình model dùng trong ví dụ).</li>
+<li>Tài liệu vLLM, SGLang, llama.cpp, MLX (docs chính thức — kiểm tra theo version).</li>
+</ul>
+</div>
+</section>
+
+<section id="i-eval">
+<h2 id="i-eval-h">Evaluation chuyên sâu — đo model cho đúng</h2>
+
+<div class="callout tip"><div class="callout-title">Đọc nhanh</div>
+<ul>
+<li>Có hai kiểu chấm chính: so xác suất model gán cho các đáp án có sẵn, hoặc để model tự viết câu trả lời rồi kiểm tra.</li>
+<li>Điểm benchmark luôn có "sai số"; chênh 1–2 điểm trên vài trăm câu hỏi thường chỉ là may rủi.</li>
+<li>Dùng LLM làm giám khảo tiện nhưng nó thiên vị: thích câu trả lời đứng trước, thích câu dài, thích văn phong của chính nó.</li>
+<li>Nếu đề thi đã lọt vào dữ liệu train, điểm cao không còn ý nghĩa — cần kiểm tra "lộ đề".</li>
+<li>Khi deploy bản nén, luôn chạy lại cùng bộ eval để chắc chất lượng không tụt.</li>
+</ul>
+</div>
+
+<p>Eval là "hệ thần kinh" của cả pipeline: quyết định ablation nào thắng, checkpoint nào được chọn, bản quantized nào được deploy. Eval sai thì mọi quyết định phía sau đều sai. Chương này đi vào ba câu hỏi: <b>đo bằng cách nào</b>, <b>con số đo được đáng tin đến đâu</b>, và <b>làm sao biết benchmark không bị lộ</b>.</p>
+
+<h3 id="i3-eval-types">Các kiểu eval — log-likelihood và generative</h3>
+
+<h4>1. Log-likelihood (multiple choice dạng cloze)</h4>
+<p>Với câu hỏi \(x\) và các đáp án \(a_1, \dots, a_K\), model không cần sinh text: ta tính log-xác suất model gán cho từng đáp án nối sau câu hỏi và chọn đáp án cao nhất:</p>
+\[
+\hat a = \arg\max_k \; \log p_\theta(a_k \mid x) = \arg\max_k \sum_{t=1}^{|a_k|} \log p_\theta\big(a_{k,t} \mid x, a_{k,&lt;t}\big)
+\]
+<ul>
+<li><b>Vấn đề độ dài</b>: tổng log-prob luôn âm và giảm theo số token → đáp án dài bị thiệt. Các harness thường báo thêm bản chuẩn hoá: chia cho số token, hoặc cho số byte/ký tự (trong lm-evaluation-harness, <code>acc_norm</code> chuẩn hoá theo độ dài byte của đáp án).</li>
+<li><b>Ưu điểm</b>: rẻ (một forward pass), ổn định, đo được cả model nhỏ / base model chưa biết làm theo format → rất hợp cho ablation pre-training.</li>
+<li><b>Nhược điểm</b>: không giống cách model được dùng thật; model chat mạnh có thể điểm cloze thấp.</li>
+</ul>
+
+<h4>2. Multiple choice dạng "chọn chữ cái" (MCF)</h4>
+<p>Liệt kê các đáp án kèm A/B/C/D trong prompt, so sánh xác suất của token "A", "B", "C", "D". Model nhỏ ở đầu quá trình train thường làm dạng này ở mức ngẫu nhiên (chưa học được "kỹ năng" ánh xạ chữ cái ↔ đáp án), nên eval ablation sớm thường dùng cloze, còn model lớn/đã train lâu dùng MCF cho sát thực tế hơn.</p>
+
+<h4>3. Generative</h4>
+<p>Model sinh câu trả lời tự do (thường với chain-of-thought), sau đó <b>trích đáp án</b> (regex, parser) và so với đáp án đúng, hoặc chạy unit test (code), hoặc nhờ verifier/judge chấm. Đây là cách đo gần với sử dụng thật nhất, nhưng:</p>
+<ul>
+<li>Tốn hơn nhiều (sinh hàng trăm–nghìn token mỗi câu).</li>
+<li>Nhạy với <b>sampling</b> (temperature, top-p) → cần chạy nhiều lần và báo trung bình/khoảng tin cậy.</li>
+<li>Nhạy với <b>parser</b>: một regex trích đáp án tồi có thể làm lệch điểm vài phần trăm. Luôn đọc tay một mẫu output.</li>
+</ul>
+
+<h3 id="i3-passk">pass@k — ước lượng không chệch và suy dẫn</h3>
+<p><b>pass@k</b> = xác suất ít nhất một trong \(k\) lần sample cho một bài là đúng. Cách ngây thơ: sample đúng \(k\) lần, xem có lần nào đúng không, lặp lại rồi lấy trung bình — rất noisy. Paper Codex (Chen et al. 2021) đề xuất: sample \(n \ge k\) lần cho mỗi bài, đếm \(c\) lần đúng, rồi dùng ước lượng không chệch:</p>
+\[
+\text{pass@}k = \mathbb{E}_{\text{bài}}\left[1 - \frac{\binom{n-c}{k}}{\binom{n}{k}}\right]
+\]
+
+<p><b>Suy dẫn.</b> Coi \(n\) sample đã có là một "túi". Chọn ngẫu nhiên \(k\) sample từ túi (không hoàn lại). Bài được tính "pass" nếu trong \(k\) sample đó có ít nhất một sample đúng. Xác suất <i>không có</i> sample đúng nào = số cách chọn \(k\) sample toàn sai chia cho tổng số cách chọn:</p>
+\[
+P(\text{fail}) = \frac{\binom{n-c}{k}}{\binom{n}{k}} \quad\Rightarrow\quad P(\text{pass}) = 1 - \frac{\binom{n-c}{k}}{\binom{n}{k}}
+\]
+<p>Vì mỗi tập con \(k\) phần tử của \(n\) sample i.i.d. cũng là một bộ \(k\) sample i.i.d., kỳ vọng của đại lượng này đúng bằng pass@k thật → <b>không chệch</b>, và nó dùng hết \(n\) sample nên variance thấp hơn nhiều so với cách ngây thơ. Nếu \(n - c &lt; k\) thì không thể chọn \(k\) sample toàn sai → pass = 1.</p>
+
+<p>Tính trực tiếp \(\binom{n}{k}\) dễ tràn số; dạng tích ổn định số học (như code trong paper Codex):</p>
+\[
+\frac{\binom{n-c}{k}}{\binom{n}{k}} = \prod_{i=n-c+1}^{n} \left(1 - \frac{k}{i}\right)
+\]
+<pre><code>import numpy as np
+
+def pass_at_k(n: int, c: int, k: int) -> float:
+    """n: số sample, c: số sample đúng, k: k trong pass@k"""
+    if n - c &lt; k:
+        return 1.0
+    return 1.0 - np.prod(1.0 - k / np.arange(n - c + 1, n + 1))</code></pre>
+
+<div class="callout example"><div class="callout-title">Ví dụ số</div>
+<p>\(n = 10\) sample, \(c = 2\) đúng. pass@1 \(= 1 - \binom{8}{1}/\binom{10}{1} = 1 - 8/10 = 0.2\) (đúng bằng tỉ lệ đúng \(c/n\)). pass@5 \(= 1 - \binom{8}{5}/\binom{10}{5} = 1 - 56/252 \approx 0.78\). Tức nếu cho model 5 lần thử, gần 78% khả năng có ít nhất một lần đúng — dù mỗi lần chỉ đúng 20%.</p>
+</div>
+
+<div class="callout tip"><div class="callout-title">Ý chính</div>
+<p>pass@1 đo độ tin cậy "một phát ăn ngay"; pass@k với k lớn đo "model có <i>khả năng</i> giải được không". RL thường tăng pass@1 mạnh nhưng có thể không tăng (thậm chí giảm) pass@k ở k rất lớn — một điểm hay được dùng để tranh luận RL "dạy kỹ năng mới" hay chỉ "chọn lọc kỹ năng có sẵn". Ngoài ra còn <b>maj@k</b> (bỏ phiếu đa số trên k sample) đo hiệu quả của self-consistency.</p>
+</div>
+
+<h3 id="i3-llm-judge">LLM-as-judge — tiện, nhưng thiên vị</h3>
+<p>Với tác vụ mở (viết, chat, tóm tắt), không có đáp án đúng duy nhất → dùng một LLM mạnh làm giám khảo, theo hai kiểu: <b>chấm điểm đơn</b> (single-answer grading, VD thang 1–10 theo rubric) hoặc <b>so sánh cặp</b> (pairwise: A hay B tốt hơn). Paper MT-Bench/Chatbot Arena (Zheng et al. 2023) cho thấy GPT-4 làm judge đạt mức đồng thuận với người tương đương mức đồng thuận giữa người với người (~80%), nhưng cũng ghi nhận các bias:</p>
+
+<table>
+<thead><tr><th>Bias</th><th>Biểu hiện</th><th>Cách giảm</th></tr></thead>
+<tbody>
+<tr><td><b>Position bias</b></td><td>ưu tiên câu trả lời đứng ở vị trí đầu (hoặc sau, tuỳ model)</td><td>chấm hai lần với thứ tự đảo ngược; chỉ tính thắng nếu nhất quán, không thì tính hoà</td></tr>
+<tr><td><b>Verbosity bias</b></td><td>thích câu trả lời dài, nhiều bullet dù không tốt hơn</td><td>rubric nêu rõ "không thưởng độ dài"; hiệu chỉnh độ dài kiểu <b>Length-Controlled AlpacaEval</b> (hồi quy tách ảnh hưởng của độ dài ra khỏi win-rate)</td></tr>
+<tr><td><b>Self-preference / self-enhancement</b></td><td>judge chấm cao output của chính nó hoặc cùng họ model</td><td>dùng judge khác họ với model được đo; dùng nhiều judge và lấy trung bình</td></tr>
+<tr><td><b>Năng lực hạn chế</b></td><td>judge chấm sai bài toán/code mà nó không tự giải được</td><td>cho judge đáp án tham chiếu (reference-guided); với math/code dùng verifier thay judge</td></tr>
+</tbody>
+</table>
+
+<div class="callout warn"><div class="callout-title">Lưu ý</div>
+<p>Luôn <b>đo độ đồng thuận</b> giữa judge và người trên vài trăm mẫu của chính tác vụ của bạn trước khi tin judge. Một judge tốt cho chat tổng quát có thể rất tệ cho domain chuyên môn (luật, y tế) hoặc ngôn ngữ ít tài nguyên.</p>
+</div>
+
+<h3 id="i3-eval-stats">Thống kê cho eval — sai số, khoảng tin cậy, cỡ mẫu</h3>
+
+<p>Một benchmark có \(n\) câu hỏi, model đúng tỉ lệ \(\hat p\). Coi mỗi câu là một phép thử Bernoulli độc lập, <b>standard error</b>:</p>
+\[
+\text{SE}(\hat p) = \sqrt{\frac{\hat p(1-\hat p)}{n}}, \qquad \text{CI}_{95\%} \approx \hat p \pm 1.96\,\text{SE}
+\]
+
+<div class="callout example"><div class="callout-title">Ví dụ số</div>
+<ul>
+<li>Benchmark 1,000 câu, \(\hat p = 0.70\): \(\text{SE} = \sqrt{0.21/1000} \approx 0.0145\) → CI 95% ≈ <b>70% ± 2.8%</b>. Model A 70.0% và model B 71.5% <i>chưa</i> khác nhau có ý nghĩa thống kê nếu chỉ nhìn riêng từng khoảng.</li>
+<li>Benchmark nhỏ kiểu AIME (30 bài), \(\hat p = 0.5\): \(\text{SE} = \sqrt{0.25/30} \approx 0.091\) → CI ≈ <b>50% ± 18%</b>. Đây là lý do các lab chạy AIME nhiều lần (VD 16–64 sample/bài) và báo trung bình; nhưng lưu ý chạy nhiều lần chỉ giảm noise do sampling, <b>không</b> giảm sai số do chỉ có 30 bài.</li>
+</ul>
+</div>
+
+<h4>Cần bao nhiêu câu hỏi?</h4>
+<p>Muốn sai số (nửa khoảng CI 95%) không quá \(E\):</p>
+\[
+n \;\ge\; \frac{1.96^2 \, p(1-p)}{E^2}
+\]
+<p>Với \(p = 0.5\) (trường hợp xấu nhất) và \(E = 0.01\) (±1 điểm): \(n \ge 3.84 \times 0.25 / 0.0001 \approx 9{,}600\) câu. Với \(E = 0.03\): ~1,070 câu. Tức <b>muốn phân biệt chênh lệch 1 điểm phần trăm một cách đáng tin cần cỡ chục nghìn câu</b> — ít benchmark nào lớn như vậy.</p>
+
+<h4>So sánh cặp (paired) — mạnh hơn nhiều</h4>
+<p>Khi so hai model trên <i>cùng</i> bộ câu hỏi, hãy dùng hiệu số theo từng câu \(d_i = s_{A,i} - s_{B,i}\) thay vì so hai CI riêng rẽ:</p>
+\[
+\text{Var}(\bar d) = \frac{\text{Var}(s_A) + \text{Var}(s_B) - 2\,\text{Cov}(s_A, s_B)}{n}
+\]
+<p>Hai model thường đúng/sai trên cùng những câu (câu dễ thì cả hai đúng, câu khó cả hai sai) → \(\text{Cov}\) dương lớn → variance của hiệu số nhỏ hơn nhiều. Paired test (VD McNemar test cho đúng/sai, hoặc paired bootstrap) phát hiện được khác biệt mà so CI riêng bỏ lỡ.</p>
+
+<div class="callout note"><div class="callout-title">Giải thích thêm: các nguồn noise khác</div>
+<ul>
+<li><b>Câu hỏi không độc lập</b>: nhiều benchmark có nhóm câu hỏi chung một đoạn văn → dùng <b>clustered standard error</b> (gộp theo cụm), SE thật có thể lớn hơn đáng kể so với công thức Bernoulli. Bài "Adding Error Bars to Evals" (Miller, 2024) hệ thống hoá các điểm này.</li>
+<li><b>Noise giữa các checkpoint</b>: trong pre-training, điểm benchmark dao động giữa các checkpoint gần nhau. Khi chọn eval cho ablation, ưu tiên eval có <b>tỉ lệ tín hiệu/nhiễu</b> cao (tăng đều theo training, ít dao động) — xem phần chọn eval ở tài liệu training.</li>
+<li><b>Prompt sensitivity</b>: đổi format prompt, số few-shot, thứ tự đáp án có thể làm điểm đổi vài phần trăm. Cố định và công bố prompt.</li>
+</ul>
+</div>
+
+<h3 id="i3-arena">Arena-style rating — Elo và Bradley–Terry</h3>
+<p>Chatbot Arena cho người dùng so hai model ẩn danh và vote. Từ hàng triệu vote, cần một "điểm" cho mỗi model. Mô hình <b>Bradley–Terry</b>: mỗi model \(i\) có năng lực \(\beta_i\), xác suất \(i\) thắng \(j\):</p>
+\[
+P(i \succ j) = \frac{1}{1 + e^{-(\beta_i - \beta_j)}}
+\]
+<p>Thang Elo chỉ là đổi đơn vị: \(R_i = 400\,\beta_i / \ln 10 + \text{const}\), khi đó \(P(i \succ j) = 1/(1 + 10^{(R_j - R_i)/400})\).</p>
+
+<div class="callout example"><div class="callout-title">Ví dụ số</div>
+<p>Chênh 100 điểm Elo: \(P = 1/(1 + 10^{-0.25}) = 1/(1 + 0.562) \approx 0.64\). Chênh 400 điểm: \(P = 1/(1+0.1) \approx 0.91\). Vậy model hơn 100 Elo chỉ thắng ~64% số lần đấu — khác biệt "rõ ràng" trên bảng xếp hạng vẫn là thua khá thường xuyên.</p>
+</div>
+
+<ul>
+<li><b>Online Elo</b> cập nhật sau từng trận: \(R_i \leftarrow R_i + K(S - E)\) — phụ thuộc thứ tự trận và hệ số \(K\), dao động. Arena đã chuyển sang <b>ước lượng Bradley–Terry bằng maximum likelihood</b> trên toàn bộ vote (không phụ thuộc thứ tự), kèm <b>bootstrap</b> để có khoảng tin cậy cho từng model.</li>
+<li>Arena cũng phải xử lý: kiểm soát độ dài và markdown (style control), vote của người dùng không đại diện cho mọi use case, và việc lab có thể thử nhiều biến thể riêng tư rồi chỉ công bố bản tốt nhất (selection bias).</li>
+</ul>
+
+<h3 id="i3-contamination">Contamination — phát hiện "lộ đề"</h3>
+<p>Contamination là khi câu hỏi (hoặc đáp án) của benchmark có trong dữ liệu train → điểm phản ánh <i>trí nhớ</i> chứ không phải năng lực. Với web-scale data, gần như chắc chắn có rò rỉ một phần với các benchmark phổ biến.</p>
+<table>
+<thead><tr><th>Phương pháp</th><th>Ý tưởng</th><th>Cần gì</th></tr></thead>
+<tbody>
+<tr><td><b>N-gram overlap</b></td><td>đánh dấu câu hỏi có n-gram dài (VD 13-gram như GPT-3) trùng với corpus train</td><td>truy cập dữ liệu train; dễ bỏ sót bản paraphrase/dịch</td></tr>
+<tr><td><b>Perplexity / Min-K% Prob</b></td><td>câu đã thấy khi train có xác suất cao bất thường; Min-K% (Shi et al. 2023) lấy trung bình log-prob của k% token có xác suất thấp nhất làm điểm</td><td>chỉ cần logprob của model</td></tr>
+<tr><td><b>Exchangeability test</b></td><td>Oren et al. (2023): nếu model đã học benchmark theo đúng thứ tự gốc, log-likelihood của thứ tự gốc cao hơn các hoán vị ngẫu nhiên một cách có ý nghĩa thống kê</td><td>chỉ cần logprob; có bảo đảm thống kê</td></tr>
+<tr><td><b>Bộ đề "song sinh" mới</b></td><td>viết bộ câu hỏi mới cùng độ khó, so điểm cũ/mới. GSM1k (Zhang et al. 2024) tạo bộ giống GSM8K và thấy một số model tụt điểm đáng kể</td><td>công sức viết đề</td></tr>
+<tr><td><b>Benchmark theo thời gian</b></td><td>chỉ dùng bài ra <i>sau</i> knowledge cutoff (VD LiveCodeBench lấy bài thi lập trình mới)</td><td>nguồn bài mới liên tục</td></tr>
+</tbody>
+</table>
+
+<div class="callout tip"><div class="callout-title">Ý chính</div>
+<p>Cách phòng tốt nhất là <b>decontaminate ngay từ pipeline data</b> (lọc n-gram khớp benchmark trước khi train) và giữ một bộ eval <b>nội bộ, không công bố</b> cho các quyết định quan trọng.</p>
+</div>
+
+<h3 id="i3-harness">Eval harness — công cụ nên dùng</h3>
+<table>
+<thead><tr><th>Công cụ</th><th>Của ai</th><th>Mạnh ở</th></tr></thead>
+<tbody>
+<tr><td><b>lm-evaluation-harness</b></td><td>EleutherAI</td><td>hàng trăm task, chuẩn de facto cho log-likelihood eval; backend HF/vLLM/API; nền của Open LLM Leaderboard</td></tr>
+<tr><td><b>lighteval</b></td><td>Hugging Face</td><td>nhanh, tích hợp datatrove/nanotron/vLLM; dùng trong các ablation của HF (FineWeb, SmolLM)</td></tr>
+<tr><td><b>simple-evals</b></td><td>OpenAI</td><td>bộ eval gọn (MMLU, GPQA, MATH, HumanEval...) dạng zero-shot chain-of-thought — phong cách eval cho model chat</td></tr>
+<tr><td><b>Inspect</b></td><td>UK AI Security Institute</td><td>framework cho eval agent / tool use / sandbox, nhiều eval an toàn</td></tr>
+</tbody>
+</table>
+
+<h3 id="i3-regression-eval">Optimization — regression eval khi deploy (quantized vs gốc)</h3>
+<p>Mỗi lần đổi precision, engine, kernel hay version, phải trả lời: <b>chất lượng có tụt không, và latency có đạt SLO không?</b></p>
+<h4>Parity chất lượng</h4>
+<ul>
+<li>Chạy <b>cùng</b> bộ eval (benchmark công khai + bộ prompt nội bộ) cho bản gốc bf16 và bản mới, dùng <b>paired comparison</b> như trên. Chênh lệch nhỏ hơn noise thì chấp nhận; nhưng chú ý các nhóm nhạy: math nhiều bước, code, long context, ngôn ngữ ít tài nguyên — quantization thường làm tụt ở đây trước.</li>
+<li>Đo thêm <b>độ khác biệt phân phối</b> ngoài accuracy: KL divergence giữa phân phối token của bản gốc và bản quantized trên một tập text, hoặc tỉ lệ "flip" (câu trước đúng nay sai và ngược lại). Accuracy tổng có thể giữ nguyên trong khi nhiều câu đổi đáp án.</li>
+<li>Với greedy decoding, kiểm tra output có <b>giống hệt</b> bản gốc trên một tập prompt không — khác biệt nhỏ ở logits có thể đổi hẳn câu trả lời dài.</li>
+</ul>
+<h4>Latency / SLO test</h4>
+<ul>
+<li>Load test với phân phối độ dài và tốc độ đến thật; báo p50/p95/p99 TTFT và TPOT ở nhiều mức concurrency, không chỉ một con số throughput đỉnh.</li>
+<li>Kiểm tra trường hợp xấu: prompt dài nhất cho phép, burst traffic, nhiều request chung prefix và không chung prefix.</li>
+<li>Đưa các test này vào CI/CD: mỗi lần nâng version engine, chạy lại tự động và chặn rollout nếu vượt ngưỡng.</li>
+</ul>
+
+<div class="callout note"><div class="callout-title">Nguồn tham khảo</div>
+<ul>
+<li>Chen et al., "Evaluating Large Language Models Trained on Code" (Codex, pass@k), 2021, arXiv:2107.03374.</li>
+<li>Zheng et al., "Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena", 2023, arXiv:2306.05685.</li>
+<li>Chiang et al., "Chatbot Arena: An Open Platform for Evaluating LLMs by Human Preference", 2024, arXiv:2403.04132.</li>
+<li>Dubois et al., "Length-Controlled AlpacaEval: A Simple Way to Debias Automatic Evaluators", 2024, arXiv:2404.04475.</li>
+<li>Miller, "Adding Error Bars to Evals: A Statistical Approach to Language Model Evaluations", 2024, arXiv:2411.00640.</li>
+<li>Shi et al., "Detecting Pretraining Data from Large Language Models" (Min-K% Prob), 2023, arXiv:2310.16789.</li>
+<li>Oren et al., "Proving Test Set Contamination in Black Box Language Models", 2023, arXiv:2310.17623.</li>
+<li>Zhang et al., "A Careful Examination of Large Language Model Performance on Grade School Arithmetic" (GSM1k), 2024, arXiv:2405.00332.</li>
+<li>Brown et al., "Language Models are Few-Shot Learners" (GPT-3, phân tích contamination 13-gram), 2020, arXiv:2005.14165.</li>
+<li>EleutherAI lm-evaluation-harness; Hugging Face lighteval; OpenAI simple-evals; UK AISI Inspect (GitHub/docs).</li>
+</ul>
+</div>
+</section>
+
+<section id="i-takeaways">
+<h2 id="i-takeaways-h">Tổng kết và tài liệu đọc thêm</h2>
+
+<div class="callout tip"><div class="callout-title">Đọc nhanh</div>
+<ul>
+<li>Làm theo thứ tự rẻ trước, đắt sau: nén model → chỉnh cấu hình engine → các mẹo sinh nhanh → kiến trúc cụm phức tạp.</li>
+<li>Mỗi thay đổi đều phải đo lại cả chất lượng lẫn tốc độ, trên dữ liệu thật của bạn.</li>
+<li>Phần lớn tiền điện toán bị lãng phí vì GPU ngồi không, không phải vì kernel chậm.</li>
+<li>Danh sách tài liệu cuối chương là các paper gốc nên đọc nếu muốn hiểu sâu từng kỹ thuật.</li>
+</ul>
+</div>
+
+<h3 id="i3-decision-order">Thứ tự áp dụng — từ rẻ đến đắt</h3>
+<p>Các kỹ thuật trong tài liệu này không độc lập; áp dụng sai thứ tự sẽ tốn công mà lợi ít. Thứ tự gợi ý:</p>
+<table>
+<thead><tr><th>Bước</th><th>Làm gì</th><th>Khi nào đáng làm</th><th>Lợi ích điển hình</th><th>Rủi ro / chi phí</th></tr></thead>
+<tbody>
+<tr><td>0</td><td><b>Đo baseline</b>: SLO, phân phối độ dài thật, throughput–latency của bf16 trên engine chuẩn</td><td>luôn luôn</td><td>biết mình đang tối ưu cái gì</td><td>gần như không</td></tr>
+<tr><td>1</td><td><b>Chọn engine tốt + cấu hình mặc định hợp lý</b> (vLLM/SGLang/TensorRT-LLM; continuous batching, PagedAttention, CUDA graphs có sẵn)</td><td>luôn luôn</td><td>nhiều lần so với code HF generate tự viết</td><td>thấp</td></tr>
+<tr><td>2</td><td><b>Quantize weights</b> (fp8 trên Hopper/Blackwell; int4 AWQ/GPTQ khi thiếu bộ nhớ hoặc batch nhỏ)</td><td>bộ nhớ hoặc băng thông là giới hạn</td><td>~2× bộ nhớ (fp8), ~3.5× (int4); decode nhanh hơn</td><td>cần eval parity; int4 rủi ro hơn với math/code</td></tr>
+<tr><td>3</td><td><b>KV cache fp8 + prefix caching + chunked prefill</b></td><td>concurrency cao, prompt dài/chung prefix</td><td>gấp đôi token KV; TTFT giảm mạnh khi trúng cache</td><td>KV fp8 cần kiểm tra long context</td></tr>
+<tr><td>4</td><td><b>Tune batch</b>: <code>max-num-seqs</code>, <code>max-num-batched-tokens</code>, chọn điểm vận hành trên đường throughput–latency</td><td>sau khi có load test</td><td>10–50% throughput ở cùng SLO</td><td>thấp</td></tr>
+<tr><td>5</td><td><b>Routing</b>: cache-aware, session affinity, tách pool theo độ dài</td><td>nhiều replica</td><td>tăng cache hit, giảm tail latency</td><td>vừa (thêm hạ tầng)</td></tr>
+<tr><td>6</td><td><b>Speculative decoding</b> (n-gram/prompt lookup, draft model, EAGLE, MTP head)</td><td>batch nhỏ–vừa, cần TPOT thấp; output dự đoán được (code, trích dẫn)</td><td>~1.5–3× tốc độ decode mỗi người dùng</td><td>lợi ích giảm ở batch lớn; cần draft khớp</td></tr>
+<tr><td>7</td><td><b>Nén model sâu hơn</b>: distillation sang model nhỏ, pruning (Minitron), 2:4 sparsity</td><td>chi phí là ưu tiên số 1, chấp nhận train thêm</td><td>model nhỏ hơn hẳn → rẻ hơn hẳn</td><td>cần compute và data để train</td></tr>
+<tr><td>8</td><td><b>Prefill/decode disaggregation</b>, EP lớn cho MoE, cụm nhiều node</td><td>quy mô lớn, SLO chặt cho cả TTFT và TPOT</td><td>goodput cao hơn ở quy mô cụm</td><td>phức tạp vận hành cao; truyền KV giữa node</td></tr>
+</tbody>
+</table>
+
+<h3 id="i3-common-mistakes">Những lỗi hay gặp</h3>
+<ul>
+<li><b>Benchmark bằng một con số throughput đỉnh</b> ở batch tối đa, rồi bất ngờ khi p99 latency vỡ SLO trong production. Luôn báo theo đường cong và percentile.</li>
+<li><b>Dùng phân phối độ dài giả</b> (VD input 128, output 128) trong khi workload thật là RAG input 6K / output 300 — kết luận về bottleneck sẽ sai hoàn toàn.</li>
+<li><b>Quantize rồi chỉ eval trên MMLU</b>: MMLU thường giữ điểm tốt, trong khi math nhiều bước, code và long context tụt trước.</li>
+<li><b>Quên chat template / tokenizer</b>: model deploy dùng template khác lúc train (thiếu BOS, sai special token) → chất lượng tụt âm thầm; đây là lỗi phổ biến nhất khi chuyển engine.</li>
+<li><b>Sampling khác nhau giữa eval và production</b> (temperature, top-p, repetition penalty, max_tokens) → điểm eval không phản ánh trải nghiệm thật.</li>
+<li><b>TP vượt qua ranh giới node</b> hoặc TP lớn hơn số KV head → giao tiếp chậm, KV bị nhân bản.</li>
+<li><b>Round-robin load balancing</b> giết prefix cache.</li>
+<li><b>Không pin version</b>: nâng engine làm thay đổi kernel/numerics, output đổi mà không ai biết.</li>
+<li><b>Để GPU rảnh</b>: utilization thấp đắt hơn mọi tối ưu kernel; gộp workload offline vào giờ thấp điểm.</li>
+</ul>
+
+<div class="callout tip"><div class="callout-title">Ý chính</div>
+<p>Inference là bài toán <b>bộ nhớ và băng thông</b> nhiều hơn là compute: hầu hết kỹ thuật (GQA/MLA, quantization, KV fp8, PagedAttention, prefix caching, speculative decoding, batching) đều là cách khác nhau để <i>đọc ít byte hơn trên mỗi token sinh ra</i> hoặc <i>chia sẻ một lần đọc cho nhiều token hơn</i>.</p>
+</div>
+
+<h3 id="i3-reading-list">Tài liệu đọc thêm (đã chọn lọc)</h3>
+
+<h4>Serving systems</h4>
+<table>
+<thead><tr><th>Tài liệu</th><th>Đọc để hiểu</th></tr></thead>
+<tbody>
+<tr><td>Kwon et al., <b>vLLM / PagedAttention</b>, SOSP 2023 (arXiv:2309.06180)</td><td>quản lý KV cache theo block như virtual memory; continuous batching</td></tr>
+<tr><td>Zheng et al., <b>SGLang</b> (arXiv:2312.07104)</td><td>RadixAttention (prefix caching dạng cây), structured generation</td></tr>
+<tr><td>Yu et al., <b>Orca</b>, OSDI 2022</td><td>iteration-level scheduling — gốc của continuous batching</td></tr>
+<tr><td>Agrawal et al., <b>Sarathi-Serve</b>, OSDI 2024 (arXiv:2403.02310)</td><td>chunked prefill, "stall-free" batching, cân bằng TTFT/TPOT</td></tr>
+<tr><td>Zhong et al., <b>DistServe</b>, OSDI 2024 (arXiv:2401.09670)</td><td>tách prefill/decode, khái niệm goodput</td></tr>
+<tr><td>Patel et al., <b>Splitwise</b> (arXiv:2311.18677); Qin et al., <b>Mooncake</b> (arXiv:2407.00079)</td><td>disaggregation ở quy mô sản phẩm, KV-cache-centric</td></tr>
+<tr><td>Sheng et al., <b>S-LoRA</b> (arXiv:2311.03285); Chen et al., <b>Punica</b> (arXiv:2310.18547)</td><td>serve hàng nghìn LoRA adapter</td></tr>
+</tbody>
+</table>
+
+<h4>Attention kernels</h4>
+<table>
+<thead><tr><th>Tài liệu</th><th>Đọc để hiểu</th></tr></thead>
+<tbody>
+<tr><td>Dao et al., <b>FlashAttention</b> (arXiv:2205.14135); <b>FlashAttention-2</b> (arXiv:2307.08691)</td><td>IO-aware attention, tiling + online softmax</td></tr>
+<tr><td>Dao et al., <b>Flash-Decoding</b> (blog, 2023)</td><td>song song hoá attention theo chiều sequence khi decode context dài</td></tr>
+</tbody>
+</table>
+
+<h4>Speculative decoding</h4>
+<table>
+<thead><tr><th>Tài liệu</th><th>Đọc để hiểu</th></tr></thead>
+<tbody>
+<tr><td>Leviathan et al., "Fast Inference from Transformers via Speculative Decoding", ICML 2023 (arXiv:2211.17192)</td><td>thuật toán draft–verify và chứng minh giữ nguyên phân phối</td></tr>
+<tr><td>Chen et al., "Accelerating Large Language Model Decoding with Speculative Sampling", 2023 (arXiv:2302.01318)</td><td>cùng ý tưởng, độc lập, thí nghiệm trên Chinchilla 70B</td></tr>
+<tr><td>Cai et al., <b>Medusa</b> (arXiv:2401.10774)</td><td>nhiều decoding head + tree attention</td></tr>
+<tr><td>Li et al., <b>EAGLE</b> (arXiv:2401.15077) và các bản kế tiếp</td><td>draft ở mức feature, tỉ lệ accept cao</td></tr>
+</tbody>
+</table>
+
+<h4>Quantization</h4>
+<table>
+<thead><tr><th>Tài liệu</th><th>Đọc để hiểu</th></tr></thead>
+<tbody>
+<tr><td>Dettmers et al., <b>LLM.int8()</b> (arXiv:2208.07339)</td><td>outlier features và mixed-precision decomposition</td></tr>
+<tr><td>Xiao et al., <b>SmoothQuant</b> (arXiv:2211.10438)</td><td>chuyển độ khó quantize từ activation sang weight (W8A8)</td></tr>
+<tr><td>Frantar et al., <b>GPTQ</b> (arXiv:2210.17323)</td><td>quantize weight-only dùng thông tin bậc hai (Hessian), sửa lỗi dần theo cột</td></tr>
+<tr><td>Lin et al., <b>AWQ</b> (arXiv:2306.00978)</td><td>bảo vệ kênh weight quan trọng theo độ lớn activation</td></tr>
+<tr><td>Ashkboos et al., <b>QuaRot</b> (arXiv:2404.00456)</td><td>xoay (Hadamard) để xoá outlier, cho phép 4-bit cả weight, activation, KV</td></tr>
+<tr><td>Dettmers et al., <b>QLoRA</b> (arXiv:2305.14314)</td><td>NF4, double quantization, fine-tune trên model 4-bit</td></tr>
+</tbody>
+</table>
+
+<h4>Pruning và distillation</h4>
+<table>
+<thead><tr><th>Tài liệu</th><th>Đọc để hiểu</th></tr></thead>
+<tbody>
+<tr><td>Hinton, Vinyals, Dean, "Distilling the Knowledge in a Neural Network", 2015 (arXiv:1503.02531)</td><td>gốc của knowledge distillation, soft targets và temperature</td></tr>
+<tr><td>Agarwal et al., <b>GKD</b> — "On-Policy Distillation of Language Models" (arXiv:2306.13649)</td><td>distill trên chính output của student, các loại divergence</td></tr>
+<tr><td>Frantar &amp; Alistarh, <b>SparseGPT</b> (arXiv:2301.00774)</td><td>pruning one-shot model lớn, unstructured và 2:4</td></tr>
+<tr><td>Sun et al., <b>Wanda</b> (arXiv:2306.11695)</td><td>pruning theo |weight| × ‖activation‖, không cần cập nhật weight</td></tr>
+<tr><td>Muralidharan et al., <b>Minitron</b> — "Compact Language Models via Pruning and Knowledge Distillation" (arXiv:2407.14679)</td><td>structured pruning (depth/width) + distillation, tốn ít token hơn nhiều so với train từ đầu</td></tr>
+</tbody>
+</table>
+
+<h4>Evaluation</h4>
+<ul>
+<li>Chen et al. 2021 (Codex, pass@k) · Zheng et al. 2023 (MT-Bench, LLM-as-judge) · Chiang et al. 2024 (Chatbot Arena) · Miller 2024 ("Adding Error Bars to Evals").</li>
+</ul>
+
+<h4>Khoá học, sách, blog</h4>
+<ul>
+<li><b>Stanford CS336</b> — Language Modeling from Scratch: có các bài về inference, kernel, parallelism.</li>
+<li><b>"How to Scale Your Model"</b> (Google DeepMind, sách online) — phần inference trên TPU giải thích roofline, KV cache và batching rất rõ, áp dụng được cho GPU.</li>
+<li><b>Hugging Face Ultra-Scale Playbook</b> — nền tảng parallelism và communication dùng chung cho cả training và inference.</li>
+<li>Docs/blog kỹ thuật của <b>vLLM</b>, <b>SGLang (LMSYS)</b>, <b>NVIDIA TensorRT-LLM</b>, <b>PyTorch</b> (các bài về torch.compile, gpt-fast cho inference).</li>
+<li>Blog <b>Lilian Weng</b> — bài "Large Transformer Model Inference Optimization" tổng quan tốt về quantization, pruning, distillation.</li>
+</ul>
+
+<div class="callout note"><div class="callout-title">Nguồn tham khảo</div>
+<ul>
+<li>Toàn bộ các paper liệt kê trong bảng trên (arXiv id đi kèm).</li>
+<li>Yu et al., "Orca: A Distributed Serving System for Transformer-Based Generative Models", OSDI 2022.</li>
+<li>Weng, "Large Transformer Model Inference Optimization", Lil'Log, 2023.</li>
+</ul>
+</div>
+</section>
+
+<section id="i-glossary">
+<h2 id="i-glossary-h">Bảng thuật ngữ</h2>
+<table>
+<thead><tr><th>Thuật ngữ</th><th>Giải thích</th></tr></thead>
+<tbody>
+<tr><td>2:4 sparsity</td><td>Trong mỗi nhóm 4 weight có đúng 2 weight bằng 0; được sparse tensor core của NVIDIA (từ Ampere) tăng tốc trực tiếp.</td></tr>
+<tr><td>acc_norm</td><td>Accuracy log-likelihood đã chuẩn hoá theo độ dài đáp án (trong lm-evaluation-harness).</td></tr>
+<tr><td>Acceptance rate (α)</td><td>Xác suất trung bình một token nháp được target chấp nhận.</td></tr>
+<tr><td>Act-order (desc_act)</td><td>Tuỳ chọn của GPTQ: quantize các cột có activation lớn trước để giảm lỗi.</td></tr>
+<tr><td>AWQ</td><td>Activation-aware Weight Quantization: scale các kênh có activation lớn trước khi quantize để giảm lỗi trên chúng.</td></tr>
+<tr><td>Beam search</td><td>Giữ k chuỗi ứng viên có điểm cao nhất ở mỗi bước; dùng length penalty để tránh thiên vị chuỗi ngắn.</td></tr>
+<tr><td>Block table</td><td>Bảng ánh xạ block KV logic của một request sang block vật lý trong pool.</td></tr>
+<tr><td>Bradley–Terry / Elo</td><td>Mô hình xác suất thắng giữa hai đối thủ theo hiệu năng lực; Elo là cùng mô hình ở thang 400·log10.</td></tr>
+<tr><td>Cache-aware routing / prefix-aware routing</td><td>Định tuyến request về replica có khả năng đã cache prefix của nó, để tăng prefix cache hit.</td></tr>
+<tr><td>Calibration data</td><td>Một tập nhỏ dữ liệu mẫu dùng để đo thống kê activation khi quantize/prune.</td></tr>
+<tr><td>Chunked prefill</td><td>Chia prefill dài thành nhiều chunk, ghép với token decode trong cùng iteration (piggybacking).</td></tr>
+<tr><td>Cloze eval</td><td>Eval trắc nghiệm bằng cách so log-likelihood của từng đáp án viết đầy đủ sau câu hỏi.</td></tr>
+<tr><td>Clustered standard error</td><td>SE tính khi các câu hỏi không độc lập mà gom thành cụm (cùng đoạn văn).</td></tr>
+<tr><td>Cold start</td><td>Độ trễ khi khởi động một replica mới (tải weights, khởi tạo engine).</td></tr>
+<tr><td>Contamination</td><td>Dữ liệu benchmark lọt vào dữ liệu train, làm điểm số bị thổi phồng.</td></tr>
+<tr><td>Continuous batching</td><td>Lập lịch theo từng iteration: request xong rời batch, request mới vào ngay (Orca).</td></tr>
+<tr><td>Copy-on-write</td><td>Chia sẻ block giữa nhiều sequence; chỉ sao chép khi một sequence cần ghi vào block chung.</td></tr>
+<tr><td>CUDA graphs</td><td>Ghi lại chuỗi kernel một lần rồi phát lại để giảm overhead launch từ CPU.</td></tr>
+<tr><td>Dark knowledge</td><td>Thông tin nằm trong các xác suất nhỏ của teacher (lựa chọn nào "gần đúng" hơn), được truyền qua distillation.</td></tr>
+<tr><td>Decode</td><td>Pha sinh từng token một sau prefill; memory-bound ở batch nhỏ.</td></tr>
+<tr><td>Dequantize</td><td>Nhân số nguyên đã lưu với scale (và trừ zero-point) để lấy lại giá trị thực xấp xỉ.</td></tr>
+<tr><td>Disaggregated serving</td><td>Tách prefill và decode sang các instance/GPU khác nhau, truyền KV cache giữa chúng.</td></tr>
+<tr><td>Double quantization</td><td>Quantize luôn cả các hệ số scale để tiết kiệm thêm bộ nhớ (dùng trong NF4/QLoRA).</td></tr>
+<tr><td>DP attention</td><td>Chạy attention kiểu data parallel (mỗi GPU một nhóm request) để tránh nhân bản KV khi dùng MLA hoặc ít KV head.</td></tr>
+<tr><td>Draft / target model</td><td>Model nhỏ đề xuất token / model lớn kiểm tra và quyết định.</td></tr>
+<tr><td>E4M3 / E5M2</td><td>Hai định dạng FP8: 4 bit exponent + 3 bit mantissa (max ±448) và 5 + 2 (max ±57344).</td></tr>
+<tr><td>Eval harness</td><td>Bộ công cụ chạy benchmark chuẩn hoá (lm-evaluation-harness, lighteval, simple-evals, Inspect).</td></tr>
+<tr><td>Flash-Decoding (split-KV)</td><td>Chia KV theo chiều độ dài cho nhiều thread block xử lý song song khi decode, rồi gộp bằng log-sum-exp.</td></tr>
+<tr><td>Flip rate</td><td>Tỉ lệ câu trả lời đổi từ đúng sang sai hoặc ngược lại sau khi nén model.</td></tr>
+<tr><td>Generation stall</td><td>Decode của các request khác bị khựng lại vì một prefill lớn chiếm cả bước forward.</td></tr>
+<tr><td>GGUF / k-quants</td><td>Định dạng file của llama.cpp; k-quants là các kiểu quantize theo super-block (Q4_K_M, Q5_K_M…).</td></tr>
+<tr><td>GGUF</td><td>Định dạng file model của llama.cpp, chứa weights đã quantize và metadata.</td></tr>
+<tr><td>GKD (on-policy distillation)</td><td>Student tự sinh chuỗi, teacher chấm từng token trên chính chuỗi đó để student học từ lỗi của mình.</td></tr>
+<tr><td>Goodput</td><td>Số request mỗi giây hoàn thành mà vẫn đạt SLO về latency.</td></tr>
+<tr><td>GPTQ</td><td>PTQ quantize từng cột và bù lỗi lên các cột còn lại bằng nghịch đảo Hessian \(2XX^\top\).</td></tr>
+<tr><td>Granularity (quantization)</td><td>Phạm vi dùng chung một scale: per-tensor, per-channel, per-token, per-group, micro-block.</td></tr>
+<tr><td>Hadamard rotation</td><td>Nhân với ma trận Hadamard trực giao để trải đều outliers ra mọi chiều trước khi quantize.</td></tr>
+<tr><td>KIVI</td><td>Quantize KV cache 2-bit: key per-channel, value per-token, giữ token gần nhất ở full precision.</td></tr>
+<tr><td>Knowledge distillation (KD)</td><td>Train student bắt chước phân phối xác suất của teacher.</td></tr>
+<tr><td>Little's law</td><td>Concurrency = throughput × latency; dùng để suy ra số request đồng thời cần chứa.</td></tr>
+<tr><td>LLM.int8()</td><td>INT8 inference tách các chiều outlier ra tính bằng FP16, phần còn lại tính bằng INT8.</td></tr>
+<tr><td>Magnitude pruning</td><td>Xóa các weight có trị tuyệt đối nhỏ nhất.</td></tr>
+<tr><td>maj@k</td><td>Độ chính xác khi lấy đáp án đa số trong k sample (self-consistency).</td></tr>
+<tr><td>MCF (multiple-choice format)</td><td>Eval trắc nghiệm bằng cách liệt kê đáp án A/B/C/D và so xác suất của chữ cái.</td></tr>
+<tr><td>Medusa / EAGLE</td><td>Các phương pháp gắn đầu dự đoán nhỏ lên target để tự tạo bản nháp (token-level / feature-level).</td></tr>
+<tr><td>Min-K% Prob</td><td>Phương pháp phát hiện dữ liệu đã train: trung bình log-prob của k% token khó nhất.</td></tr>
+<tr><td>Min-p sampling</td><td>Giữ token có xác suất ≥ p_min × xác suất lớn nhất; ngưỡng tự co giãn.</td></tr>
+<tr><td>Minitron</td><td>Phương pháp của NVIDIA: prune model lớn theo importance từ activation rồi distill để phục hồi.</td></tr>
+<tr><td>MLX</td><td>Framework machine learning của Apple tối ưu cho Apple silicon (unified memory).</td></tr>
+<tr><td>Mode-covering / mode-seeking</td><td>Hành vi của forward KL (phủ mọi vùng teacher có xác suất) / reverse KL (tập trung vào đỉnh chính).</td></tr>
+<tr><td>MXFP4 / NVFP4</td><td>Định dạng số thực 4-bit có scale theo block (32 phần tử với scale E8M0 / 16 phần tử với scale FP8).</td></tr>
+<tr><td>NF4 (NormalFloat4)</td><td>Kiểu 4-bit có các mức đặt theo quantile phân phối chuẩn, dùng trong bitsandbytes/QLoRA.</td></tr>
+<tr><td>Outlier features</td><td>Một số ít chiều activation có giá trị lớn bất thường, nhất quán qua các token; nguồn gốc khó khăn khi quantize.</td></tr>
+<tr><td>PagedAttention</td><td>Quản lý KV cache theo block cố định với block table, giống bộ nhớ ảo (vLLM).</td></tr>
+<tr><td>Paired comparison / McNemar test</td><td>So hai model trên cùng câu hỏi bằng hiệu số theo từng câu; McNemar là test cho dữ liệu đúng/sai ghép cặp.</td></tr>
+<tr><td>Position / verbosity / self-preference bias</td><td>Các thiên vị của LLM-as-judge: ưu tiên vị trí, ưu tiên câu dài, ưu tiên output của chính mình.</td></tr>
+<tr><td>Preemption (serving)</td><td>Engine tạm đẩy request ra khỏi batch khi hết KV cache, sau đó tính lại hoặc swap.</td></tr>
+<tr><td>Preemption (swap / recompute)</td><td>Tạm đuổi request khi hết KV: chuyển KV sang CPU hoặc bỏ KV rồi prefill lại sau.</td></tr>
+<tr><td>Prefill</td><td>Pha inference xử lý toàn bộ prompt trong một lần forward; compute-bound.</td></tr>
+<tr><td>Prefix caching</td><td>Giữ KV của các tiền tố đã tính để request sau dùng lại.</td></tr>
+<tr><td>Prompt lookup decoding</td><td>Lấy bản nháp bằng cách tra n-gram trong prompt; không cần draft model.</td></tr>
+<tr><td>PTQ / QAT</td><td>Quantize sau khi train (chỉ cần calibration) / train có mô phỏng quantization để model quen với lỗi làm tròn.</td></tr>
+<tr><td>Q4_K_M</td><td>Một mức k-quant của GGUF: ~4 bit/weight, quantize theo block, một số tensor quan trọng giữ bit cao hơn.</td></tr>
+<tr><td>QuaRot / SpinQuant / QuIP#</td><td>Các phương pháp quantize dùng phép xoay trực giao (Hadamard ngẫu nhiên hoặc học được) để loại bỏ outliers.</td></tr>
+<tr><td>RadixAttention</td><td>Prefix caching của SGLang dùng radix tree và LRU eviction.</td></tr>
+<tr><td>Redundant experts / EPLB</td><td>Nhân bản expert MoE bị tải nặng lên nhiều GPU; EPLB là bộ cân bằng tải expert-parallel của DeepSeek.</td></tr>
+<tr><td>Repetition / frequency / presence penalty</td><td>Các cách giảm logit của token đã xuất hiện để tránh lặp.</td></tr>
+<tr><td>S-LoRA / Punica / SGMV</td><td>Hệ thống và kernel cho phép batch nhiều request dùng các LoRA adapter khác nhau trên cùng base model.</td></tr>
+<tr><td>Scale / zero-point</td><td>Kích thước một nấc lưới quantize / số nguyên tương ứng với giá trị 0.</td></tr>
+<tr><td>Sequence-level KD</td><td>Distillation bằng cách SFT student trên câu trả lời hoàn chỉnh do teacher sinh.</td></tr>
+<tr><td>Session affinity</td><td>Gửi các lượt của cùng một hội thoại về cùng một replica.</td></tr>
+<tr><td>SLO (service level objective)</td><td>Mục tiêu chất lượng dịch vụ, ví dụ P99 TTFT dưới 500 ms.</td></tr>
+<tr><td>SmoothQuant</td><td>Chia lại "độ khó quantize" giữa activation và weight bằng hệ số theo kênh để làm W8A8.</td></tr>
+<tr><td>SparseGPT</td><td>Pruning one-shot dùng cập nhật bậc hai kiểu OBS để bù lỗi khi xóa weight.</td></tr>
+<tr><td>Speculative decoding</td><td>Draft model đoán trước γ token, target model kiểm tra cùng lúc; bảo toàn phân phối nhờ rejection sampling.</td></tr>
+<tr><td>Standard error / confidence interval</td><td>Độ bất định của một điểm số ước lượng; CI 95% ≈ ước lượng ± 1.96 SE.</td></tr>
+<tr><td>Straight-through estimator (STE)</td><td>Coi đạo hàm của hàm làm tròn bằng 1 khi backprop trong QAT.</td></tr>
+<tr><td>Structured / constrained decoding</td><td>Che logits của token vi phạm grammar (regex, JSON schema, CFG) để output luôn đúng định dạng.</td></tr>
+<tr><td>Structured / unstructured pruning</td><td>Xóa cả đơn vị kiến trúc (head, neuron, layer) / xóa từng weight riêng lẻ.</td></tr>
+<tr><td>Temperature (distillation)</td><td>Chia logits cho \(T\) để làm mềm phân phối; loss KD nhân \(T^2\) để giữ độ lớn gradient.</td></tr>
+<tr><td>Top-p (nucleus) sampling</td><td>Chỉ sample trong tập token nhỏ nhất có tổng xác suất ≥ p.</td></tr>
+<tr><td>TPOT / ITL</td><td>Thời gian trung bình mỗi token output sau token đầu / khoảng cách giữa hai token liên tiếp.</td></tr>
+<tr><td>Tree attention</td><td>Attention mask cho phép verify cả cây ứng viên trong một forward.</td></tr>
+<tr><td>TTFT (time to first token)</td><td>Thời gian từ khi gửi request đến khi nhận token đầu tiên (hàng đợi + prefill).</td></tr>
+<tr><td>Unified memory</td><td>CPU và GPU dùng chung một vùng RAM (Apple silicon), cho phép GPU truy cập dung lượng lớn.</td></tr>
+<tr><td>W4A16 / W8A8 / W4A8</td><td>Ký hiệu số bit của weights (W) và activations (A) khi quantize.</td></tr>
+<tr><td>Wanda</td><td>Pruning theo điểm \(|W_{ij}|\cdot\lVert X_j\rVert_2\), so sánh trong từng hàng output, không cập nhật weight.</td></tr>
+</tbody>
+</table>
+</section>
+
+</main>
+</div>
+<button class="lite-btn" id="liteBtn" title="Ẩn/hiện công thức lớn và phần suy dẫn">Đọc nhẹ</button>
+<button class="theme-btn" id="themeBtn">Sáng / Tối</button>
+<script>
+(function(){
+  var root=document.documentElement, btn=document.getElementById('themeBtn');
+  try{var t=localStorage.getItem('theme'); if(t) root.setAttribute('data-theme',t);}catch(e){}
+  btn.addEventListener('click',function(){
+    var cur=root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+    var nxt=cur==='dark'?'light':'dark'; root.setAttribute('data-theme',nxt);
+    try{localStorage.setItem('theme',nxt);}catch(e){}
+  });
+  var links=[].slice.call(document.querySelectorAll('nav.toc a'));
+  var map={}; links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
+  var heads=[].slice.call(document.querySelectorAll('main h2[id], main h3[id]'));
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){links.forEach(function(l){l.classList.remove('active')}); var a=map[e.target.id]; if(a){a.classList.add('active'); a.scrollIntoView({block:'nearest'});}}});},{rootMargin:'0px 0px -75% 0px'});
+    heads.forEach(function(h){io.observe(h)});
+  }
+})();
+</script>
+<script>
+(function(){
+  var root=document.documentElement, b=document.getElementById('liteBtn');
+  try{if(localStorage.getItem('lite')==='1') root.classList.add('lite');}catch(e){}
+  b.addEventListener('click',function(){
+    var on=root.classList.toggle('lite');
+    try{localStorage.setItem('lite',on?'1':'0');}catch(e){}
+  });
+})();
+</script>
+</body>
+</html>

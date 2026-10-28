@@ -79,16 +79,24 @@
   <section class="viz" id="trang-hinh">
     <div class="viz-head">
       <span class="fig">Hình 2</span>
-      <h2>Bốn trang hình, theo thứ tự nên đọc</h2>
+      <h2>Năm trang hình, theo thứ tự nên đọc</h2>
       <p class="sub">Đi từ nguyên lý tới thực hành: hiểu model được train thế nào, thêm phần ảnh cho VLM, rồi tới chạy model nhanh và rẻ, cuối cùng là làm thật với repo training_recipes.</p>
     </div>
     <div class="route" aria-label="Lộ trình đọc">
+      <span class="r">0 · Luồng Transformer</span><span class="arrow">→</span>
       <span class="r">1 · Frontier Training</span><span class="arrow">→</span>
       <span class="r">2 · VLM Training</span><span class="arrow">→</span>
       <span class="r">3 · Inference &amp; Deploy</span><span class="arrow">→</span>
       <span class="r">4 · Training Recipes (thực hành)</span>
     </div>
     <div class="cards">
+      <a class="card" href="transformer.html">
+        <span class="step">Nền · đọc trước tiên</span>
+        <h3>Luồng Transformer</h3>
+        <p>Một chuỗi chữ đi qua LLM thế nào: tokenizer, embedding, 32 lần attention + FFN cộng vào residual stream, LM head, softmax. Rồi lúc train và lúc chạy khác nhau ra sao.</p>
+        <ul><li>Sơ đồ toàn cảnh có shape tensor</li><li>Attention từng bước: Q K V, GQA, RoPE, mask, softmax</li><li>FFN SwiGLU, máy đếm tham số Llama-3-8B</li></ul>
+        <span class="go">Mở trang hình →</span>
+      </a>
       <a class="card" href="frontier-training.html">
         <span class="step">Trang 1 · lý thuyết LLM</span>
         <h3>Frontier Training</h3>

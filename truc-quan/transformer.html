@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Luồng Transformer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="shared.css">
+<style>
+/* Luồng Transformer: sơ đồ SVG dọc có "bus" residual bên trái; các hình con đi sâu vào attention, FFN, đếm tham số, train vs chạy */
+.tx-svg [data-k] rect{fill:var(--surface);stroke:var(--border);stroke-width:1.5;transition:fill .2s,stroke .2s}
+.tx-svg .k-io rect,.tx-svg .k-emb rect{fill:var(--teal-bg);stroke:var(--teal)}
+.tx-svg .k-norm rect{fill:var(--khaki-bg);stroke:var(--khaki)}
+.tx-svg .k-attn rect{fill:var(--note-bg);stroke:var(--note)}
+.tx-svg .k-ffn rect{fill:var(--ex-bg);stroke:var(--ex)}
+.tx-svg .k-head rect{fill:var(--warn-bg);stroke:var(--warn)}
+.tx-svg .k-train rect{fill:var(--tip-bg);stroke:var(--tip)}
+.tx-svg .k-infer rect{fill:var(--accent-soft);stroke:var(--accent)}
+.tx-svg [data-k].is-active rect{stroke:var(--accent);stroke-width:3;fill:var(--accent-soft)}
+.tx-svg .ttl{font-size:14px;font-weight:700}
+.tx-svg .sub{font-size:11.5px;fill:var(--muted)}
+.tx-svg .shp{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.tx-svg .lbl{font-size:12px;fill:var(--muted);font-weight:600}
+.tx-svg .edge{stroke:var(--muted);stroke-width:1.6;fill:none}
+.tx-svg .bus{stroke:var(--accent);stroke-width:7;fill:none;opacity:.45;stroke-linecap:round;stroke-linejoin:round}
+.tx-svg .bus-hit{stroke:transparent;stroke-width:22;fill:none}
+.tx-svg [data-k=bus].is-active .bus{opacity:1}
+.tx-svg .plus circle{fill:var(--surface);stroke:var(--accent);stroke-width:2}
+.tx-svg .plus.is-active circle{fill:var(--accent)}
+.tx-svg .plus text{font-size:17px;font-weight:700;fill:var(--accent)}
+.tx-svg .plus.is-active text{fill:var(--surface)}
+.tx-svg .frame{fill:none;stroke:var(--muted);stroke-dasharray:6 5;stroke-width:1.3}
+.tx-svg .loop{stroke:var(--accent);stroke-width:1.6;fill:none;stroke-dasharray:5 4}
+.shape-ctl{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:end;margin-bottom:12px}
+.shape-ctl .ctl{min-width:150px}
+.mem-note{font-size:13px;color:var(--muted);margin-top:10px}
+.mem-note b{color:var(--text);font-family:var(--mono)}
+
+/* Hình 2: attention */
+.att{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px 18px;align-items:start}
+.att-toks{display:grid;gap:6px}
+.att-tok{display:flex;align-items:center;gap:8px;height:34px}
+.att-tok .w{font-weight:700;min-width:46px;font-size:14px}
+.att-tok .pos{font-family:var(--mono);font-size:11px;color:var(--muted);width:18px}
+.att-tok.sel .w{color:var(--accent)}
+.rope{width:22px;height:22px}
+.rope line{stroke:var(--note);stroke-width:2.2;stroke-linecap:round}
+.rope circle{fill:none;stroke:var(--border)}
+.qkv{display:grid;gap:6px;min-width:0;overflow-x:auto}
+.qkv-row{display:flex;gap:10px;align-items:center;height:34px}
+.cells{display:flex;gap:1.5px}
+.cells i{display:block;width:6px;height:16px;border-radius:1.5px;background:var(--border)}
+.cells.q i{background:var(--note)}
+.cells.k i{background:var(--warn)}
+.cells.v i{background:var(--tip)}
+.grp .cells i{opacity:1}
+.qkv-lab{font-family:var(--mono);font-size:10.5px;color:var(--muted);width:12px}
+.grid5{display:grid;grid-template-columns:repeat(5,minmax(44px,1fr));gap:4px;max-width:340px}
+.grid5 .c{height:34px;border-radius:6px;display:grid;place-items:center;font-family:var(--mono);font-size:12px;background:var(--surface-2);border:1px solid var(--border);font-variant-numeric:tabular-nums;cursor:pointer}
+.grid5 .c.mask{background:repeating-linear-gradient(45deg,var(--surface-2),var(--surface-2) 4px,var(--bg) 4px,var(--bg) 8px);color:var(--muted)}
+.grid5 .c.row{outline:2px solid var(--accent);outline-offset:-1px}
+.grid5 .hd{font-size:11px;font-weight:600;text-align:center;color:var(--muted);height:auto;border:0;background:none;cursor:default}
+.att-stage{display:grid;gap:12px;min-width:0}
+.wbars{display:grid;gap:5px}
+.wbar{display:grid;grid-template-columns:52px minmax(0,1fr) 54px;align-items:center;gap:8px;font-size:13px}
+.wbar .t{height:14px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.wbar .t span{display:block;height:100%;background:var(--accent);transition:width .35s}
+.wbar .n{font-family:var(--mono);font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+.headgrid{display:grid;grid-template-columns:repeat(16,1fr);gap:3px;max-width:340px}
+.headgrid i{height:14px;border-radius:3px;display:block}
+
+/* Hình 3: FFN */
+.silu-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:center}
+@media (max-width:640px){.silu-wrap{grid-template-columns:minmax(0,1fr)}}
+.silu svg{width:100%;height:auto}
+.silu .ax{stroke:var(--border);stroke-width:1}
+.silu .cv{stroke:var(--ex);stroke-width:2.5;fill:none}
+.silu .relu{stroke:var(--muted);stroke-width:1.5;fill:none;stroke-dasharray:4 4}
+.silu .pt{fill:var(--accent)}
+.silu text{font-size:11px;fill:var(--muted)}
+
+/* Hình 4: đếm tham số */
+.pc-ctl{grid-template-columns:repeat(auto-fit,minmax(118px,1fr))}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.pc-out{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0 6px}
+.pc-out div{display:grid;gap:2px}
+.pc-out small{font-size:12px;color:var(--muted)}
+
+/* Hình 5, 6: chuỗi token */
+.seq{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-end}
+.tk{display:grid;gap:3px;justify-items:center;min-width:58px;padding:6px 8px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);font-weight:600;font-size:14px;cursor:pointer;font-family:var(--font);color:var(--text)}
+.tk small{font-family:var(--mono);font-size:10.5px;font-weight:500;color:var(--muted)}
+.tk.see{background:var(--note-bg);border-color:var(--note)}
+.tk.cur{background:var(--accent-soft);border-color:var(--accent)}
+.tk.tgt{background:var(--tip-bg);border-color:var(--tip)}
+.tk.gen{border-style:dashed}
+.tk.new{background:var(--accent-soft);border-color:var(--accent);border-style:solid}
+.rowlab{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;margin:10px 0 6px}
+.kv{display:flex;flex-wrap:wrap;gap:4px}
+.kv span{display:grid;place-items:center;min-width:58px;height:30px;border-radius:6px;font-size:12px;font-family:var(--mono);background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn)}
+.kv span.fresh{background:var(--warn);color:var(--surface)}
+.ptable td.num{white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="crumb" href="index.html">← Bản đồ trực quan</a>
+    <h1>Luồng Transformer</h1>
+    <p class="lead">Một chuỗi chữ đi qua LLM decoder-only như thế nào: tokenizer → embedding → L lần decoder block (attention, FFN, cộng vào residual stream) → LM head → xác suất token kế tiếp. Số liệu theo Llama-3-8B như trong tài liệu: L = 32, d = 4096, 32 query head, 8 KV head, d_h = 128, d_ff = 14.336, V = 128.256.</p>
+    <div class="doc-row" data-doclinks="frontier,nguyenly"></div>
+  </header>
+
+  <nav class="jump" aria-label="Các hình">
+    <a href="#tx-overview">1 · Toàn cảnh</a>
+    <a href="#tx-attn">2 · Bên trong attention</a>
+    <a href="#tx-ffn">3 · Bên trong FFN</a>
+    <a href="#tx-params">4 · Đếm tham số</a>
+    <a href="#tx-train">5 · Khi train</a>
+    <a href="#tx-infer">6 · Khi chạy</a>
+  </nav>
+
+  <!-- ============ Hình 1 ============ -->
+  <section class="viz" id="tx-overview">
+    <div class="viz-head">
+      <span class="fig">Hình 1</span>
+      <h2>Toàn cảnh: từ chữ tới token kế tiếp</h2>
+      <p class="sub">Đường đỏ bên trái là residual stream: vector của mỗi token chạy dọc model. Attention và FFN rẽ ra đọc, tính, rồi cộng kết quả trở lại tại dấu ⊕. Khung nét đứt lặp lại 32 lần.</p>
+      <span class="hint">Bấm Tiếp ▶ để đi từng khối, hoặc bấm thẳng vào khối bất kỳ. Đổi B, T để xem shape tensor thay đổi.</span>
+    </div>
+    <div class="viz-grid" id="tx-ov">
+      <div class="canvas">
+        <div class="stepbar" data-stepbar></div>
+        <div class="shape-ctl">
+          <div class="ctl"><label for="tx-B">B (số chuỗi) <output id="tx-Bv">1</output></label>
+            <input type="range" id="tx-B" min="1" max="16" value="1"></div>
+          <div class="ctl"><label for="tx-T">T (token mỗi chuỗi)</label>
+            <select id="tx-T"><option value="4">4 (ví dụ trong hình)</option><option value="2048">2.048</option><option value="8192">8.192</option></select></div>
+        </div>
+        <svg class="tx-svg" id="tx-svg" viewBox="0 0 540 860" role="img" aria-label="Sơ đồ luồng decoder-only Transformer"></svg>
+        <p class="mem-note" id="tx-mem"></p>
+        <div class="caption" data-caption></div>
+      </div>
+      <aside class="panel" data-panel aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <!-- ============ Hình 2 ============ -->
+  <section class="viz" id="tx-attn">
+    <div class="viz-head">
+      <span class="fig">Hình 2</span>
+      <h2>Bên trong self-attention: token nào nhìn token nào</h2>
+      <p class="sub">Ví dụ 5 token. Điểm số là số minh hoạ (không phải từ model thật), nhưng các bước, shape và quy tắc đúng như tài liệu. Từ bước 4 trở đi, bấm một hàng của bảng để chọn token đang "hỏi".</p>
+      <span class="hint">Bấm Tiếp ▶; tới bảng điểm thì bấm vào hàng "thảm" hoặc "ngồi"</span>
+    </div>
+    <div class="viz-grid wide" id="tx-at">
+      <div class="canvas">
+        <div class="stepbar" data-stepbar></div>
+        <div class="att">
+          <div class="att-toks" id="tx-at-toks"></div>
+          <div class="att-stage" id="tx-at-stage"></div>
+        </div>
+        <div class="caption" data-caption></div>
+        <div class="doc-links" id="tx-at-links"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Hình 3 ============ -->
+  <section class="viz" id="tx-ffn">
+    <div class="viz-head">
+      <span class="fig">Hình 3</span>
+      <h2>Bên trong FFN SwiGLU: nhánh gate quyết định cho bao nhiêu đi qua</h2>
+      <p class="sub">FFN tính riêng trên vector của từng token, không nhìn sang token khác. Hai nhánh song song nở từ 4.096 lên 14.336 chiều, nhân với nhau từng chiều, rồi nén về 4.096.</p>
+      <span class="hint">Bấm vào từng khối; kéo thanh "giá trị gate" để xem SiLU chặn hay cho qua</span>
+    </div>
+    <div class="viz-grid" id="tx-ff">
+      <div class="canvas">
+        <svg class="tx-svg" id="tx-ffsvg" viewBox="0 0 540 330" role="img" aria-label="Sơ đồ FFN SwiGLU"></svg>
+        <div class="silu-wrap" style="margin-top:14px">
+          <div class="silu"><svg id="tx-silu" viewBox="0 0 300 170" aria-label="Đồ thị SiLU"></svg></div>
+          <div style="display:grid;gap:10px">
+            <div class="ctl"><label for="tx-a">Giá trị gate a = v·W_gate (một chiều) <output id="tx-av">1,0</output></label>
+              <input type="range" id="tx-a" min="-6" max="6" step="0.1" value="1"></div>
+            <div id="tx-gate-out" style="font-size:14px"></div>
+          </div>
+        </div>
+      </div>
+      <aside class="panel" data-panel aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <!-- ============ Hình 4 ============ -->
+  <section class="viz" id="tx-params">
+    <div class="viz-head">
+      <span class="fig">Hình 4</span>
+      <h2>Đếm tham số: phần lớn nằm ở FFN</h2>
+      <p class="sub">Công thức trong tài liệu cho GQA + SwiGLU. Chọn preset hoặc tự gõ cấu hình. GPT-3 dùng FFN cổ điển (2 ma trận, 4d) và tied embedding, nên công thức rút về 12·L·d².</p>
+      <span class="hint">Bấm preset, hoặc sửa số trong ô để xem tham số dồn về đâu</span>
+    </div>
+    <div class="viz-grid wide">
+      <div class="canvas">
+        <div class="presets" id="tx-presets">
+          <button class="btn is-on" data-p="llama">Llama-3-8B</button>
+          <button class="btn" data-p="gpt3">GPT-3 175B</button>
+        </div>
+        <div class="controls pc-ctl" id="tx-pc"></div>
+        <div class="pc-out" id="tx-pc-out"></div>
+        <div class="rowlab">Một layer gồm</div>
+        <div class="bar" id="tx-bar-layer"></div>
+        <div class="legend" id="tx-leg-layer"></div>
+        <div class="rowlab" style="margin-top:16px">Cả model gồm</div>
+        <div class="bar" id="tx-bar-all"></div>
+        <div class="legend" id="tx-leg-all"></div>
+        <div class="tbl-wrap" style="margin-top:14px"><table class="tbl ptable" id="tx-ptable"></table></div>
+        <div class="doc-links" id="tx-pc-links"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Hình 5 ============ -->
+  <section class="viz" id="tx-train">
+    <div class="viz-head">
+      <span class="fig">Hình 5</span>
+      <h2>Khi train: cả chuỗi chạy một lần, mỗi vị trí đoán token kế tiếp</h2>
+      <p class="sub">Input là chuỗi, đáp án là chính chuỗi đó dịch sang trái một ô. Nhờ causal mask, một lần forward tính được loss ở mọi vị trí mà không vị trí nào "nhìn trộm" đáp án. Xác suất trong hình là số minh hoạ.</p>
+      <span class="hint">Bấm vào một token ở hàng input để xem vị trí đó được nhìn gì và phải đoán gì</span>
+    </div>
+    <div class="viz-grid" id="tx-tr">
+      <div class="canvas">
+        <div class="rowlab">Input (model đọc)</div>
+        <div class="seq" id="tx-tr-in"></div>
+        <div class="rowlab">Đáp án (token kế tiếp) · xác suất model gán · loss = −ln p</div>
+        <div class="seq" id="tx-tr-out"></div>
+        <div class="caption" id="tx-tr-cap"></div>
+      </div>
+      <aside class="panel" data-panel aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <!-- ============ Hình 6 ============ -->
+  <section class="viz" id="tx-infer">
+    <div class="viz-head">
+      <span class="fig">Hình 6</span>
+      <h2>Khi chạy: prefill một lần, rồi sinh từng token với KV cache</h2>
+      <p class="sub">Prompt "Con mèo". Lúc chạy, model chỉ dùng phân phối ở vị trí cuối, chọn 1 token, nối vào, lặp lại. K và V của token cũ được giữ trong KV cache nên mỗi bước decode chỉ đưa 1 token mới qua model.</p>
+      <span class="hint">Bấm Tiếp ▶ để sinh từng token và xem KV cache lớn dần</span>
+    </div>
+    <div class="viz-grid wide" id="tx-if">
+      <div class="canvas">
+        <div class="stepbar" data-stepbar></div>
+        <div class="rowlab">Chuỗi</div>
+        <div class="seq" id="tx-if-seq"></div>
+        <div class="rowlab">KV cache (mỗi ô = K, V của 1 token ở cả 32 layer)</div>
+        <div class="kv" id="tx-if-kv"></div>
+        <p class="mem-note" id="tx-if-mem"></p>
+        <div class="caption" data-caption></div>
+        <div class="doc-links" id="tx-if-links"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>Nguồn: mục "Transformer decoder block", "Đếm tham số", "Language modeling objective" của Frontier Training.</span>
+  </footer>
+</div>
+
+<script src="shared.js"></script>
+<script>
+(function () {
+  const $ = (s, r = document) => r.querySelector(s);
+  const NS = 'http://www.w3.org/2000/svg';
+  const F = (a, l) => [['frontier', a, l + ' (đầy đủ)'], ['nguyenly', a, l + ' (nguyên lý)']];
+  const docs = (...xs) => xs.flatMap((x) => (x[0] === 'inference' ? [x] : F(x[0], x[1])));
+  const vi = (n, d = 0) => TQ.fmt(n, d);
+  const linksHtml = (arr) => arr.map((d) => TQ.docLink(d[0], d[1], d[2])).join('');
+  const el = (tag, attrs, parent) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+  const txt = (s, attrs, parent) => { const t = el('text', attrs, parent); t.textContent = s; return t; };
+
+  /* ================= Hình 1: toàn cảnh ================= */
+  if ($('#tx-overview')) {
+  const X0 = 140, W0 = 360;
+  const NODES = [
+    { k: 'tok', y: 14, h: 46, t: 'Tokenizer', s: '"Con mèo ngồi trên" → 4 token id', kind: 'io' },
+    { k: 'emb', y: 84, h: 46, t: 'Embedding  E[x]', s: 'tra 1 hàng của bảng V × d', kind: 'emb' },
+    { k: 'n1', y: 226, h: 36, t: 'RMSNorm₁', kind: 'norm' },
+    { k: 'attn', y: 282, h: 56, t: 'Self-attention', s: 'Q K V · RoPE · causal mask · GQA', kind: 'attn' },
+    { k: 'n2', y: 396, h: 36, t: 'RMSNorm₂', kind: 'norm' },
+    { k: 'ffn', y: 452, h: 56, t: 'FFN SwiGLU', s: 'SiLU(gate) ⊙ up → down', kind: 'ffn' },
+    { k: 'nf', y: 590, h: 36, t: 'RMSNorm cuối', kind: 'norm' },
+    { k: 'head', y: 648, h: 46, t: 'LM head  W_out', s: 'd chiều → V điểm số (logits)', kind: 'head' },
+    { k: 'soft', y: 716, h: 48, t: 'Softmax', s: 'logits → xác suất', kind: 'head' },
+    { k: 'train', x: 140, w: 172, y: 790, h: 56, t: 'Khi train', s: '−log p(token đúng)', kind: 'train' },
+    { k: 'infer', x: 328, w: 172, y: 790, h: 56, t: 'Khi chạy', s: 'chọn 1 token, nối vào', kind: 'infer' },
+  ];
+  const svg = $('#tx-svg');
+  // mũi tên
+  const defs = el('defs', {}, svg);
+  const mk = el('marker', { id: 'tx-arr', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' }, defs);
+  el('path', { d: 'M0 0 L10 5 L0 10 z', style: 'fill:var(--muted)' }, mk);
+  const mk2 = el('marker', { id: 'tx-arr2', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' }, defs);
+  el('path', { d: 'M0 0 L10 5 L0 10 z', style: 'fill:var(--accent)' }, mk2);
+
+  // khung lặp L lần
+  el('rect', { class: 'frame', x: 30, y: 172, width: 486, height: 372, rx: 12 }, svg);
+  txt('Decoder block — lặp L lần (Llama-3-8B: 32 lần)', { class: 'lbl', x: 92, y: 198 }, svg);
+
+  // bus residual
+  const gBus = el('g', { 'data-k': 'bus', 'aria-label': 'Residual stream' }, svg);
+  const busD = 'M320 130 V150 H70 V608 H138';
+  el('path', { class: 'bus', d: busD }, gBus);
+  el('path', { class: 'bus-hit', d: busD }, gBus);
+  txt('residual stream', { class: 'lbl', x: 0, y: 0, transform: 'translate(52 470) rotate(-90)', style: 'fill:var(--accent)' }, gBus);
+
+  // nhánh rẽ khỏi bus + đường quay về ⊕
+  const edges = [
+    'M70 244 H138', 'M320 262 V280', 'M320 338 V360 H84',
+    'M70 414 H138', 'M320 432 V450', 'M320 508 V528 H84',
+    'M320 60 V82', 'M320 626 V646', 'M320 694 V714',
+    'M320 764 V776 H226 V788', 'M320 776 H414 V788',
+  ];
+  edges.forEach((d) => el('path', { class: 'edge', d, 'marker-end': 'url(#tx-arr)' }, svg));
+  el('circle', { cx: 70, cy: 244, r: 4, style: 'fill:var(--accent)' }, svg);
+  el('circle', { cx: 70, cy: 414, r: 4, style: 'fill:var(--accent)' }, svg);
+  // vòng lặp sinh token
+  el('path', { class: 'loop', d: 'M500 818 H522 V37 H502', 'marker-end': 'url(#tx-arr2)' }, svg);
+  txt('nối token mới vào, chạy lại', { class: 'lbl', x: 0, y: 0, transform: 'translate(534 520) rotate(-90)', style: 'fill:var(--accent);font-size:11px' }, svg);
+
+  // ⊕
+  [['add1', 360], ['add2', 528]].forEach(([k, y]) => {
+    const g = el('g', { class: 'plus', 'data-k': k }, svg);
+    el('circle', { cx: 70, cy: y, r: 13 }, g);
+    txt('+', { x: 70, y: y + 6, 'text-anchor': 'middle' }, g);
+  });
+
+  const shapeEls = {};
+  NODES.forEach((n) => {
+    const x = n.x ?? X0, w = n.w ?? W0;
+    const g = el('g', { 'data-k': n.k, class: 'k-' + n.kind }, svg);
+    el('rect', { x, y: n.y, width: w, height: n.h, rx: 9 }, g);
+    const single = !n.s;
+    txt(n.t, { class: 'ttl', x: x + 14, y: n.y + (single ? n.h / 2 + 5 : 21) }, g);
+    if (n.s) txt(n.s, { class: 'sub', x: x + 14, y: n.y + 39 }, g);
+    if (!n.x) shapeEls[n.k] = txt('', { class: 'shp', x: x + w - 12, y: n.y + (single ? n.h / 2 + 4 : 21), 'text-anchor': 'end' }, g);
+  });
+
+  const L3 = { L: 32, d: 4096, nh: 32, nkv: 8, dh: 128, dff: 14336, V: 128256 };
+  function updateShapes() {
+    const B = +$('#tx-B').value, T = +$('#tx-T').value;
+    $('#tx-Bv').textContent = B;
+    const bt = `[${B}, ${vi(T)}`;
+    const S = {
+      tok: bt + ']', emb: bt + ', 4096]', n1: bt + ', 4096]', attn: bt + ', 4096]',
+      n2: bt + ', 4096]', ffn: bt + ', 4096]', nf: bt + ', 4096]', head: bt + ', 128256]', soft: bt + ', 128256]',
+    };
+    for (const k in S) if (shapeEls[k]) shapeEls[k].textContent = S[k];
+    const gb = (B * T * L3.V * 4) / 1e9;
+    $('#tx-mem').innerHTML = `Riêng tensor logits [B, T, V] ở fp32: ${B} × ${vi(T)} × 128.256 × 4 byte = <b>${gb < 0.01 ? vi(B * T * L3.V * 4 / 1e6, 1) + ' MB' : vi(gb, 1) + ' GB'}</b>. Tài liệu: T = 8.192, V = 128k → 4,2 GB cho một chuỗi.`;
+  }
+  $('#tx-B').addEventListener('input', updateShapes);
+  $('#tx-T').addEventListener('change', updateShapes);
+  updateShapes();
+
+  const OV = {
+    tok: { eyebrow: 'Bước 1 · vào', title: 'Tokenizer: chữ → token id', chips: [['shape [B, T]', 'teal']],
+      html: '<p>Văn bản được cắt thành token (mảnh từ), mỗi token đổi thành một số nguyên id trong khoảng 0 … V−1. Llama-3 có V = 128.256.</p><p>Cách cắt "Con | mèo | ngồi | trên" trong hình chỉ để minh hoạ. Tokenizer thật (BPE) có thể cắt một từ tiếng Việt thành nhiều token: đó là "thuế token" của tiếng Việt.</p>',
+      doc: docs(['b-tokenizer-h', 'Tokenizer'], ['t-tok-multilingual', 'Thuế token tiếng Việt']) },
+    emb: { eyebrow: 'Bước 2', title: 'Embedding: tra bảng', chips: [['shape [B, T, 4096]', 'teal'], ['≈ 525M tham số', '']],
+      html: '<div class="formula">h⁽⁰⁾ₜ = E[xₜ]        E ∈ ℝ^(V × d) = 128.256 × 4.096</div><p>Mỗi token id lấy đúng một hàng của bảng E, thành vector d = 4.096 số.</p><p>Không cộng positional embedding ở bước này. Vị trí được đưa vào bên trong attention bằng RoPE.</p>',
+      doc: docs(['t-transformer-math', 'Decoder block'], ['a-positional-encodings', 'Positional encodings'], ['a-embedding-sharing', 'Tied embeddings']) },
+    bus: { eyebrow: 'Bước 3 · ý quan trọng nhất', title: 'Residual stream: "bus" chạy suốt model', chips: [['shape không đổi [B, T, d]', 'accent']],
+      html: '<p>Vector của mỗi token chạy dọc model như một đường bus chung. Attention và FFN <b>không ghi đè</b> lên bus: mỗi khối đọc bus (qua norm), tính, rồi <b>cộng thêm</b> kết quả vào bus.</p><p>Nhờ phép cộng, gradient có đường tắt đi thẳng từ loss về các layer đầu (∂x′/∂x = I + …), nên train được model hàng trăm layer.</p><p>Cái giá: độ lớn của bus tăng dần theo độ sâu, vì layer nào cũng cộng thêm vào.</p>',
+      doc: docs(['t-transformer-math', 'Residual stream & pre-norm'], ['b-rmsnorm', 'RMSNorm & sandwich norm']) },
+    n1: { eyebrow: 'Bước 4', title: 'RMSNorm₁: chuẩn hoá đầu vào của attention', chips: [['pre-norm', 'khaki'], ['d tham số (gain g)', '']],
+      html: '<div class="formula">RMSNorm(x) = x / √( (1/d)·Σ xᵢ² + ε ) ⊙ g</div><p>Chỉ chuẩn hoá <b>bản sao</b> đưa vào attention; bus giữ nguyên. Đó là pre-norm. Transformer gốc (2017) dùng post-norm (chuẩn hoá ngay trên bus), gradient dễ méo qua nhiều layer và cần warmup rất cẩn thận. Vì vậy gần như mọi LLM hiện nay dùng pre-norm.</p>',
+      doc: docs(['t-transformer-math', 'Pre-norm vs post-norm'], ['b-rmsnorm', 'RMSNorm']) },
+    attn: { eyebrow: 'Bước 5', title: 'Self-attention: token gom thông tin từ các token trước nó', chips: [['32 query head', 'note'], ['8 KV head (GQA)', 'note'], ['d_h = 128', '']],
+      html: '<p>u = RMSNorm₁(x) được chiếu thành Q, K, V. Mỗi head so Q của token đang xét với K của các token đứng trước (causal mask chặn token phía sau), softmax ra trọng số, rồi lấy tổng có trọng số của V. Ghép 32 head lại và nhân W_O để về d = 4.096.</p><ul><li>GQA: 4 query head dùng chung 1 cặp K, V → K, V nhỏ đi 4 lần.</li><li>RoPE xoay Q, K theo vị trí.</li><li>Ma trận QKᵀ có shape [T, T] cho mỗi head: nguồn chi phí O(T²).</li></ul><p>Xem từng bước ở hình <b>Bên trong self-attention</b>.</p>',
+      doc: docs(['t-transformer-math', 'Self-attention'], ['a-attention', 'MHA / MQA / GQA / MLA'], ['ar-attn-theory', 'Attention bằng con số']) },
+    add1: { eyebrow: 'Bước 6', title: 'Cộng vào bus lần 1', chips: [['[B, T, 4096]', 'accent']],
+      html: '<div class="formula">h = x + Attn( RMSNorm₁(x) )</div><p>Output của attention (đã về d = 4.096 nhờ W_O) được cộng vào bus. Shape không đổi.</p>',
+      doc: docs(['t-transformer-math', 'Residual stream']) },
+    n2: { eyebrow: 'Bước 7', title: 'RMSNorm₂', chips: [['pre-norm', 'khaki']],
+      html: '<p>Giống RMSNorm₁ nhưng có gain g riêng. Chuẩn hoá h trước khi đưa vào FFN; bus vẫn giữ nguyên.</p>',
+      doc: docs(['t-transformer-math', 'Decoder block'], ['b-rmsnorm', 'RMSNorm']) },
+    ffn: { eyebrow: 'Bước 8', title: 'FFN SwiGLU: xử lý riêng từng token', chips: [['4096 → 14.336 → 4096', 'ex'], ['≈ 81% tham số mỗi layer', 'ex']],
+      html: '<div class="formula">FFN(v) = ( SiLU(v·W_gate) ⊙ (v·W_up) ) · W_down</div><p>Khác attention, FFN không nhìn sang token khác: tính riêng trên vector của từng token.</p><ul><li>3 ma trận gate, up, down ≈ 176M tham số mỗi layer.</li><li>Có thể xem như bộ nhớ key–value: cột của W_up/W_gate phát hiện pattern, hàng tương ứng của W_down là thứ được cộng vào bus. Phần lớn "kiến thức" được cho là nằm ở FFN.</li></ul><p>Xem hình <b>Bên trong FFN SwiGLU</b>.</p>',
+      doc: docs(['t-transformer-math', 'FFN SwiGLU'], ['ar-ffn-swiglu', 'Vì sao 8/3·d']) },
+    add2: { eyebrow: 'Bước 9', title: 'Cộng vào bus lần 2, rồi sang block kế', chips: [['lặp 32 lần', 'accent']],
+      html: '<div class="formula">x′ = h + FFN( RMSNorm₂(h) )</div><p>x′ là input của block tiếp theo. Cả cụm trong khung nét đứt lặp L lần (Llama-3-8B: 32), mỗi lần một bộ trọng số riêng. Shape vẫn là [B, T, 4096].</p>',
+      doc: docs(['t-transformer-math', 'Residual stream'], ['t-param-count', 'Đếm tham số']) },
+    nf: { eyebrow: 'Bước 10', title: 'RMSNorm cuối', chips: [['RMSNorm_f', 'khaki']],
+      html: '<p>Sau block cuối, chuẩn hoá bus một lần nữa rồi mới đưa vào LM head:</p><div class="formula">z = RMSNorm_f( x⁽ᴸ⁾ ) · W_out</div>',
+      doc: docs(['t-transformer-math', 'LM head']) },
+    head: { eyebrow: 'Bước 11', title: 'LM head: 4.096 chiều → 128.256 điểm số', chips: [['[B, T, V]', 'warn'], ['dV tham số (0 nếu tied)', '']],
+      html: '<p>Nhân với W_out ∈ ℝ^(d × V) để ra một điểm số (logit) cho <b>mỗi</b> token trong vocab, ở <b>mỗi</b> vị trí. Nếu dùng tied embeddings thì W_out = Eᵀ, không thêm tham số.</p><p>Tensor logits rất lớn: T = 8.192, V = 128k ở fp32 đã là 4,2 GB cho một chuỗi. Vì vậy cần kernel fused hoặc chunked cross-entropy.</p>',
+      doc: docs(['t-transformer-math', 'LM head'], ['a-embedding-sharing', 'Tied embeddings']) },
+    soft: { eyebrow: 'Bước 12', title: 'Softmax: điểm số → xác suất', chips: [['tổng = 1', 'warn']],
+      html: '<div class="formula">p(xₜ = i | x&lt;ₜ) = e^(zᵢ) / Σⱼ e^(zⱼ)</div><p>Cộng cùng một hằng số vào mọi logit thì softmax không đổi, nên "mức nền" của logits có thể trôi dần trong lúc train. Đó là lý do có z-loss hoặc logit softcapping (phần Stability).</p>',
+      doc: docs(['t-lm-objective', 'Cross-entropy & softmax'], ['b-zloss', 'z-loss'], ['b-softcap', 'Softcapping']) },
+    train: { eyebrow: 'Bước 13a · khi train', title: 'Chấm điểm bằng cross-entropy', chips: [['nats/token', 'tip']],
+      html: '<div class="formula">L = −(1/T) · Σₜ log p(xₜ | x&lt;ₜ)\n∂L/∂zᵢ = softmax(z)ᵢ − 1[i = token đúng]</div><p>Ở mỗi vị trí lấy xác suất model gán cho token đúng tiếp theo, tính −log p, rồi lấy trung bình. Gradient đẩy logit của token đúng lên một lượng 1 − p, đẩy mọi token sai xuống đúng bằng xác suất đang gán cho chúng.</p><p>Cả T vị trí được tính trong <b>một</b> lần forward. Xem hình <b>Khi train</b>.</p>',
+      doc: docs(['t-lm-objective', 'Language modeling objective'], ['t-backprop', 'Backprop']) },
+    infer: { eyebrow: 'Bước 13b · khi chạy', title: 'Chọn một token rồi lặp lại', chips: [['autoregressive', 'accent']],
+      html: '<p>Chỉ cần phân phối ở vị trí cuối. Chọn một token (greedy, temperature, top-p…), nối vào cuối chuỗi rồi chạy tiếp. Mỗi token mới phải đi qua đủ 32 block.</p><p>K, V của các token cũ được giữ trong KV cache nên không phải tính lại. Xem hình <b>Khi chạy</b>.</p>',
+      doc: [...F('ar-kv-inference', 'KV cache & kiến trúc vì inference'), ['inference', 'i-gen-loop', 'Vòng lặp sinh (Inference)'], ['inference', 'i-sampling', 'Sampling (Inference)']] },
+  };
+  const ORDER = ['tok', 'emb', 'bus', 'n1', 'attn', 'add1', 'n2', 'ffn', 'add2', 'nf', 'head', 'soft', 'train', 'infer'];
+  let syncing = false, ovStep = null;
+  const ovEx = TQ.explorer($('#tx-ov'), OV, {
+    initial: 'tok',
+    onShow: (k) => { if (!syncing && ovStep) { syncing = true; ovStep.go(ORDER.indexOf(k) + 1); syncing = false; } },
+  });
+  ovStep = TQ.stepper($('#tx-ov'), ORDER.map((k) => ({ title: OV[k].title, text: 'Giải thích chi tiết ở khung bên cạnh.' })), {
+    autoplayMs: 2600,
+    onStep: (i) => { if (!syncing) { syncing = true; ovEx.show(ORDER[i - 1]); syncing = false; } },
+  });
+  }
+
+  /* ================= Hình 2: attention ================= */
+  if ($('#tx-attn')) {
+  const TOK = ['Con', 'mèo', 'ngồi', 'trên', 'thảm'];
+  const S = [ // điểm QKᵀ/√d_h minh hoạ cho 1 head
+    [1.0, 0.3, 1.8, 0.2, 0.9],
+    [1.2, 2.2, 0.4, 1.6, 0.1],
+    [0.5, 2.4, 1.0, 0.7, 1.3],
+    [0.2, 0.8, 2.0, 1.1, 0.6],
+    [0.1, 0.9, 1.4, 2.3, 0.8],
+  ];
+  const softRow = (i) => {
+    const ex = S[i].map((v, j) => (j <= i ? Math.exp(v) : 0));
+    const sum = ex.reduce((a, b) => a + b, 0);
+    return ex.map((e) => e / sum);
+  };
+  let atStep = 1, selRow = 4;
+  const GROUPC = ['var(--note)', 'var(--tip)', 'var(--warn)', 'var(--ex)', 'var(--teal)', 'var(--accent)', 'var(--khaki)', 'var(--bad)'];
+  const ropeIcon = (pos) => `<svg class="rope" viewBox="-11 -11 22 22" aria-hidden="true"><circle r="9"></circle><line x1="0" y1="0" x2="${(8 * Math.cos(-pos * 0.6)).toFixed(2)}" y2="${(8 * Math.sin(-pos * 0.6)).toFixed(2)}"></line></svg>`;
+  function renderAtt() {
+    const toks = $('#tx-at-toks');
+    toks.innerHTML = '<div class="att-tok" style="height:22px"></div>' + TOK.map((t, i) =>
+      `<div class="att-tok${atStep >= 4 && i === selRow ? ' sel' : ''}"><span class="pos">${i + 1}</span><span class="w">${t}</span>${atStep === 3 ? ropeIcon(i) : ''}</div>`).join('');
+    const st = $('#tx-at-stage');
+    if (atStep <= 3) {
+      const cells = (n, cls, grp) => `<span class="cells ${cls}">${Array.from({ length: n }, (_, h) =>
+        `<i style="${grp ? 'background:' + GROUPC[cls === 'q' ? Math.floor(h / 4) : h] : ''}"></i>`).join('')}</span>`;
+      const grp = atStep >= 2;
+      st.innerHTML = `<div class="qkv"><div class="qkv-row" style="height:22px;font-size:12px;color:var(--muted)">Q: 32 head × 128 · K: 8 × 128 · V: 8 × 128</div>${TOK.map(() =>
+        `<div class="qkv-row"><span class="qkv-lab">Q</span>${cells(32, 'q', grp)}<span class="qkv-lab">K</span>${cells(8, 'k', grp)}<span class="qkv-lab">V</span>${cells(8, 'v', grp)}</div>`).join('')}</div>` +
+        (grp ? `<div><div class="rowlab">GQA: cùng màu = dùng chung một cặp K, V</div><div class="headgrid">${Array.from({ length: 32 }, (_, h) => `<i style="background:${GROUPC[Math.floor(h / 4)]}" title="query head ${h + 1} → KV head ${Math.floor(h / 4) + 1}"></i>`).join('')}</div></div>` : '');
+      return;
+    }
+    // bước 4–7: bảng 5×5
+    const P = TOK.map((_, i) => softRow(i));
+    let g = '<div class="grid5"><div class="c hd" style="grid-column:1/-1;text-align:left">hàng = token đang hỏi (Q) · cột = token được nhìn (K)</div>' + TOK.map((t) => `<div class="c hd">${t}</div>`).join('');
+    TOK.forEach((_, i) => TOK.forEach((__, j) => {
+      const masked = atStep >= 5 && j > i;
+      let label, style = '';
+      if (masked) label = '−∞';
+      else if (atStep >= 6) {
+        label = P[i][j].toFixed(2);
+        style = `background:color-mix(in srgb,var(--accent) ${Math.round(P[i][j] * 85)}%,var(--surface-2));${P[i][j] > 0.5 ? 'color:var(--surface)' : ''}`;
+      } else label = S[i][j].toFixed(1);
+      g += `<div class="c${masked ? ' mask' : ''}${i === selRow ? ' row' : ''}" data-row="${i}" style="${style}" title="hàng ${TOK[i]}">${label}</div>`;
+    }));
+    g += '</div>';
+    let side = '';
+    if (atStep >= 6) {
+      const p = P[selRow];
+      side = `<div><div class="rowlab">"${TOK[selRow]}" chia sự chú ý (hàng cộng lại = 1)</div><div class="wbars">${TOK.map((t, j) =>
+        `<div class="wbar"><span>${t}</span><span class="t"><span style="width:${(p[j] * 100).toFixed(1)}%"></span></span><span class="n">${j > selRow ? 'bị che' : p[j].toFixed(2)}</span></div>`).join('')}</div></div>`;
+      if (atStep === 7) {
+        const terms = TOK.slice(0, selRow + 1).map((t, j) => `${p[j].toFixed(2)}·V(${t})`).join(' + ');
+        side += `<div class="formula">out("${TOK[selRow]}") = ${terms}\n→ ghép 32 head: 32 × 128 = 4096 chiều → nhân W_O → cộng vào bus</div>`;
+      }
+    }
+    st.innerHTML = g + side;
+    st.querySelectorAll('[data-row]').forEach((c) => c.addEventListener('click', () => { selRow = +c.dataset.row; renderAtt(); }));
+  }
+  const AT_STEPS = [
+    { title: 'Chiếu Q, K, V', text: 'u = RMSNorm₁(x) nhân với 3 ma trận: Q = u·W_Q có 32 head × 128 = 4.096 chiều; K = u·W_K và V = u·W_V chỉ 8 head × 128 = 1.024 chiều mỗi cái.' },
+    { title: 'Chia head, GQA', text: '32 query head chia thành 8 nhóm, mỗi nhóm 4 head dùng chung 1 KV head. MHA thì 32 KV head, MQA thì 1. KV cache nhỏ đi 4 lần so với MHA.' },
+    { title: 'RoPE: xoay theo vị trí', text: 'Q và K của token ở vị trí m được xoay một góc tỉ lệ với m. Tích Q·K khi đó chỉ phụ thuộc vào <b>khoảng cách</b> giữa hai token. Kim trong vòng tròn minh hoạ góc xoay tăng theo vị trí.' },
+    { title: 'Điểm số QKᵀ / √d_h', text: 'Mỗi ô = mức "khớp" giữa Q của hàng và K của cột, chia cho √128 ≈ 11,3 để softmax không bị dồn hết vào một ô (gradient gần 0). Một head có ma trận [T, T]: chi phí O(T²).' },
+    { title: 'Causal mask', text: 'Ô phía trên đường chéo (token đứng sau) bị đặt −∞. Token "ngồi" không được nhìn "trên", "thảm" vì lúc sinh chữ chúng chưa tồn tại.' },
+    { title: 'Softmax từng hàng', text: 'Mỗi hàng thành trọng số dương cộng lại bằng 1; ô −∞ thành 0. Bấm hàng khác để xem token đó chú ý vào đâu.' },
+    { title: 'Trộn V, ghép head, W_O', text: 'Output của token = tổng V của các token được nhìn, nhân trọng số. Làm vậy cho cả 32 head, ghép lại thành 4.096 chiều, nhân W_O, rồi cộng vào residual stream.' },
+  ];
+  TQ.stepper($('#tx-at'), AT_STEPS, { autoplayMs: 3200, onStep: (i) => { atStep = i; renderAtt(); } });
+  $('#tx-at-links').innerHTML = linksHtml(docs(['t-transformer-math', 'Self-attention từng bước'], ['a-attention', 'MHA / MQA / GQA / MLA'], ['a-positional-encodings', 'RoPE'], ['ar-attn-theory', 'Attention bằng con số']));
+  }
+
+  /* ================= Hình 3: FFN ================= */
+  if ($('#tx-ffn')) {
+  const fsvg = $('#tx-ffsvg');
+  const fdefs = el('defs', {}, fsvg);
+  const fmk = el('marker', { id: 'tx-arr3', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' }, fdefs);
+  el('path', { d: 'M0 0 L10 5 L0 10 z', style: 'fill:var(--muted)' }, fmk);
+  const FN = [
+    { k: 'v', x: 180, y: 10, w: 180, h: 44, t: 'v = RMSNorm₂(h)', s: '4.096 chiều', kind: 'norm' },
+    { k: 'gate', x: 30, y: 92, w: 220, h: 44, t: 'W_gate', s: '4.096 → 14.336', kind: 'ffn' },
+    { k: 'up', x: 290, y: 92, w: 220, h: 44, t: 'W_up', s: '4.096 → 14.336', kind: 'ffn' },
+    { k: 'silu', x: 30, y: 162, w: 220, h: 40, t: 'SiLU(a) = a·σ(a)', kind: 'attn' },
+    { k: 'mul', x: 180, y: 222, w: 180, h: 40, t: '⊙ nhân từng chiều', kind: 'head' },
+    { k: 'down', x: 180, y: 282, w: 180, h: 44, t: 'W_down', s: '14.336 → 4.096', kind: 'ffn' },
+  ];
+  ['M270 54 V72 H140 V90', 'M270 72 H400 V90', 'M140 136 V160', 'M140 202 V242 H178', 'M400 136 V242 H362', 'M270 262 V280'].forEach((d) =>
+    el('path', { class: 'edge', d, 'marker-end': 'url(#tx-arr3)' }, fsvg));
+  FN.forEach((n) => {
+    const g = el('g', { 'data-k': n.k, class: 'k-' + n.kind }, fsvg);
+    el('rect', { x: n.x, y: n.y, width: n.w, height: n.h, rx: 9 }, g);
+    txt(n.t, { class: 'ttl', x: n.x + 12, y: n.y + (n.s ? 20 : n.h / 2 + 5) }, g);
+    if (n.s) txt(n.s, { class: 'shp', x: n.x + 12, y: n.y + 37 }, g);
+  });
+  txt('nhánh gate', { class: 'lbl', x: 30, y: 84 }, fsvg);
+  txt('nhánh up', { class: 'lbl', x: 452, y: 84 }, fsvg);
+  txt('→ cộng vào bus', { class: 'lbl', x: 370, y: 309 }, fsvg);
+  const FF = {
+    v: { title: 'Đầu vào: v = RMSNorm₂(h)', chips: [['[B, T, 4096]', 'khaki']], html: '<p>Vector đã chuẩn hoá của <b>một</b> token. FFN xử lý từng token độc lập: token này không thấy token khác ở bước này (việc trao đổi giữa token là của attention).</p>', doc: docs(['t-transformer-math', 'FFN SwiGLU']) },
+    gate: { title: 'Nhánh gate: W_gate', chips: [['4096 × 14.336 ≈ 58,7M', 'ex']], html: '<p>Chiếu lên 14.336 chiều. Mỗi chiều là một "detector": giá trị lớn khi vector khớp một pattern nào đó. Kết quả đi qua SiLU để thành "độ mở cửa".</p>', doc: docs(['t-transformer-math', 'FFN SwiGLU'], ['ar-ffn-swiglu', 'FFN & SwiGLU']) },
+    up: { title: 'Nhánh up: W_up', chips: [['4096 × 14.336 ≈ 58,7M', 'ex']], html: '<p>Chiếu song song lên 14.336 chiều: đây là "nội dung" sẽ được cho qua nhiều hay ít tuỳ nhánh gate.</p>', doc: docs(['t-transformer-math', 'FFN SwiGLU']) },
+    silu: { title: 'SiLU: biến gate thành độ mở cửa', chips: [['SiLU(a) = a·σ(a)', 'note']], html: '<p>a âm nhiều → gần 0 (đóng cửa). a dương lớn → gần bằng a (mở). Khác ReLU ở chỗ đường cong mượt và cho một chút giá trị âm quanh 0. Kéo thanh bên dưới để thử.</p>', doc: docs(['t-transformer-math', 'FFN SwiGLU']) },
+    mul: { title: '⊙: nhân từng chiều', chips: [['GLU', 'warn']], html: '<p>Chiều thứ i của kết quả = SiLU(gateᵢ) × upᵢ. Gate quyết định cho bao nhiêu thông tin của nhánh up đi qua, riêng cho từng chiều. Shazeer (2020) cho thấy kiểu GLU cho perplexity tốt hơn ReLU/GeLU ở cùng compute.</p>', doc: docs(['t-transformer-math', 'FFN SwiGLU'], ['ar-ffn-swiglu', 'Vì sao hidden dim 8/3·d']) },
+    down: { title: 'W_down: nén về 4.096 rồi cộng vào bus', chips: [['14.336 × 4096 ≈ 58,7M', 'ex']], html: '<p>Đưa về đúng d = 4.096 để cộng vào residual stream. Nhìn kiểu key–value memory: hàng thứ i của W_down là "giá trị" được cộng vào bus khi detector i bật.</p><p>3 ma trận ≈ 176,2M tham số, khoảng 81% mỗi layer của Llama-3-8B. Vì có 3 ma trận thay vì 2, người ta thường chọn d_ff ≈ 8/3·d để tổng tham số ≈ 8d² như FFN cổ điển 4d.</p>', doc: docs(['t-param-count', 'Đếm tham số'], ['ar-ffn-swiglu', 'Vì sao 8/3·d']) },
+  };
+  TQ.explorer($('#tx-ff'), FF, { initial: 'mul' });
+  // đồ thị SiLU
+  const sv = $('#tx-silu');
+  const sx = (a) => 20 + ((a + 6) / 12) * 270, sy = (y) => 150 - (y + 0.5) * 21;
+  const silu = (a) => a / (1 + Math.exp(-a));
+  let path = '', relu = '';
+  for (let a = -6; a <= 6.001; a += 0.1) { path += (path ? 'L' : 'M') + sx(a).toFixed(1) + ' ' + sy(silu(a)).toFixed(1); }
+  relu = `M${sx(-6)} ${sy(0)} L${sx(0)} ${sy(0)} L${sx(6)} ${sy(6)}`;
+  sv.innerHTML = `<line class="ax" x1="20" x2="290" y1="${sy(0)}" y2="${sy(0)}"></line><line class="ax" x1="${sx(0)}" x2="${sx(0)}" y1="8" y2="160"></line>` +
+    `<path class="relu" d="${relu}"></path><path class="cv" d="${path}"></path><circle class="pt" id="tx-pt" r="5.5"></circle>` +
+    `<text x="24" y="${sy(0) - 4}">0</text><text x="200" y="20">SiLU</text><text x="230" y="44">ReLU (nét đứt)</text><text x="22" y="166">a = −6</text><text x="252" y="166">a = 6</text>`;
+  function updGate() {
+    const a = +$('#tx-a').value, g = silu(a);
+    $('#tx-av').textContent = vi(a, 1);
+    const pt = $('#tx-pt'); pt.setAttribute('cx', sx(a)); pt.setAttribute('cy', sy(g));
+    const state = g < 0.05 && g > -0.3 ? 'gần như <b>đóng</b>' : g >= a * 0.9 ? 'gần như <b>mở hết</b>' : '<b>mở một phần</b>';
+    $('#tx-gate-out').innerHTML = `SiLU(${vi(a, 1)}) = <b>${vi(g, 2)}</b>: cửa ${state}.<br>Giả sử nhánh up ở chiều này = 1,0 → đi qua = ${vi(g, 2)} × 1,0 = <b>${vi(g, 2)}</b>.`;
+  }
+  $('#tx-a').addEventListener('input', updGate); updGate();
+  }
+
+  /* ================= Hình 4: đếm tham số ================= */
+  if ($('#tx-params')) {
+  const PRE = {
+    llama: { L: 32, d: 4096, nh: 32, nkv: 8, dh: 128, dff: 14336, V: 128256, ffn: 'swiglu', tied: false },
+    gpt3: { L: 96, d: 12288, nh: 96, nkv: 96, dh: 128, dff: 49152, V: 50257, ffn: 'classic', tied: true },
+  };
+  const FIELDS = [['L', 'Số layer L'], ['d', 'd (hidden)'], ['nh', 'n_h (query head)'], ['nkv', 'n_kv (KV head)'], ['dh', 'd_h'], ['dff', 'd_ff'], ['V', 'V (vocab)']];
+  $('#tx-pc').innerHTML = FIELDS.map(([k, l]) => `<div class="ctl"><label for="tx-p-${k}">${l}</label><input type="number" id="tx-p-${k}" min="1"></div>`).join('') +
+    `<div class="ctl"><label for="tx-p-ffn">Kiểu FFN</label><select id="tx-p-ffn"><option value="swiglu">SwiGLU (3 ma trận)</option><option value="classic">Cổ điển (2 ma trận)</option></select></div>` +
+    `<div class="ctl"><label for="tx-p-tied">Embedding</label><select id="tx-p-tied"><option value="0">không tied (thêm LM head)</option><option value="1">tied (dùng chung)</option></select></div>`;
+  const M = (n) => (n >= 1e9 ? vi(n / 1e9, 2) + 'B' : vi(n / 1e6, 2) + 'M');
+  function setPreset(p) {
+    const c = PRE[p];
+    FIELDS.forEach(([k]) => ($('#tx-p-' + k).value = c[k]));
+    $('#tx-p-ffn').value = c.ffn; $('#tx-p-tied').value = c.tied ? '1' : '0';
+    document.querySelectorAll('#tx-presets [data-p]').forEach((b) => b.classList.toggle('is-on', b.dataset.p === p));
+    calcParams();
+  }
+  function calcParams() {
+    const c = {}; FIELDS.forEach(([k]) => (c[k] = Math.max(1, +$('#tx-p-' + k).value || 1)));
+    const ffnK = $('#tx-p-ffn').value === 'swiglu' ? 3 : 2, tied = $('#tx-p-tied').value === '1';
+    const qo = 2 * c.d * c.nh * c.dh, kv = 2 * c.d * c.nkv * c.dh, ffn = ffnK * c.d * c.dff, nrm = 2 * c.d;
+    const layer = qo + kv + ffn + nrm, layers = c.L * layer, emb = c.V * c.d, head = tied ? 0 : c.V * c.d;
+    const total = layers + emb + head + c.d;
+    $('#tx-pc-out').innerHTML =
+      `<div><small>Tổng tham số</small><span class="big">${M(total)}</span></div>` +
+      `<div><small>Mỗi layer</small><span class="big">${M(layer)}</span></div>` +
+      `<div><small>FFN / mỗi layer</small><span class="big">${vi((ffn / layer) * 100, 0)}%</span></div>` +
+      `<div><small>Train 1 token ≈ 6N FLOPs</small><span class="big">${vi((6 * total) / 1e9, 0)} GFLOP</span></div>`;
+    const seg = (parts) => parts.map(([v, col, lab]) => `<span style="flex-basis:${(v / parts.reduce((a, p) => a + p[0], 0)) * 100}%;background:${col}" title="${lab}: ${M(v)}">${v / parts.reduce((a, p) => a + p[0], 0) > 0.09 ? lab : ''}</span>`).join('');
+    const lp = [[qo, 'var(--note)', 'W_Q, W_O'], [kv, 'var(--teal)', 'W_K, W_V'], [ffn, 'var(--ex)', 'FFN'], [nrm, 'var(--khaki)', 'norm']];
+    $('#tx-bar-layer').innerHTML = seg(lp);
+    $('#tx-leg-layer').innerHTML = lp.map(([v, col, lab]) => `<span><i style="background:${col}"></i>${lab}: ${M(v)} (${vi((v / layer) * 100, 1)}%)</span>`).join('');
+    const ap = [[layers, 'var(--ex)', `${c.L} layer`], [emb, 'var(--teal)', 'embedding'], [head, 'var(--warn)', 'LM head']].filter((p) => p[0] > 0);
+    $('#tx-bar-all').innerHTML = seg(ap);
+    $('#tx-leg-all').innerHTML = ap.map(([v, col, lab]) => `<span><i style="background:${col}"></i>${lab}: ${M(v)} (${vi((v / total) * 100, 1)}%)</span>`).join('');
+    $('#tx-ptable').innerHTML = '<tr><th>Thành phần</th><th>Công thức</th><th style="text-align:right">Tham số</th></tr>' +
+      `<tr><td>W_Q, W_O</td><td class="mono">2 × ${vi(c.d)} × ${vi(c.nh * c.dh)}</td><td class="num">${M(qo)}</td></tr>` +
+      `<tr><td>W_K, W_V</td><td class="mono">2 × ${vi(c.d)} × (${c.nkv}×${c.dh})</td><td class="num">${M(kv)}</td></tr>` +
+      `<tr><td>FFN</td><td class="mono">${ffnK} × ${vi(c.d)} × ${vi(c.dff)}</td><td class="num">${M(ffn)}</td></tr>` +
+      `<tr><td>Norms</td><td class="mono">2 × ${vi(c.d)}</td><td class="num">${M(nrm)}</td></tr>` +
+      `<tr><td><b>Mỗi layer</b></td><td></td><td class="num"><b>${M(layer)}</b></td></tr>` +
+      `<tr><td>${c.L} layer</td><td class="mono">${c.L} × ${M(layer)}</td><td class="num">${M(layers)}</td></tr>` +
+      `<tr><td>Embedding${tied ? ' (tied)' : ' + LM head'}</td><td class="mono">${tied ? '' : '2 × '}${vi(c.V)} × ${vi(c.d)}</td><td class="num">${M(emb + head)}</td></tr>` +
+      `<tr><td><b>Tổng</b></td><td></td><td class="num"><b>${M(total)}</b></td></tr>`;
+  }
+  document.querySelectorAll('#tx-presets [data-p]').forEach((b) => b.addEventListener('click', () => setPreset(b.dataset.p)));
+  $('#tx-pc').addEventListener('input', () => { document.querySelectorAll('#tx-presets [data-p]').forEach((b) => b.classList.remove('is-on')); calcParams(); });
+  setPreset('llama');
+  $('#tx-pc-links').innerHTML = linksHtml(docs(['t-param-count', 'Đếm tham số: 12Ld² → Llama-3-8B'], ['t-flops', 'FLOPs: C ≈ 6ND'], ['a-embedding-sharing', 'Tied embeddings']));
+  }
+
+  /* ================= Hình 5: khi train ================= */
+  if ($('#tx-train')) {
+  const SEQ = ['<bos>', 'Con', 'mèo', 'ngồi', 'trên', 'thảm'];
+  const PROB = [0.08, 0.30, 0.55, 0.62, 0.45]; // minh hoạ
+  let trSel = 2;
+  function renderTrain() {
+    const ins = SEQ.slice(0, 5), outs = SEQ.slice(1);
+    $('#tx-tr-in').innerHTML = ins.map((t, i) =>
+      `<button class="tk${i === trSel ? ' cur' : i < trSel ? ' see' : ''}" data-i="${i}">${TQ.esc(t)}<small>vị trí ${i + 1}</small></button>`).join('');
+    $('#tx-tr-out').innerHTML = outs.map((t, i) =>
+      `<button class="tk${i === trSel ? ' tgt' : ''}" data-i="${i}">${TQ.esc(t)}<small>p=${vi(PROB[i], 2)} · ${vi(-Math.log(PROB[i]), 2)}</small></button>`).join('');
+    const mean = PROB.reduce((a, p) => a - Math.log(p), 0) / PROB.length;
+    $('#tx-tr-cap').innerHTML = `<b>Vị trí ${trSel + 1}</b> nhìn được: ${ins.slice(0, trSel + 1).map(TQ.esc).join(', ')} (xanh + cam). Phải đoán: <b>${TQ.esc(outs[trSel])}</b>. Model gán p = ${vi(PROB[trSel], 2)} → loss = −ln ${vi(PROB[trSel], 2)} = ${vi(-Math.log(PROB[trSel]), 2)}.<br>Loss cả chuỗi = trung bình 5 vị trí = <b>${vi(mean, 2)} nats/token</b>, perplexity = e^loss ≈ <b>${vi(Math.exp(mean), 1)}</b>.`;
+    document.querySelectorAll('#tx-tr .tk').forEach((b) => b.addEventListener('click', () => { trSel = +b.dataset.i; renderTrain(); }));
+  }
+  renderTrain();
+  const TRP = $('#tx-tr [data-panel]');
+  TRP.innerHTML = TQ.renderItem({
+    title: 'Teacher forcing: một lần forward, T bài toán đoán',
+    chips: [['song song theo T', 'tip'], ['causal mask', 'note']],
+    html: '<p>Lúc train, input luôn là chữ <b>thật</b> của dữ liệu (không phải chữ model tự sinh). Mỗi vị trí t nhìn x₁…xₜ và đoán xₜ₊₁. Causal mask trong attention đảm bảo vị trí t không thấy đáp án.</p><div class="formula">L = −(1/T) Σₜ log p(xₜ | x&lt;ₜ)     PPL = e^L</div><p>Diễn giải perplexity: model "phân vân" như thể phải chọn đều trong PPL token ở mỗi bước. Tài liệu: loss 2,0 → PPL ≈ 7,4; loss 1,5 → PPL ≈ 4,5.</p><p>Gradient tại mỗi vị trí: đẩy logit của token đúng lên 1 − p, đẩy các token khác xuống đúng bằng xác suất của chúng. Khi p → 1 thì gradient → 0.</p><p>Loss/token phụ thuộc tokenizer; so giữa các tokenizer khác nhau thì dùng bits-per-byte.</p>',
+    doc: docs(['t-lm-objective', 'Language modeling objective'], ['e-sft', 'SFT: chỉ tính loss phần trả lời'], ['e-sequence-packing', 'Sequence packing']),
+  });
+  }
+
+  /* ================= Hình 6: khi chạy ================= */
+  if ($('#tx-infer')) {
+  const PROMPT = ['Con', 'mèo'], GEN = ['ngồi', 'trên', 'thảm', '<eos>'];
+  const KV_TOKEN = 2 * 32 * 8 * 128 * 2; // K và V · 32 layer · 8 KV head · d_h 128 · bf16
+  const IF_STEPS = [
+    { title: 'Prefill', text: 'Cả prompt ("Con", "mèo") đi qua 32 block <b>một lần</b>, song song như lúc train. K, V của từng token được lưu vào KV cache. Phân phối ở vị trí cuối → chọn "ngồi". Pha này nhiều phép tính, thường bị giới hạn bởi compute.' },
+    { title: 'Decode bước 1', text: 'Chỉ token mới "ngồi" đi qua model. Q của nó attend vào K, V trong cache (2 token cũ) + của chính nó. Thêm K, V của "ngồi" vào cache → chọn "trên".' },
+    { title: 'Decode bước 2', text: 'Lại chỉ 1 token. Mỗi bước phải đọc toàn bộ trọng số model và cả KV cache từ bộ nhớ GPU mà chỉ làm ít phép tính → decode thường bị giới hạn bởi băng thông bộ nhớ.' },
+    { title: 'Decode bước 3', text: 'KV cache tăng tuyến tính theo số token. Context càng dài, cache càng chiếm bộ nhớ: đó là lý do có GQA, MLA, KV cache quantization.' },
+    { title: 'Gặp <eos>, dừng', text: 'Model sinh token kết thúc. Bộ nhớ KV cache của request được giải phóng.' },
+  ];
+  function renderInfer(i) {
+    const n = Math.min(i, GEN.length); // số token đã sinh
+    const seq = PROMPT.map((t) => ({ t, cls: '', lab: 'prompt' })).concat(GEN.slice(0, n).map((t, j) => ({ t, cls: j === n - 1 ? ' new' : ' gen', lab: j === n - 1 ? 'mới sinh' : 'đã sinh' })));
+    $('#tx-if-seq').innerHTML = seq.map((s) => `<span class="tk${s.cls}" style="cursor:default">${TQ.esc(s.t)}<small>${s.lab}</small></span>`).join('');
+    const cached = i === 5 ? 0 : PROMPT.length + (i - 1);
+    const fresh = i === 1 ? 2 : 1;
+    const cacheToks = PROMPT.concat(GEN).slice(0, cached);
+    $('#tx-if-kv').innerHTML = i === 5
+      ? '<span style="background:var(--surface-2);color:var(--muted);border-color:var(--border);min-width:160px">đã giải phóng</span>'
+      : cacheToks.map((t, j) => `<span class="${j >= cached - fresh ? 'fresh' : ''}">${TQ.esc(t)}</span>`).join('');
+    $('#tx-if-mem').innerHTML = `Mỗi token trong cache của Llama-3-8B (bf16): 2 (K, V) × 32 layer × 8 KV head × 128 × 2 byte = <b>${vi(KV_TOKEN / 1024)} KiB</b>. Hiện có ${cached} token → ${vi((cached * KV_TOKEN) / 1024)} KiB. Một request 8.192 token → <b>${vi((8192 * KV_TOKEN) / 2 ** 30, 2)} GiB</b>.`;
+  }
+  TQ.stepper($('#tx-if'), IF_STEPS, { autoplayMs: 2800, onStep: renderInfer });
+  $('#tx-if-links').innerHTML = linksHtml([...F('ar-kv-inference', 'KV cache & kiến trúc vì inference'), ['inference', 'i-gen-loop', 'Vòng lặp sinh (Inference)'], ['inference', 'i-prefill-decode', 'Prefill và decode (Inference)'], ['inference', 'i-kv-size', 'Công thức KV cache (Inference)']]);
+  }
+
+})();
+</script>
+</body>
+</html>

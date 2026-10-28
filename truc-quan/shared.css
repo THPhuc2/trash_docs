@@ -37,6 +37,7 @@
 }
 
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html{scroll-behavior:smooth;scroll-padding-top:72px}
 body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15.5px;line-height:1.65;-webkit-font-smoothing:antialiased}
 a{color:var(--link)}

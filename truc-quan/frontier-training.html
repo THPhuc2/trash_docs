@@ -653,7 +653,7 @@
       html: '<p>SFT chỉ dạy bắt chước. PO dạy thêm "cái gì tệ hơn và nên tránh". DPO tối ưu thẳng trên cặp (x, y_w, y_l), không cần reward model riêng. LR thường nhỏ hơn LR của SFT khoảng 10–20 lần.</p>',
       doc: links(['e-po', 'Preference optimization'], ['pt-po-theory', 'Bradley–Terry → DPO']) },
     rl: { eyebrow: 'Post-training · bước 3', title: 'RL với reward kiểm chứng được', chips: [['xem Hình 10', 'accent']],
-      html: '<p>Model tương tác với environment, verifier chấm (đáp án toán khớp, code qua unit test, JSON đúng schema). RLVR là thứ giúp tăng reasoning rõ nhất. Phần lớn thời gian RL là thời gian sinh rollout.</p>',
+      html: '<p>Model tương tác với environment, verifier chấm (đáp án toán khớp, code qua unit test, JSON đúng schema). RLVR (được DeepSeek-R1 phổ biến) cho reward khách quan, khó bị hack, rất hợp để tăng reasoning toán/code. Phần lớn thời gian RL là thời gian sinh rollout.</p>',
       doc: links(['e-rl', 'RL'], ['f-rlvr-rubrics', 'RLVR & rubrics']) },
     rel: { eyebrow: 'Release', title: 'Đánh giá lại, safety, chốt checkpoint', chips: [['tái tạo được', 'tip']],
       html: '<p>Chạy lại bộ eval cốt lõi (giữ nguyên từ pre-training để so xuyên suốt), safety check, rồi chốt checkpoint release kèm đầy đủ log và config để tái tạo và debug sau này.</p>',
@@ -664,6 +664,7 @@
   });
 
   /* ================= Hình 2: block transformer ================= */
+  if (document.getElementById('tfroot')) {
   $('#tf-links').innerHTML = linksHtml(['t-transformer-math', 'Decoder block từng bước'], ['ar-ffn-swiglu', 'FFN SwiGLU']);
   TQ.stepper('#tfroot', [
     { title: 'Embedding', text: 'Mỗi token id tra bảng <code>E ∈ ℝ^{V×d}</code> lấy ra một vector d chiều. Cả batch thành tensor <code>[B, T, d]</code>. Không cộng positional embedding ở đây; vị trí được đưa vào bên trong attention qua RoPE.' },
@@ -676,6 +677,7 @@
     { title: 'RMSNorm cuối và LM head', text: 'Nhân với <code>W_out ∈ ℝ^{d×V}</code> ra logits <code>[B, T, V]</code> (tied embeddings: W_out = Eᵀ). Với T = 8192, V = 128k ở FP32, logits của một sequence đã là 4,2 GB, nên cần fused/chunked cross-entropy.' },
     { title: 'Softmax và cross-entropy', text: 'Logits thành xác suất; loss = −log p(token đúng). Từ đây backward chạy ngược toàn bộ đường vừa đi để tính gradient.' },
   ]);
+  }
 
   /* ================= Hình 3: bộ nhớ ================= */
   const NS = [0.5, 1, 3, 7.5, 8, 13, 34, 70, 175, 405];
@@ -817,7 +819,7 @@
     const parts = [];
     parts.push('<p><span class="k">Warmup</span> tăng dần từ 0 lên đỉnh: lúc đầu gradient hỗn loạn và thống kê v của Adam chưa ổn định. Run ngắn thường 1–5% số step; lab lớn cố định số step (ví dụ 2000).</p>');
     if (lrOn.cos) parts.push('<p><span class="k" style="color:var(--note)">Cosine</span> giảm mượt suốt run. Nhược điểm: hình dạng phụ thuộc tổng số step đặt từ đầu, muốn train thêm thì LR đã gần đáy.</p>');
-    if (lrOn.wsd) parts.push('<p><span class="k" style="color:var(--accent)">WSD</span> giữ LR hằng số rồi decay ở 10–20% cuối, kết quả ngang cosine. Loss tụt mạnh khi decay vì phần loss "thừa" do dao động tỉ lệ với LR (thường 0,05–0,1 nats). Kimi K2: 10T token LR 2e-4 hằng số, rồi 5,5T token cosine về 2e-5.</p>');
+    if (lrOn.wsd) parts.push('<p><span class="k" style="color:var(--accent)">WSD</span> giữ LR hằng số rồi decay ở 10–20% cuối, kết quả ngang cosine. Loss tụt mạnh khi decay (thường 0,05–0,1 nats) vì phần loss "thừa" do dao động tỉ lệ với LR. Kimi K2: 10T token LR 2e-4 hằng số, rồi 5,5T token cosine về 2e-5.</p>');
     if (lrOn.ms) parts.push('<p><span class="k" style="color:var(--ex)">Multi-step</span> giảm theo bậc. 80/10/10 ngang cosine; 70/15/15 và 60/20/20 có thể tốt hơn cosine.</p>');
     if (lrOn.br) parts.push('<p><span class="k">Rẽ nhánh</span>: với WSD chỉ cần chạy một run ở phase stable, lưu checkpoint ở 30%, 50%, 70%, rồi từ mỗi checkpoint chạy một đoạn decay ngắn là có model hoàn chỉnh để so. Với cosine phải chạy lại 3 run riêng.</p>');
     $('#lr-panel').innerHTML = TQ.renderItem({ eyebrow: 'Đang hiển thị', title: 'Vòng đời của learning rate', html: parts.join(''), doc: links(['c-learning-rates', 'Learning rates'], ['op-wsd-theory', 'Lý thuyết WSD'], ['op-warmup-theory', 'Warmup']) });
@@ -976,7 +978,7 @@
     's-head': { eyebrow: 'Cơ chế 3', title: 'Logits ở LM head trôi xa 0', chips: [['softmax không "thấy"', 'warn']], html: '<p>Softmax không đổi khi cộng cùng hằng số vào mọi logit, nên logits có thể trôi rất xa mà loss không phát hiện, cho tới khi tràn số hoặc gradient bất thường. log Z lớn làm loss nhạy với sai số số học.</p>', doc: links(['b-stability-h', 'Logits, softmax'], ['ar-instability-theory', 'Vì sao loss spike']) },
     's-res': { eyebrow: 'Cơ chế 4', title: 'Residual stream phình, massive activations', chips: [['hỏng cả FP8', 'warn']], html: '<p>Với pre-norm, không có gì kéo norm residual xuống, nó tăng theo độ sâu; layer sâu "ít tác dụng". Nhiều LLM có vài chiều activation lớn gấp hàng nghìn lần trung bình, làm hỏng lượng tử hoá và dễ tràn số.</p>', doc: links(['ar-instability-theory', 'Vì sao loss spike'], ['b-rmsnorm', 'Sandwich norm']) },
     's-adam': { eyebrow: 'Cơ chế 5', title: 'Adam với gradient hiếm và ε', html: '<p>Embedding của token hiếm lâu không có gradient → v tiến về 0; khi token xuất hiện lại, update m/√v rất lớn. Ngược lại, khi √v nhỏ hơn ε thì Adam suy biến thành SGD, update bị co lại vô tình.</p>', doc: links(['ar-instability-theory', 'Vì sao loss spike']) },
-    's-lr': { eyebrow: 'Thủ phạm quen thuộc', title: 'Learning rate quá cao', chips: [['nguyên nhân số 1', 'bad']], html: '<p>Đứng đầu danh sách "usual suspects". Với parametrization chuẩn, LR tối ưu dịch chuyển khi tăng width nên LR tìm được ở model nhỏ có thể quá cao cho model lớn.</p>', doc: links(['f-usual-suspects', 'Usual suspects'], ['ar-mup', 'μP']) },
+    's-lr': { eyebrow: 'Thủ phạm quen thuộc', title: 'Learning rate quá cao', chips: [['đứng đầu danh sách', 'bad']], html: '<p>Đứng đầu danh sách "usual suspects". Với parametrization chuẩn, LR tối ưu dịch chuyển khi tăng width nên LR tìm được ở model nhỏ có thể quá cao cho model lớn.</p>', doc: links(['f-usual-suspects', 'Usual suspects'], ['ar-mup', 'μP']) },
     's-data': { eyebrow: 'Thủ phạm quen thuộc', title: 'Batch dữ liệu xấu', html: '<p>Rác lặp, encoding lỗi, tài liệu cực dài toàn một token. Spike thường do <i>tổ hợp</i> một batch cụ thể với một trạng thái weights cụ thể: cùng batch đó ở thời điểm khác có thể không sao.</p>', doc: links(['f-usual-suspects', 'Usual suspects'], ['ar-spike-playbook', 'Spike playbook']) },
     's-fp': { eyebrow: 'Precision', title: 'Tràn số, update bị "nuốt"', html: '<p>FP16 dải hẹp (tối đa 65504) dễ tràn. BF16 dải rộng như FP32 nhưng chỉ ~2–3 chữ số có nghĩa: 1,0 + 0,001 làm tròn về 1,0, update biến mất.</p>', doc: links(['ar-precision', 'Precision & stability']) },
     'f-qk': { eyebrow: 'Rào chắn', title: 'QK-norm', chips: [['Gemma 3 thay softcap bằng cái này', 'tip']], html: '<p>Áp LayerNorm/RMSNorm lên q và k trước khi nhân, nên attention logits không nổ được.</p><div class="callout callout--warn">Lưu ý: paper RNoPE thấy QK-norm làm hại long context vì xoá thông tin độ lớn của q·k, khiến attention khó "sắc" giữa hàng chục nghìn token.</div>', doc: links(['b-qknorm', 'QK-norm']) },
@@ -985,7 +987,7 @@
     'f-clip': { eyebrow: 'Rào chắn', title: 'Gradient clipping theo global norm', chips: [['c = 1,0 phổ biến', 'tip']], html: '<p>Coi toàn bộ gradient là một vector, co lại nếu norm vượt c, giữ nguyên hướng. Với Adam, tác dụng chính là bảo vệ m và v khỏi một batch bất thường. Nếu clip kích hoạt ở phần lớn step là bạn đang giảm LR một cách khó kiểm soát. Distributed: norm phải là norm toàn cục.</p>', doc: links(['ar-grad-clip', 'Gradient clipping']) },
     'f-norm': { eyebrow: 'Rào chắn', title: 'RMSNorm, sandwich norm, khởi tạo', html: '<p>Depth-scaled sandwich norm (Trinity) chuẩn hoá cả trước và sau sub-layer, gain post-norm khởi tạo 1/√L để residual không phình theo độ sâu. OLMo2 cho thấy khởi tạo đơn giản N(0; 0,02) có thể ổn định hơn scaled init.</p>', doc: links(['b-rmsnorm', 'RMSNorm & sandwich norm'], ['ar-init-theory', 'Initialization']) },
     'f-wd': { eyebrow: 'Rào chắn', title: 'Không weight decay cho embedding', html: '<p>Weight decay làm embedding nhỏ dần; norm ngay sau đó chia cho σ nhỏ → gradient về các layer đầu bị khuếch đại (σ = 0,05 thì phóng đại 20 lần). Hugging Face không thấy mất chất lượng khi bỏ decay ở embedding.</p>', doc: links(['b-wd-emb', 'Weight decay & embeddings']) },
-    'f-mup': { eyebrow: 'Rào chắn', title: 'μP: tune ở model hẹp, dùng cho model rộng', html: '<p>Scale init và LR theo width sao cho LR tối ưu gần như không đổi. Ví dụ tài liệu: tune ở d₀ = 256 được η₀ = 10⁻²; model d = 4096 (m = 16) dùng LR hidden 10⁻²/16 = 6,25 × 10⁻⁴. Chi phí tuning chỉ ~7% chi phí pre-train.</p>', doc: links(['ar-mup', 'μP']) },
+    'f-mup': { eyebrow: 'Rào chắn', title: 'μP: tune ở model hẹp, dùng cho model rộng', html: '<p>Scale init và LR theo width sao cho LR tối ưu gần như không đổi. Ví dụ tài liệu: tune ở d₀ = 256 được η₀ = 10⁻²; model d = 4096 (m = 16) dùng LR hidden 10⁻²/16 = 6,25 × 10⁻⁴. Tensor Programs V: tune trên proxy 40M rồi chuyển sang GPT-3 6,7B, chi phí tuning chỉ ~7% chi phí pre-train.</p>', doc: links(['ar-mup', 'μP']) },
     'f-prec': { eyebrow: 'Rào chắn', title: 'BF16 để tính, FP32 để giữ', html: '<p>Tránh FP16. Giữ master weights và optimizer state ở FP32; softmax/log-sum-exp, thống kê norm và phép tích luỹ nên ở FP32.</p>', doc: links(['ar-precision', 'Precision & stability']) },
     'f-filter': { eyebrow: 'Rào chắn', title: 'Lọc data, rewind và bỏ qua batch', html: '<p>OLMo2 loại document có n-gram 1–13 token lặp từ 32 lần trở lên, giảm đáng kể tần suất spike. Khi spike đã xảy ra: xem tab "Khi spike đã xảy ra".</p>', doc: links(['f-usual-suspects', 'Usual suspects'], ['ar-spike-playbook', 'Spike playbook']) },
     'f-mon': { eyebrow: 'Rào chắn', title: 'Monitoring hằng ngày', html: '<ul><li>Global grad norm: tăng dần đều thường báo trước divergence.</li><li>Update/param ratio theo layer: ≫ 10⁻³ là LR quá cao ở layer đó.</li><li>Max attention logit, attention entropy, log Z.</li><li>Activation RMS/max, MoE load, tỉ lệ step bị clip, số NaN/Inf.</li></ul>', doc: links(['ar-monitoring', 'Monitoring']) },
@@ -1024,9 +1026,9 @@
     rewind: { text: '<b>2. Rewind và bỏ qua data (cách của PaLM).</b> Quay lại checkpoint ~100 step trước spike, bỏ qua ~200–500 batch. PaLM gặp ~20 spike và cách này chặn được.', next: 'again' },
     again: { cls: 'q', text: 'Train tiếp. Spike có tái diễn không?', ch: [['Không', 'done'], ['Có', 'lr']] },
     done: { cls: 'end', text: '<b>Tiếp tục train.</b> Theo dõi grad norm, max attention logit, tỉ lệ step bị clip.', end: true },
-    lr: { text: '<b>3. Giảm learning rate</b>, tạm thời hoặc vĩnh viễn. Logbook OPT-175B ghi nhiều lần restart kèm giảm LR. Hiệu quả nhưng làm chậm tiến độ.', next: 'hw' },
-    hw: { text: '<b>4. Kiểm tra phần cứng.</b> Một GPU lỗi âm thầm (silent data corruption) có thể gây spike ngẫu nhiên.', next: 'arch' },
-    arch: { cls: 'risk', text: '<b>5. Cuối cùng mới thêm rào chắn giữa chừng</b> (QK-norm, z-loss). Rủi ro vì đổi phân phối activation; tốt hơn là đã có từ đầu sau khi ablate.', end: true },
+    lr: { text: '<b>3. Giảm learning rate</b>, tạm thời hoặc vĩnh viễn. Logbook OPT-175B ghi nhiều lần restart kèm giảm LR. Hiệu quả nhưng làm chậm tiến độ.', next: 'arch' },
+    hw: { text: '<b>5. Kiểm tra phần cứng.</b> Một GPU lỗi âm thầm (silent data corruption) có thể gây spike ngẫu nhiên.', end: true },
+    arch: { cls: 'risk', text: '<b>4. Thêm rào chắn kiến trúc giữa chừng</b> (QK-norm, z-loss). Rủi ro vì đổi phân phối activation; tốt hơn là đã có từ đầu sau khi ablate.', next: 'hw' },
   };
   let spkPath = ['start'];
   function spkDraw() {

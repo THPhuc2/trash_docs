@@ -372,8 +372,8 @@
       <div class="controls">
         <div class="ctl"><label for="bTotal">Tổng VRAM (GiB) <output id="oTotal"></output></label><input type="range" id="bTotal" min="8" max="96" step="0.01"></div>
         <div class="ctl"><label for="bUsed">Đang bị chiếm (GiB) <output id="oUsed"></output></label><input type="range" id="bUsed" min="0" max="8" step="0.1"></div>
-        <div class="ctl"><label for="bTrain">--train-gb <output id="oTrain"></output></label><input type="range" id="bTrain" min="1" max="80" step="0.5"></div>
-        <div class="ctl"><label for="bServe">--serve-gb <output id="oServe"></output></label><input type="range" id="bServe" min="1" max="60" step="0.5"></div>
+        <div class="ctl"><label for="bTrain">--train-gb <output id="oTrain"></output></label><input type="range" id="bTrain" min="1" max="80" step="any"></div>
+        <div class="ctl"><label for="bServe">--serve-gb <output id="oServe"></output></label><input type="range" id="bServe" min="1" max="60" step="any"></div>
         <div class="ctl"><label for="bHead">--headroom-gb <output id="oHead"></output></label><input type="range" id="bHead" min="0.5" max="3" step="0.1"></div>
       </div>
       <div class="bar" id="bBar"></div>
@@ -691,10 +691,10 @@ python ../11_evaluation/compute_metrics.py --pred preds/sft.jsonl --task report 
         io: { in: ['outputs/merged-FP8'], script: 'serve_profile.sh · bench_point.sh · paired_compare.py', out: ['API + số đo tốc độ + CI'] },
         cmds: `bash ../19_inference_optimization/serve_profile.sh throughput outputs/merged-FP8
 bash ../19_inference_optimization/bench/bench_point.sh medical outputs/merged
-python ../10_inference/vllm_offline.py --model outputs/merged-FP8 --input <test.jsonl> --output preds/fp8.jsonl
-python ../11_evaluation/compute_metrics.py --pred preds/fp8.jsonl --task mcq --out results/fp8.json --bootstrap 1000
-python ../11_evaluation/paired_compare.py results/fp8.samples.jsonl results/bf16.samples.jsonl --metric correct --margin 0.01`,
-        checks: ['Bản FP8 không kém bf16 quá margin (cận dưới CI > −margin)', 'Dùng --task hợp với bài (ví dụ README dùng mcq)'],
+python ../10_inference/vllm_offline.py --model outputs/merged-FP8 --input $D/test.jsonl --output preds/fp8.jsonl
+python ../11_evaluation/compute_metrics.py --pred preds/fp8.jsonl --task report --out results/fp8.json --bootstrap 1000   # cùng --task với B4
+python ../11_evaluation/paired_compare.py results/fp8.samples.jsonl results/sft.samples.jsonl --metric fact_f1 --margin 0.01   # sft = bản bf16 từ B4`,
+        checks: ['Bản FP8 không kém bf16 quá margin (cận dưới CI > −margin)', 'Cùng --task với B4; --metric khớp task: fact_f1 / rougeL (report), correct (mcq, number) — README dùng mcq + correct'],
         doc: [D('a-quickstart', 'Bắt đầu nhanh'), D('j-r19-flow', 'Recipe 19 — 7 bước')] },
     ] },
     C: { name: 'Luồng C — Suy luận <think>', route: '00 (mcq_to_grpo) → trace CoT → SFT-CoT → merge → lọc độ khó → GRPO', rows: [
@@ -871,7 +871,7 @@ python ../07_merge_export/merge_lora.py --adapter sft_cot/outputs/qwen3-4b-sft-c
   /* ---------------- ENV MAP ---------------- */
   const RECIPES = [
     ['00', 'data_preparation', ['data']], ['01', 'continued_pretrain', ['unsloth']], ['02', 'sft_llm', ['hf', 'unsloth']],
-    ['03', 'sft_vlm', ['hf', 'unsloth']], ['04', 'preference', ['hf']], ['05', 'reasoning', ['hf', 'unsloth_vllm']],
+    ['03', 'sft_vlm', ['hf', 'unsloth']], ['04', 'preference', ['hf']], ['05', 'reasoning', ['hf', 'unsloth', 'unsloth_vllm']],
     ['06', 'mae_vision_pretrain', ['hf']], ['07', 'merge_export', ['hf', 'unsloth', 'quant']], ['08', 'quantization', ['quant', 'modelopt']],
     ['09', 'llamafactory', ['lf']], ['10', 'inference', ['hf', 'unsloth', 'serve']], ['11', 'evaluation', ['serve', 'hf']],
     ['12', 'training_optimization', ['hf']], ['13', 'advanced_parallelism', ['hf']], ['14', 'tool_calling_sft', ['hf']],
@@ -914,7 +914,7 @@ python ../07_merge_export/merge_lora.py --adapter sft_cot/outputs/qwen3-4b-sft-c
     ['sft_from_csv.yaml', 'CSV câu hỏi–trả lời', 'bảng hỏi–đáp phẳng', 'messages', '02 SFT', { img: 0, group: 'patient_id' }],
     ['vlm_from_excel.yaml', 'Excel nhiều sheet + cột đường dẫn ảnh X-quang', 'Excel nhiều sheet, ô gộp', 'vlm_messages, chia theo thời gian', '03', { img: 1, group: 'patient_id', yaml: 1 }],
     ['vlm_bv175_multiturn.yaml', 'CSV ca chụp + ảnh <StudyInstanceUID>.png (dữ liệu thật của repo)', 'CSV + ảnh + metadata DICOM + nhãn detector', 'vlm_messages, llamafactory; 3 view', '03, 09', { img: 1, group: 'PatientID' }],
-    ['vlm_from_dicom.yaml', 'Thư mục DICOM + bảng kết quả', 'thư mục .dcm', 'PNG 8-bit đã windowing + metadata', '03', { img: 1, note: 'Báo cáo phải ghép theo StudyInstanceUID; cần pip install "pydicom>=3.0".' }],
+    ['vlm_from_dicom.yaml', 'Thư mục DICOM + bảng kết quả', 'thư mục .dcm', 'PNG 8-bit đã windowing + metadata', '03', { img: 1, group: 'PatientID', note: 'Báo cáo phải ghép theo StudyInstanceUID; cần pip install "pydicom>=3.0".' }],
     ['vlm_from_hf.yaml', 'Dataset HF có cột ảnh (vd THP2903/BV175_xray_findings)', 'dataset Hub có cột Image', 'vlm_messages', '03', { img: 1, nogroup: 'Dataset không có cột mã bệnh nhân → hash_group: false, chia theo dòng (mức ca chụp). Nhớ ghim revision.' }],
     ['mcq_to_grpo.yaml', 'Trắc nghiệm → GRPO', 'trắc nghiệm (phương án cột A–D)', 'grpo (gold = chữ cái) + messages', '05, 17', { img: 0, nogroup: 'Đề thi công khai: pii.enabled: false, hash_group: false.' }],
     ['reasoning_from_traces.yaml', 'Trace suy luận → SFT-CoT', 'trace suy luận', 'messages có <think>', '05 sft_cot', { img: 0 }],
@@ -1134,7 +1134,7 @@ python prepare_data.py --config configs/my_${name}.yaml</pre>`,
   };
   const SDOC = [D('k-checklist', 'Checklist chạy song song'), D('k-sharing-table', 'Bảng so sánh')];
   const SR = {
-    r_queue: { title: 'Xếp hàng chạy lần lượt', chips: [['an toàn nhất', 'tip']], html: '<p>Một máy: GPU task-spooler. Job chỉ chạy khi GPU rảnh. Ví dụ xếp train → merge → eval rồi đi ngủ:</p><pre class="code">ts -G 1 bash recipes/02_sft_llm/run.sh unsloth configs/qlora_unsloth.yaml\nts -G 1 bash recipes/11_evaluation/lm_eval.sh vllm outputs/merged\nts -l</pre><p>Trên WSL2 dùng <code>ts -S 1</code> để chạy tuần tự tuyệt đối.</p>', doc: [D('k-queue', 'Hàng đợi job'), ...SDOC] },
+    r_queue: { title: 'Xếp hàng chạy lần lượt', chips: [['an toàn nhất', 'tip']], html: '<p>Một máy: GPU task-spooler. Job chỉ chạy khi GPU rảnh. Ví dụ xếp train rồi eval rồi đi ngủ (chen lệnh merge thật vào giữa):</p><pre class="code">ts -G 1 bash recipes/02_sft_llm/run.sh unsloth configs/qlora_unsloth.yaml\nts -G 1 bash recipes/11_evaluation/lm_eval.sh vllm outputs/merged\nts -l</pre><p>Trên WSL2 dùng <code>ts -S 1</code> để chạy tuần tự tuyệt đối.</p>', doc: [D('k-queue', 'Hàng đợi job'), ...SDOC] },
     r_two: { title: 'Mỗi job một GPU nguyên', chips: [['CUDA_VISIBLE_DEVICES', 'accent']], html: '<p>Dùng <code>CUDA_VISIBLE_DEVICES</code> / <code>compose.multi-gpu.yml</code>. Cách duy nhất vừa đơn giản vừa chắc chắn.</p>', doc: SDOC },
     r_mig: { title: 'Chia slice MIG', chips: [['cô lập phần cứng', 'tip']], html: '<p>Mỗi job train dùng 1 slice. NCCL không chạy giữa các slice: không DDP/FSDP/TP qua nhiều slice. Slice 1g.10gb đủ cho vLLM 4B–8B AWQ, không đủ train 8B.</p>', doc: [D('k-mig', 'MIG'), ...SDOC] },
     r_budget: { title: 'Ngân sách mềm (gpu_budget.py)', chips: [['cẩn thận', 'warn']], html: '<ol><li>VRAM đang dùng ≈ 0, không notebook giữ model</li><li>Tính ngân sách: train + vLLM + 1–1,5 GB/process ≤ 90% (Hình 10)</li><li>vLLM: hạ <code>--gpu-memory-utilization</code>, <code>--max-model-len</code>, <code>--max-num-seqs</code></li><li>Train: <code>per_process_memory_fraction</code>, giảm batch / seq, bật gradient_checkpointing</li><li>Chạy server trước, train sau; theo dõi <code>nvidia-smi -l 2</code> 5 phút đầu</li><li>Port khác nhau, checkpoint thường xuyên</li></ol>', doc: [D('k-budget-h', 'gpu_budget.py và playbook'), ...SDOC] },
@@ -1178,15 +1178,16 @@ python prepare_data.py --config configs/my_${name}.yaml</pre>`,
     if (need > avail) v.push('<span class="chip chip--bad">không vừa bộ nhớ đang trống → chạy tuần tự</span>');
     if (tf + sf <= 0.9 && need <= avail) v.push('<span class="chip chip--tip">OK trên giấy: server trước, train sau, xem nvidia-smi -l 2</span>');
     $('bVerdict').innerHTML = v.join('');
-    $('bCmd').textContent = `python docker/gpu_budget.py --train-gb ${train} --serve-gb ${serve} --headroom-gb ${head} --env >> docker/.env`;
+    const isDef = (gb, f) => Math.abs(gb - f * total) < 1e-6;   // không truyền cờ = script dùng 55% / 30% tổng
+    $('bCmd').textContent = `python docker/gpu_budget.py${isDef(train, 0.55) ? '' : ' --train-gb ' + +train.toFixed(2)}${isDef(serve, 0.30) ? '' : ' --serve-gb ' + +serve.toFixed(2)} --headroom-gb ${head} --env >> docker/.env`;
     addCopyTo($('bCmd').parentElement);
-    $('bEnv').textContent = `TRAIN_MEM_FRACTION=${tf.toFixed(2)}\nVLLM_GPU_UTIL=${sf.toFixed(2)}\nSGLANG_MEM_FRACTION=${sf.toFixed(2)}`;
+    $('bEnv').textContent = `TRAIN_MEM_FRACTION=${tf}\nVLLM_GPU_UTIL=${sf}\nSGLANG_MEM_FRACTION=${sf}`;
   }
-  Object.values(B).forEach((el) => el.addEventListener('input', calcB));
+  Object.values(B).forEach((el) => el.addEventListener('input', () => { if (el === B.train || el === B.serve) el.value = Math.round(+el.value * 2) / 2; calcB(); }));
   const PRE = {
     '4090': { total: 23.99, used: 0.5, train: 13, serve: 7, head: 1.5 },
-    default: { total: 23.99, used: 0.5, train: +(0.55 * 23.99).toFixed(2), serve: +(0.30 * 23.99).toFixed(2), head: 1.5 },
-    busy: { total: 23.99, used: 1, train: +(0.55 * 23.99).toFixed(2), serve: +(0.30 * 23.99).toFixed(2), head: 1.5 },
+    default: { total: 23.99, used: 0.5, train: 0.55 * 23.99, serve: 0.30 * 23.99, head: 1.5 },
+    busy: { total: 23.99, used: 1, train: 0.55 * 23.99, serve: 0.30 * 23.99, head: 1.5 },
   };
   document.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => setB(PRE[b.dataset.preset])));
   $('bDoc').innerHTML = TQ.docLink('camnang', 'k-gpu-budget-py', 'gpu_budget.py — từng bước') + ' ' + TQ.docLink('camnang', 'k-budget-rules', 'Bốn quy tắc ngân sách');

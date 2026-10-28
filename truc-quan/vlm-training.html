@@ -515,7 +515,7 @@ table.mx{border-collapse:separate;border-spacing:4px;font-family:var(--mono);fon
     <div class="viz-head">
       <span class="fig">Hình 11</span>
       <h2>Đánh giá và inference: đo đúng, chạy nhanh</h2>
-      <p class="sub">Ô có nhãn "bộ tối thiểu" là bộ benchmark tài liệu gợi ý theo dõi trong lúc phát triển.</p>
+      <p class="sub">Ô có nhãn "bộ tối thiểu" là bộ benchmark tài liệu gợi ý theo dõi trong lúc phát triển: mỗi nhóm chọn 1 bộ (tài liệu/OCR: DocVQA hoặc OCRBench), cộng video nếu model hỗ trợ.</p>
       <span class="hint">Bấm từng năng lực, từng cái bẫy, từng cách tăng tốc</span>
     </div>
     <div class="viz-grid" id="evalx">
@@ -895,7 +895,7 @@ table.mx{border-collapse:separate;border-spacing:4px;font-family:var(--mono);fon
     { vit: ['part', 'Đôi khi mở, LR nhỏ'], proj: ['train', 'Train'], llm: ['part', 'Một phần / toàn bộ / LoRA'], data: ['caption recaption', 'interleaved web docs', 'OCR, tài liệu', 'grounding', 'text-only', 'hàng chục → hàng trăm triệu mẫu'] },
     { vit: ['part', 'Tuỳ model'], proj: ['train', 'Train'], llm: ['train', 'Thường mở toàn bộ'], data: ['VQA', 'document / chart QA', 'grounding', 'hội thoại nhiều lượt', 'text-only SFT'] },
     { vit: ['train', 'Toàn bộ, context dài hơn'], proj: ['train', 'Train'], llm: ['train', 'Toàn bộ, context dài hơn'], data: ['video caption / QA', 'multi-image', 'PDF dài'] },
-    { vit: ['frozen', 'Thường đóng băng'], proj: ['part', 'Tài liệu không nêu riêng'], llm: ['train', 'Toàn bộ LLM'], data: ['preference pairs', 'bài có đáp án kiểm chứng'] },
+    { vit: ['frozen', 'Thường đóng băng'], proj: ['part', 'Thường train; có thể đóng băng nếu tái dùng từ stage trước'], llm: ['train', 'Toàn bộ LLM'], data: ['preference pairs', 'bài có đáp án kiểm chứng'] },
   ];
   const setBlk = (id, st) => { const b = el(id); b.className = 'blk st-' + st[0]; b.querySelector('.bs').textContent = st[1]; };
   TQ.stepper('#stages', [

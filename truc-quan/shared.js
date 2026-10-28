@@ -15,20 +15,27 @@
   };
 
   // Link chỉ chạy được khi mở trang từ máy (file://) hoặc server local cùng thư mục.
+  // Khi được nhúng thẳng vào tài liệu gốc: window.TQ_EMBED = { file: '<tên file tài liệu>' }
+  const EMB = window.TQ_EMBED || null;
   const h = location.hostname;
-  TQ.canLinkDocs = location.protocol === 'file:' || h === 'localhost' || h === '127.0.0.1' || h === '';
+  TQ.canLinkDocs = !!EMB || location.protocol === 'file:' || h === 'localhost' || h === '127.0.0.1' || h === '';
 
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   TQ.esc = esc;
 
-  TQ.docHref = (doc, anchor) => '../' + encodeURI(TQ.DOCS[doc].file) + (anchor ? '#' + anchor : '');
+  TQ.docHref = (doc, anchor) => {
+    const f = TQ.DOCS[doc].file;
+    if (EMB && f === EMB.file) return '#' + (anchor || '');
+    return (EMB ? '' : '../') + encodeURI(f) + (anchor ? '#' + anchor : '');
+  };
 
   TQ.docLink = (doc, anchor, label) => {
     const d = TQ.DOCS[doc];
     if (!d) return '';
     const text = esc(label || d.name);
     if (TQ.canLinkDocs) {
-      return `<a class="doc-link" href="${TQ.docHref(doc, anchor)}" target="_blank" rel="noopener" title="${esc(d.name)}">${text}</a>`;
+      const same = EMB && d.file === EMB.file;
+      return `<a class="doc-link" href="${TQ.docHref(doc, anchor)}"${same ? '' : ' target="_blank" rel="noopener"'} title="${esc(same ? 'Nhảy tới mục này' : d.name)}">${text}</a>`;
     }
     return `<span class="doc-link is-ref" title="Mở file ${esc(d.file)} trên máy để nhảy tới mục này">${text} · ${esc(d.name)}</span>`;
   };

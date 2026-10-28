@@ -292,12 +292,12 @@ KV tổng  = KV/token × Σ độ dài các request</div>
         <div class="chart-wrap" style="margin-top:12px"><svg id="bt-chart" viewBox="0 0 620 270" role="img" aria-label="Throughput và TPOT theo batch size"></svg></div>
         <div class="legend"><span><i style="background:var(--accent)"></i>Throughput (token/s, trục trái)</span><span><i style="background:var(--note)"></i>TPOT (ms, trục phải)</span><span><i style="background:var(--bad)"></i>SLO TPOT</span></div>
         <p style="margin:16px 0 0;font-size:13px;font-weight:600">Roofline: arithmetic intensity của linear layer khi decode ≈ B</p>
-        <div class="roof" id="bt-roof" style="--ridge:71%">
+        <div class="roof" id="bt-roof" style="--ridge:68.6%">
           <div class="track"></div><div class="ridge"></div>
           <div class="pt att" id="bt-att" title="attention decode, I ≈ g = 4"></div>
           <div class="pt" id="bt-pt"></div>
           <span class="t" style="left:0;transform:none">I = 1</span>
-          <span class="t" style="left:71%">ridge ≈ 295</span>
+          <span class="t" style="left:68.6%">ridge ≈ 295</span>
           <span class="t" style="right:0;left:auto;transform:none">4.000</span>
         </div>
         <div class="legend"><span><i style="background:var(--warn-bg);outline:1px solid var(--border)"></i>memory-bound</span><span><i style="background:var(--tip-bg);outline:1px solid var(--border)"></i>compute-bound</span><span><i style="background:var(--accent)"></i>linear layer, I ≈ B</span><span><i style="background:var(--note)"></i>attention decode, I ≈ g = 4 (không đổi theo B)</span></div>
@@ -534,7 +534,7 @@ speedup ≈ (1 − α^(γ+1)) / ((1 − α)(γ·c + 1))</div>
             <h3>Ít bit hơn = đọc ít byte hơn = decode nhanh hơn</h3>
             <p>Decode batch nhỏ bị giới hạn bởi băng thông: mỗi token phải đọc hết weights một lần. Giảm bit/weight là giảm số byte phải đọc.</p>
             <ul>
-              <li>"4-bit group 128" thực ra tốn ~4,25 bit/weight vì phải lưu thêm scale.</li>
+              <li>"4-bit group 128" thực ra tốn ~4,125–4,25 bit/weight vì phải lưu thêm scale (và zero-point nếu asymmetric).</li>
               <li>FP8 70 GB vừa 1 GPU 80 GB nhưng gần như không còn chỗ cho KV cache.</li>
               <li>Bit càng thấp, kernel dequantize càng phức tạp, nên tốc độ thật không tăng tuyến tính.</li>
             </ul>
@@ -738,7 +738,7 @@ KV/token = 2 × L × n_kv × d_head × bytes</div>
     const steps = [
       { title: 'Request vào hàng đợi', text: 'Request đến engine và chờ tới lượt. Thời gian chờ này đã tính vào TTFT.' },
       { title: 'Tokenize', text: 'Văn bản được cắt thành token. Model chỉ thấy dãy token id, không thấy chữ.' },
-      { title: 'Prefill: cả prompt trong một lần forward', text: 'Mọi token prompt tính song song, ghi K, V của cả 6 token vào KV cache. Đây là matmul ma trận × ma trận, arithmetic intensity I ≈ số token (prompt 2.000 token → I ≈ 2.000, lớn hơn ridge ≈ 295 của H100), nên <b>compute-bound</b>. Ví dụ: 8B, 2.000 token, H100 ở 50% MFU → ≈ 65 ms.' },
+      { title: 'Prefill: cả prompt trong một lần forward', text: 'Mọi token prompt tính song song, ghi K, V của cả 6 token vào KV cache. Đây là matmul ma trận × ma trận, arithmetic intensity I ≈ số token (prompt 2.000 token → I ≈ 2.000, lớn hơn ridge ≈ 295 của H100), nên prefill prompt dài là <b>compute-bound</b> (prompt 6 token ở đây quá ngắn để chạm ridge, chỉ để minh hoạ). Ví dụ: 8B, 2.000 token, H100 ở 50% MFU → ≈ 65 ms.' },
       { title: 'Sample token đầu → hết TTFT', text: 'Logits của vị trí cuối qua sampling (temperature, top-p…) cho token " Hà". Khoảng từ lúc gửi tới đây là <b>TTFT</b> = chờ hàng đợi + prefill.' },
       { title: 'Decode bước 1', text: 'Chỉ đưa 1 token mới " Hà" vào. Muốn có nó, GPU phải đọc <b>toàn bộ weights</b> + KV cache cũ từ HBM, chỉ để tính 1 token: I ≈ 1 FLOP/byte (batch 1), <b>memory-bound</b>. KV cache thêm 1 ô. Khoảng giữa hai token là <b>TPOT</b>.' },
       { title: 'Decode bước 2', text: 'Lặp lại: đưa " Nội" vào, đọc lại toàn bộ weights, sinh ".". Token t+1 phụ thuộc token t, nên không song song theo thời gian được. Trần lý thuyết 8B bf16 trên H100: 3,35 TB/s ÷ 16 GB ≈ 209 token/s ≈ 5 ms/token.' },
@@ -757,7 +757,7 @@ KV/token = 2 × L × n_kv × d_head × bytes</div>
       $('[data-r=kv]', root).innerHTML = n === 0 ? '<span class="muted">trống</span>'
         : Array.from({ length: i >= 8 ? 9 : n }, (_, k) => `<i class="${i >= 8 ? 'rel' : k >= 6 ? 'g' : ''}"></i>`).join('') +
           `<span class="lbl">${i >= 8 ? 'đã giải phóng' : n + ' token × 128 KiB (Llama-3-8B) = ' + f0(n * 128) + ' KiB'}</span>`;
-      $('[data-r=phase]', root).innerHTML = i === 3 ? '<span class="chip chip--note">PREFILL · compute-bound · I ≈ n</span>'
+      $('[data-r=phase]', root).innerHTML = i === 3 ? '<span class="chip chip--note">PREFILL · compute-bound (prompt dài) · I ≈ n</span>'
         : i >= 5 && i <= 7 ? '<span class="chip chip--accent">DECODE · memory-bound · I ≈ B = 1</span>'
         : i === 4 ? '<span class="chip chip--tip">SAMPLE token đầu</span>' : '<span class="muted">—</span>';
       const seg = [...$('[data-r=tl]', root).children];
@@ -792,7 +792,7 @@ KV/token = 2 × L × n_kv × d_head × bytes</div>
       el('kv-req').textContent = kib(req);
       el('kv-all').textContent = kib(all);
       el('kv-formula').textContent = `KV/token = 2 × ${L} × ${n} × ${d} × ${b} byte = ${f0(tok)} byte = ${kib(tok)}\nKV tổng  = ${kib(tok)} × ${f0(c)} token × ${B} request = ${kib(all)}`;
-      const gpu = 80e9, pct = all / gpu * 100;
+      const gpu = 80 * GiB, pct = all / gpu * 100;
       const fill = el('kv-bar-fill');
       fill.style.flexBasis = Math.min(100, pct) + '%';
       fill.style.background = pct > 100 ? 'var(--bad)' : 'var(--teal)';
@@ -855,7 +855,7 @@ KV/token = 2 × L × n_kv × d_head × bytes</div>
       $('#bt-verdict').textContent = kvNeed > kvAvail ? 'KV không đủ chỗ trên 1 GPU 80 GB'
         : growth < 1.5 ? 'Vùng "tăng batch gần như miễn phí"'
         : t <= slo ? 'Đang qua điểm gãy: TPOT tăng rõ nhưng còn trong SLO' : 'TPOT vượt SLO: goodput giảm';
-      // roofline: log scale 1..4000, ridge 295 → 71%
+      // roofline: log scale 1..4000, ridge 295 → 68.6%
       const pos = (I) => Math.min(100, (Math.log(I) / Math.log(4000)) * 100);
       $('#bt-roof').style.setProperty('--ridge', pos(295) + '%');
       $('#bt-pt').style.left = pos(B) + '%';
