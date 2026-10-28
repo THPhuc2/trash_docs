@@ -1,0 +1,1240 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Inference & Deploy trực quan</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="shared.css">
+<style>
+/* Trang Inference & Deploy: các hình chạy từng bước + máy tính nhỏ. Chỉ dùng token màu từ shared.css. */
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono)}
+.sp{display:grid;gap:14px}
+.rows{display:grid;grid-template-columns:118px minmax(0,1fr);gap:12px 14px;align-items:center}
+@media (max-width:560px){.rows{grid-template-columns:minmax(0,1fr);gap:4px 0}.rows .rowlab{margin-top:8px}}
+.rowlab{font-family:var(--mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.tokrow{display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-height:32px;min-width:0}
+.tok{font-family:var(--mono);font-size:12.5px;padding:3px 7px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);white-space:pre;line-height:1.5}
+.tok.p{background:var(--note-bg);border-color:var(--note);color:var(--note)}
+.tok.g{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.tok.ok{background:var(--tip-bg);border-color:var(--tip);color:var(--tip)}
+.tok.rej{background:var(--bad-bg);border-color:var(--bad);color:var(--bad);text-decoration:line-through}
+.tok.ghost{border-style:dashed;opacity:.55}
+.tok.new{animation:pop .45s ease-out}
+.tok sub{font-size:10px;opacity:.85;margin-left:3px}
+@keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+.kv{display:flex;flex-wrap:wrap;gap:3px;align-items:center}
+.kv i{width:20px;height:20px;border-radius:4px;background:var(--note);display:block}
+.kv i.g{background:var(--accent)}
+.kv i.rel{background:var(--surface-2);outline:1.5px dashed var(--border)}
+.kv .lbl{font-size:12.5px;color:var(--muted);margin-left:8px}
+.tl{position:relative;display:flex;height:30px;border-radius:7px;overflow:hidden;background:var(--surface-2);border:1px solid var(--border)}
+.tl>span{display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;color:var(--bg);white-space:nowrap;overflow:hidden;transition:opacity .3s;border-right:2px solid var(--surface)}
+.tl>span.off{opacity:.12}
+.tl .q{background:var(--khaki)} .tl .pf{background:var(--note)} .tl .dc{background:var(--accent)}
+.brk{position:relative;height:40px;margin-top:4px}
+.brk span{position:absolute;top:0;height:30px;border:1.5px solid var(--text);border-top:0;border-radius:0 0 6px 6px;font-size:11.5px;font-weight:700;display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px;transition:opacity .3s}
+.brk span.off{opacity:0}
+.brk .e2e{top:14px;height:26px;border-color:var(--muted);color:var(--muted)}
+.stairs{display:grid;gap:6px}
+.stairs .node{margin-left:calc(var(--i) * 3.2%);grid-template-columns:auto minmax(0,1fr) auto;align-items:center;column-gap:12px}
+@media (max-width:560px){.stairs .node{margin-left:calc(var(--i) * 1.4%)}}
+.stairs .num{font-family:var(--mono);font-weight:600;font-size:13px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2);border:1.5px solid var(--border)}
+.stairs .node.is-active .num{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.axis-note{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:6px}
+.stat{display:grid;gap:2px;min-width:0}
+.stat .lab{font-size:12px;color:var(--muted)}
+.stat .v{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;padding:12px 14px;background:var(--surface-2);border-radius:8px}
+.ok-t{color:var(--tip)} .bad-t{color:var(--bad)} .warn-t{color:var(--warn)}
+.roof{position:relative;height:46px;margin-top:6px}
+.roof .track{position:absolute;left:0;right:0;top:16px;height:12px;border-radius:6px;background:linear-gradient(90deg,var(--warn-bg) 0 var(--ridge),var(--tip-bg) var(--ridge) 100%);border:1px solid var(--border)}
+.roof .ridge{position:absolute;top:8px;height:28px;width:2px;background:var(--text);left:var(--ridge)}
+.roof .pt{position:absolute;top:13px;width:18px;height:18px;margin-left:-9px;border-radius:50%;background:var(--accent);border:3px solid var(--surface);box-shadow:0 0 0 1.5px var(--accent);transition:left .3s}
+.roof .pt.att{background:var(--note);box-shadow:0 0 0 1.5px var(--note)}
+.roof .t{position:absolute;top:32px;font-size:11px;color:var(--muted);transform:translateX(-50%);white-space:nowrap;font-family:var(--mono)}
+.lane-wrap{overflow-x:auto}
+.lane{display:grid;gap:2px;min-width:520px}
+.lane .h{font-size:11px;font-family:var(--mono);color:var(--muted);display:flex;align-items:center}
+.lane .c{height:26px;border-radius:4px;font-size:10.5px;font-weight:700;color:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity .25s}
+.lane .c.e{background:var(--surface-2)}
+.lane .c.pad{background:repeating-linear-gradient(45deg,var(--border) 0 3px,var(--surface-2) 3px 7px);color:var(--muted)}
+.lane .c.fut{opacity:.14}
+.lane .c.now{outline:2px solid var(--text);outline-offset:-1px}
+.lane .tn{font-size:10px;font-family:var(--mono);color:var(--muted);text-align:center}
+.lane .tn.now{color:var(--accent);font-weight:700}
+.lane-title{font-weight:700;font-size:13.5px;margin:12px 0 6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pool{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+@media (max-width:560px){.pool{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.blk{border:1.5px solid var(--border);border-radius:7px;padding:5px;min-height:62px;display:grid;gap:4px;align-content:start;background:var(--surface);position:relative;transition:background .3s,border-color .3s}
+.blk .id{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.blk .fill{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}
+.blk .fill b{height:8px;border-radius:2px;background:var(--surface-2)}
+.blk .own{display:flex;flex-wrap:wrap;gap:2px}
+.blk .own span{font-size:10px;font-weight:700;padding:0 4px;border-radius:4px;color:var(--bg)}
+.blk .rc{position:absolute;top:4px;right:5px;font-size:10px;font-weight:700;font-family:var(--mono);color:var(--accent)}
+.blk.cache{border-style:dashed;border-color:var(--tip)}
+.blk.hot{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent);border-color:var(--accent)}
+.btab{display:grid;gap:4px;font-family:var(--mono);font-size:12.5px;margin-top:10px}
+.btab div{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.btab .who{font-weight:700;min-width:30px}
+.btab .m{padding:1px 6px;border-radius:5px;background:var(--surface-2);border:1px solid var(--border)}
+.contig{display:grid;grid-template-columns:repeat(32,minmax(0,1fr));gap:2px;min-width:480px}
+.contig b{height:30px;border-radius:3px}
+.contig .u{background:var(--note)} .contig .u2{background:var(--ex)}
+.contig .r{background:repeating-linear-gradient(45deg,var(--warn) 0 2px,var(--warn-bg) 2px 6px)}
+.contig .f{background:var(--surface-2);outline:1px dashed var(--border)}
+.iters{display:flex;align-items:flex-end;gap:2px;height:150px;border-bottom:1.5px solid var(--border);overflow-x:auto;padding-top:6px}
+.iters .it{flex:none;display:flex;flex-direction:column-reverse;width:16px;border-radius:3px 3px 0 0;overflow:hidden}
+.iters .it .d{background:var(--accent)} .iters .it .pf{background:var(--note)}
+.spdbars{display:flex;align-items:flex-end;gap:6px;height:130px;border-bottom:1.5px solid var(--border);padding-top:16px}
+.spdbars .sb{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;min-width:0;height:100%}
+.spdbars .sb i{display:block;width:100%;border-radius:4px 4px 0 0;background:var(--note-bg);border:1.5px solid var(--note);border-bottom:0;transition:height .3s}
+.spdbars .sb.best i{background:var(--accent);border-color:var(--accent)}
+.spdbars .sb.cur i{outline:2px solid var(--text);outline-offset:1px}
+.spdbars .sb span{font-size:10.5px;font-family:var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.spdx{display:flex;gap:6px;font-size:10.5px;font-family:var(--mono);color:var(--muted)}
+.spdx span{flex:1;text-align:center}
+.pq{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:4px}
+.pq div{font-family:var(--mono);font-size:11.5px;text-align:center;background:var(--surface-2);border-radius:6px;padding:4px 2px;transition:opacity .3s}
+.pq div.off{opacity:.15}
+.grid-q{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));gap:2px;max-width:520px}
+.grid-q b{aspect-ratio:1;border-radius:2px;display:grid;place-items:center;font-size:9px;color:var(--bg);font-weight:700}
+.mem70 .row{display:grid;grid-template-columns:118px minmax(0,1fr);gap:10px;align-items:center;margin-bottom:8px}
+@media (max-width:560px){.mem70 .row{grid-template-columns:minmax(0,1fr);gap:2px}}
+.mem70 .lbar{position:relative;height:28px;background:var(--surface-2);border-radius:6px}
+.mem70 .lbar i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:var(--note);transition:background .3s}
+.mem70 .lbar i.fit{background:var(--tip)}
+.mem70 .lbar i.no{background:var(--bad)}
+.mem70 .lbar em{position:absolute;left:8px;top:0;bottom:0;display:flex;align-items:center;font-style:normal;font-size:12px;font-weight:700;color:var(--bg);white-space:nowrap}
+.mem70 .lbar .cap{position:absolute;top:-4px;bottom:-4px;width:0;border-left:2px dashed var(--text)}
+.mem70 .lbar .sp2{position:absolute;right:8px;top:0;bottom:0;display:flex;align-items:center;font-size:12px;font-family:var(--mono);color:var(--muted)}
+.groups{display:grid;gap:12px}
+.groups .gt{font-family:var(--mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.groups .gr{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.check{display:grid;gap:6px}
+.check label{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;align-items:start;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:14px}
+.check label:hover{border-color:var(--accent)}
+.check input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--tip)}
+.check label.done{background:var(--tip-bg);border-color:var(--tip)}
+.check label.done span{color:var(--muted)}
+.progress{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin:6px 0 12px}
+.progress i{display:block;height:100%;background:var(--tip);transition:width .3s}
+.diag{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;align-items:center}
+@media (max-width:640px){.diag{grid-template-columns:minmax(0,1fr)}.diag .arrow{transform:rotate(90deg);justify-self:center}}
+.legend i.hatch{background:repeating-linear-gradient(45deg,var(--border) 0 2px,var(--surface-2) 2px 5px)}
+.legend i.hatch2{background:repeating-linear-gradient(45deg,var(--warn) 0 2px,var(--warn-bg) 2px 5px)}
+.chart-wrap{overflow-x:auto}
+.chart-wrap svg{min-width:460px;width:100%;height:auto}
+svg .ax{stroke:var(--border);stroke-width:1}
+svg .grid{stroke:var(--border);stroke-width:1;stroke-dasharray:2 4}
+svg .lt{font-size:11px;fill:var(--muted);font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="crumb" href="index.html">← Bản đồ trực quan</a>
+    <h1>Inference & Deploy, nhìn bằng mắt</h1>
+    <p class="lead">Một request đi qua model thế nào, vì sao decode chậm, KV cache ăn bao nhiêu bộ nhớ, engine xếp lịch ra sao, và chọn quantize hay nén thế nào khi deploy. Mỗi hình đều bấm được: chạy từng bước, kéo thanh trượt, hoặc bấm vào khối để xem giải thích.</p>
+    <div class="doc-row" data-doclinks="inference"></div>
+  </header>
+
+  <nav class="jump" aria-label="Các hình">
+    <a href="#f-ladder">Lộ trình</a>
+    <a href="#f-journey">1 request</a>
+    <a href="#f-kv">KV cache</a>
+    <a href="#f-batch">Batch & roofline</a>
+    <a href="#f-cb">Continuous batching</a>
+    <a href="#f-paged">PagedAttention</a>
+    <a href="#f-chunk">Chunked / tách pha</a>
+    <a href="#f-spec">Speculative</a>
+    <a href="#f-quant">Quantization</a>
+    <a href="#f-compress">Nén model</a>
+    <a href="#f-size">Sizing & chi phí</a>
+    <a href="#f-check">Checklist</a>
+  </nav>
+
+  <!-- HÌNH 1 -->
+  <section class="viz" id="f-ladder">
+    <div class="viz-head">
+      <span class="fig">Hình 1 · Bản đồ</span>
+      <h2>Tối ưu theo thứ tự: rẻ trước, đắt sau</h2>
+      <p class="sub">Các kỹ thuật trong tài liệu không độc lập. Bậc càng thấp càng tốn công. Đi từ trên xuống, chỉ xuống bậc sau khi bậc trên chưa đủ.</p>
+      <span class="hint">Bấm vào từng bậc để xem làm gì, khi nào đáng làm, rồi nhảy tới hình liên quan</span>
+    </div>
+    <div class="viz-grid">
+      <div class="canvas">
+        <div class="axis-note"><span>rẻ, gần như luôn làm</span><span>đắt, chỉ khi quy mô lớn ↓</span></div>
+        <div class="stairs" id="ladder"></div>
+      </div>
+      <aside class="panel" data-panel></aside>
+    </div>
+  </section>
+
+  <!-- HÌNH 2 -->
+  <section class="viz" id="f-journey">
+    <div class="viz-head">
+      <span class="fig">Hình 2 · Chạy từng bước</span>
+      <h2>Hành trình của một request: prefill một lần, decode từng token</h2>
+      <p class="sub">Ví dụ nhỏ 6 token prompt. Theo dõi KV cache dài ra mỗi bước, pha nào bị giới hạn bởi compute, pha nào bởi băng thông bộ nhớ, và TTFT / TPOT / E2E nằm ở đâu trên trục thời gian.</p>
+      <span class="hint">Bấm "Tiếp ▶" (hoặc "Tự chạy") để đi qua 8 bước</span>
+    </div>
+    <div class="canvas" id="journey">
+      <div data-stepbar></div>
+      <div class="rows">
+        <div class="rowlab">Văn bản</div><div class="tokrow" data-r="text"></div>
+        <div class="rowlab">Token</div><div class="tokrow" data-r="tok"></div>
+        <div class="rowlab">KV cache</div><div class="kv" data-r="kv"></div>
+        <div class="rowlab">Pha</div><div class="tokrow" data-r="phase"></div>
+        <div class="rowlab">Thời gian</div>
+        <div style="min-width:0">
+          <div class="tl" data-r="tl">
+            <span class="q" style="flex-basis:12%">chờ</span>
+            <span class="pf" style="flex-basis:25%">prefill</span>
+            <span class="dc" style="flex-basis:21%">decode</span>
+            <span class="dc" style="flex-basis:21%">decode</span>
+            <span class="dc" style="flex-basis:21%">decode</span>
+          </div>
+          <div class="brk" data-r="brk">
+            <span style="left:0;width:37%">TTFT</span>
+            <span style="left:37%;width:21%">TPOT</span>
+            <span class="e2e" style="left:0;width:100%">E2E = TTFT + (n_out − 1) × TPOT</span>
+          </div>
+        </div>
+      </div>
+      <div class="caption" data-caption></div>
+      <div class="doc-links" id="journey-docs"></div>
+    </div>
+  </section>
+
+  <!-- HÌNH 3 -->
+  <section class="viz" id="f-kv">
+    <div class="viz-head">
+      <span class="fig">Hình 3 · Máy tính</span>
+      <h2>KV cache lớn cỡ nào?</h2>
+      <p class="sub">Mỗi token trong mỗi request giữ lại K và V ở mọi layer. Chọn model, độ dài context và số request chạy cùng lúc để thấy KV cache phình ra so với một GPU 80 GB.</p>
+      <span class="hint">Chọn model mẫu hoặc tự nhập số; kéo context và batch</span>
+    </div>
+    <div class="viz-grid">
+      <div class="canvas">
+        <div class="controls">
+          <div class="ctl"><label for="kv-preset">Model</label>
+            <select id="kv-preset">
+              <option value="8b">Llama-3-8B (GQA, 32 layer, 8 KV head)</option>
+              <option value="70b">Llama-3-70B (GQA, 80 layer, 8 KV head)</option>
+              <option value="mha">8B nếu dùng MHA (32 KV head)</option>
+              <option value="custom">Tự nhập</option>
+            </select></div>
+          <div class="ctl"><label for="kv-L">Số layer L</label><input id="kv-L" type="number" min="1" max="200" value="32"></div>
+          <div class="ctl"><label for="kv-n">Số KV head n<sub>kv</sub></label><input id="kv-n" type="number" min="1" max="128" value="8"></div>
+          <div class="ctl"><label for="kv-d">Head dim d<sub>h</sub></label><input id="kv-d" type="number" min="16" max="512" value="128"></div>
+          <div class="ctl"><label for="kv-b">Kiểu lưu KV</label>
+            <select id="kv-b"><option value="2">bf16 (2 byte)</option><option value="1">fp8 (1 byte)</option><option value="0.5">4-bit (0,5 byte)</option></select></div>
+          <div class="ctl"><label for="kv-c">Context mỗi request <output id="kv-c-o"></output></label><input id="kv-c" type="range" min="0" max="6" value="2"></div>
+          <div class="ctl"><label for="kv-B">Số request cùng lúc <output id="kv-B-o"></output></label><input id="kv-B" type="range" min="0" max="8" value="0"></div>
+        </div>
+        <div class="formula" id="kv-formula"></div>
+        <div class="stats" style="margin-top:12px">
+          <div class="stat"><span class="lab">KV / token</span><span class="v" id="kv-tok"></span></div>
+          <div class="stat"><span class="lab">1 request</span><span class="v" id="kv-req"></span></div>
+          <div class="stat"><span class="lab">Tổng cả batch</span><span class="v" id="kv-all"></span></div>
+        </div>
+        <p style="margin:14px 0 6px;font-size:13px;font-weight:600">So với một GPU 80 GB</p>
+        <div class="bar" id="kv-bar"><span id="kv-bar-fill" style="background:var(--teal)"></span></div>
+        <p class="muted" style="font-size:12.5px;margin-top:6px" id="kv-note"></p>
+      </div>
+      <aside class="panel">
+        <div class="p-eyebrow">Đọc hình</div>
+        <h3>Vì sao chỉ cache K và V?</h3>
+        <p>Query của token t chỉ dùng đúng một lần ở bước t. Còn K, V của mọi token cũ được mọi token sau đọc lại, và nhờ causal mask chúng không bao giờ đổi. Vì vậy chỉ K, V đáng giữ lại.</p>
+        <div class="formula">KV/token = 2 × L × n_kv × d_h × b
+KV tổng  = KV/token × Σ độ dài các request</div>
+        <ul>
+          <li>Thừa số 2: một cho K, một cho V.</li>
+          <li>GQA giảm n<sub>kv</sub> → KV nhỏ đi 4 lần so với MHA ở cùng model (thử chọn "8B nếu dùng MHA").</li>
+          <li>Bộ nhớ còn trống sau weights quyết định số request chạy cùng lúc:</li>
+        </ul>
+        <div class="formula">B_max ≈ (Mem_GPU − weights − act) / (KV/token × c_tb)</div>
+        <div class="callout callout--warn">MLA (DeepSeek) không dùng công thức này: KV/token = L × (d_c + d_h^R) × bytes. Luôn đọc config.json của model.</div>
+        <div class="doc-links" id="kv-docs"></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- HÌNH 4 -->
+  <section class="viz" id="f-batch">
+    <div class="viz-head">
+      <span class="fig">Hình 4 · Kéo thanh trượt</span>
+      <h2>Tăng batch: throughput lên, TPOT cũng lên</h2>
+      <p class="sub">Model 8B bf16 trên H100 (băng thông 3,35 TB/s). Mỗi bước decode phải đọc hết 16 GB weights một lần, rồi đọc thêm KV của từng request. Đây là ước lượng trần lý thuyết theo công thức trong tài liệu, không phải số đo.</p>
+      <span class="hint">Kéo "Batch B", đổi context và SLO; xem điểm tròn chạy trên hai đường cong</span>
+    </div>
+    <div class="viz-grid">
+      <div class="canvas">
+        <div class="controls">
+          <div class="ctl"><label for="bt-B">Batch B <output id="bt-B-o"></output></label><input id="bt-B" type="range" min="0" max="9" value="5"></div>
+          <div class="ctl"><label for="bt-c">Context mỗi request</label>
+            <select id="bt-c"><option value="1024">1K</option><option value="4096" selected>4K</option><option value="8192">8K</option><option value="32768">32K</option></select></div>
+          <div class="ctl"><label for="bt-slo">SLO TPOT</label>
+            <select id="bt-slo"><option value="20">20 ms</option><option value="50" selected>50 ms</option><option value="100">100 ms</option></select></div>
+        </div>
+        <div class="stats">
+          <div class="stat"><span class="lab">TPOT (1 bước decode)</span><span class="v" id="bt-tpot"></span></div>
+          <div class="stat"><span class="lab">Throughput tổng</span><span class="v" id="bt-thr"></span></div>
+          <div class="stat"><span class="lab">KV cần cho batch</span><span class="v" id="bt-kv"></span></div>
+          <div class="stat"><span class="lab">B lớn nhất đạt SLO</span><span class="v" id="bt-max"></span></div>
+        </div>
+        <div class="chart-wrap" style="margin-top:12px"><svg id="bt-chart" viewBox="0 0 620 270" role="img" aria-label="Throughput và TPOT theo batch size"></svg></div>
+        <div class="legend"><span><i style="background:var(--accent)"></i>Throughput (token/s, trục trái)</span><span><i style="background:var(--note)"></i>TPOT (ms, trục phải)</span><span><i style="background:var(--bad)"></i>SLO TPOT</span></div>
+        <p style="margin:16px 0 0;font-size:13px;font-weight:600">Roofline: arithmetic intensity của linear layer khi decode ≈ B</p>
+        <div class="roof" id="bt-roof" style="--ridge:71%">
+          <div class="track"></div><div class="ridge"></div>
+          <div class="pt att" id="bt-att" title="attention decode, I ≈ g = 4"></div>
+          <div class="pt" id="bt-pt"></div>
+          <span class="t" style="left:0;transform:none">I = 1</span>
+          <span class="t" style="left:71%">ridge ≈ 295</span>
+          <span class="t" style="right:0;left:auto;transform:none">4.000</span>
+        </div>
+        <div class="legend"><span><i style="background:var(--warn-bg);outline:1px solid var(--border)"></i>memory-bound</span><span><i style="background:var(--tip-bg);outline:1px solid var(--border)"></i>compute-bound</span><span><i style="background:var(--accent)"></i>linear layer, I ≈ B</span><span><i style="background:var(--note)"></i>attention decode, I ≈ g = 4 (không đổi theo B)</span></div>
+      </div>
+      <aside class="panel">
+        <div class="p-eyebrow">Công thức</div>
+        <h3 id="bt-verdict">Vùng "tăng batch gần như miễn phí"</h3>
+        <div class="formula">t_step(B) ≈ max( t_w + B × t_kv ,  2·P·B / peak )
+throughput = B / t_step</div>
+        <ul>
+          <li><span class="k">t_w</span> = 16 GB / 3,35 TB/s ≈ 4,8 ms: thời gian đọc weights, trả một lần cho cả batch.</li>
+          <li><span class="k">t_kv</span>: đọc KV của một request (4K context ≈ 0,5 GiB ≈ 0,16 ms).</li>
+          <li>B nhỏ: t_step gần như không đổi → throughput tăng gần tuyến tính, TPOT giữ nguyên.</li>
+          <li>B lớn: phần đọc KV chiếm ưu thế → TPOT tăng, throughput bão hoà. Giảm KV (GQA, FP8 KV) lại tăng được throughput.</li>
+        </ul>
+        <div class="callout callout--note"><b>Goodput</b> = số request/s đạt SLO. Tăng B làm throughput tăng, nhưng khi TPOT vượt SLO thì goodput giảm. Điểm vận hành tốt nằm ngay trước chỗ gãy.</div>
+        <p class="muted" style="font-size:13px">Người đọc nhanh cỡ 7–15 token/s, nên TPOT 30–50 ms đã nhanh hơn tốc độ đọc. Với agent / reasoning sinh rất nhiều token thì TPOT đáng tối ưu hơn.</p>
+        <div class="doc-links" id="bt-docs"></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- HÌNH 5 -->
+  <section class="viz" id="f-cb">
+    <div class="viz-head">
+      <span class="fig">Hình 5 · Chạy từng bước</span>
+      <h2>Static batching và continuous batching</h2>
+      <p class="sub">4 slot, 8 request có độ dài khác nhau (R1 = 3 token, R2 = 8, …). Static phải chờ request dài nhất xong mới nhận lô mới. Continuous nạp request mới ngay ở bước decode kế tiếp khi có slot trống.</p>
+      <span class="hint">Bấm "Tiếp ▶" để đi từng bước decode; ô gạch chéo là slot chạy padding (phí GPU)</span>
+    </div>
+    <div class="canvas" id="cb">
+      <div data-stepbar></div>
+      <div class="lane-wrap">
+        <div class="lane-title">Static batching <span class="chip chip--bad" id="cb-s-sum"></span></div>
+        <div class="lane" id="cb-static"></div>
+        <div class="lane-title">Continuous batching <span class="chip chip--tip" id="cb-c-sum"></span></div>
+        <div class="lane" id="cb-cont"></div>
+      </div>
+      <div class="legend"><span><i class="hatch"></i>padding: slot giữ chỗ nhưng không sinh gì</span><span><i style="background:var(--surface-2);outline:1px solid var(--border)"></i>slot trống</span><span>chữ R5 = request bắt đầu ở bước đó</span></div>
+      <div class="caption" data-caption></div>
+      <div class="doc-links" id="cb-docs"></div>
+    </div>
+  </section>
+
+  <!-- HÌNH 6 -->
+  <section class="viz" id="f-paged">
+    <div class="viz-head">
+      <span class="fig">Hình 6 · Chạy từng bước</span>
+      <h2>PagedAttention và prefix caching: KV cache như bộ nhớ ảo</h2>
+      <p class="sub">Pool KV chia thành block cố định. Mỗi request có một bảng block (giống page table) trỏ tới block vật lý bất kỳ. Hình minh hoạ dùng block 4 token cho dễ nhìn; thực tế thường 16 token.</p>
+      <span class="hint">Bấm "Tiếp ▶": từ cấp phát liền khối kiểu cũ → block theo nhu cầu → chia sẻ → copy-on-write → prefix cache</span>
+    </div>
+    <div class="canvas" id="paged">
+      <div data-stepbar></div>
+      <div id="paged-view"></div>
+      <div class="caption" data-caption></div>
+      <div class="doc-links" id="paged-docs"></div>
+    </div>
+  </section>
+
+  <!-- HÌNH 7 -->
+  <section class="viz" id="f-chunk">
+    <div class="viz-head">
+      <span class="fig">Hình 7 · Kéo thanh trượt + bấm khối</span>
+      <h2>Prompt dài chen vào: chunked prefill hay tách hẳn prefill / decode</h2>
+      <p class="sub">32 người đang decode thì một request mới mang 8.000 token prompt tới. Không chia nhỏ, cả bước forward đó bị prefill chiếm, mọi người đang decode bị "giật".</p>
+      <span class="hint">Tab 1: kéo kích thước chunk. Tab 2: bấm từng khối của hệ thống tách pha</span>
+    </div>
+    <div id="chunk-tabs">
+      <div class="tabs" role="tablist">
+        <button data-tab="chunk" role="tab">Chunked prefill</button>
+        <button data-tab="disagg" role="tab">Tách prefill / decode</button>
+      </div>
+      <div data-pane="chunk">
+        <div class="viz-grid">
+          <div class="canvas">
+            <div class="controls">
+              <div class="ctl"><label for="ck-size">Kích thước chunk <output id="ck-size-o"></output></label><input id="ck-size" type="range" min="0" max="4" value="1"></div>
+            </div>
+            <div class="iters" id="ck-iters" aria-label="Chiều cao cột = thời gian mỗi iteration"></div>
+            <div class="legend"><span><i style="background:var(--accent)"></i>token decode của 32 người đang chat (1 token/người)</span><span><i style="background:var(--note)"></i>token prefill của request mới</span><span>mỗi cột = 1 iteration, cao = thời gian (đơn vị tương đối, hình minh hoạ)</span></div>
+            <div class="stats" style="margin-top:12px">
+              <div class="stat"><span class="lab">ITL lớn nhất (người đang chat)</span><span class="v" id="ck-itl"></span></div>
+              <div class="stat"><span class="lab">TTFT của request mới</span><span class="v" id="ck-ttft"></span></div>
+              <div class="stat"><span class="lab">Số iteration để prefill xong</span><span class="v" id="ck-n"></span></div>
+            </div>
+          </div>
+          <aside class="panel">
+            <div class="p-eyebrow">Cơ chế</div>
+            <h3>Cắt prefill thành chunk, cho decode "đi nhờ"</h3>
+            <div class="formula">token / iteration = c_chunk + B_decode ≤ token budget</div>
+            <ul>
+              <li><span class="k">Generation stall</span>: một bước prefill 8.000 token làm mọi người đang decode chờ.</li>
+              <li><span class="k">Chunked prefill</span> (Sarathi): mỗi iteration chỉ xử lý một chunk, ví dụ 512 token.</li>
+              <li><span class="k">Piggybacking</span>: weights đã đọc cho chunk prefill được dùng luôn cho token decode, nên decode gần như miễn phí.</li>
+            </ul>
+            <div class="callout callout--warn">Đánh đổi: chunk nhỏ → ITL đều hơn, nhưng TTFT của request mới tăng nhẹ (prefill chia nhiều bước, phải đọc lại KV các chunk trước). vLLM và SGLang bật chunked prefill mặc định ở nhiều cấu hình.</div>
+            <div class="doc-links" id="ck-docs"></div>
+          </aside>
+        </div>
+      </div>
+      <div data-pane="disagg" hidden>
+        <div class="viz-grid" id="dis">
+          <div class="canvas">
+            <div class="diag">
+              <button class="node" data-k="req"><span class="n-tag">vào</span><span class="n-t">Request</span><span class="n-s">prompt dài (RAG, agent, code)</span></button>
+              <span class="arrow">→</span>
+              <button class="node" data-k="pf"><span class="n-tag">compute</span><span class="n-t">Prefill instance</span><span class="n-s">TP lớn → TTFT thấp</span></button>
+              <span class="arrow">→</span>
+              <button class="node" data-k="xfer"><span class="n-tag">mạng</span><span class="n-t">Chuyển KV cache</span><span class="n-s">NVLink / RDMA</span></button>
+            </div>
+            <div class="diag" style="margin-top:8px">
+              <span></span><span></span>
+              <button class="node" data-k="dec"><span class="n-tag">bộ nhớ</span><span class="n-t">Decode instance</span><span class="n-s">batch lớn → TPOT ổn định</span></button>
+              <span class="arrow">→</span>
+              <button class="node" data-k="out"><span class="n-tag">ra</span><span class="n-t">Stream token</span><span class="n-s">đo bằng goodput</span></button>
+            </div>
+            <div class="flow" style="margin-top:16px">
+              <button class="node dashed" data-k="distserve"><span class="n-t">DistServe</span><span class="n-s">tối ưu goodput theo SLO</span></button>
+              <button class="node dashed" data-k="splitwise"><span class="n-t">Splitwise</span><span class="n-s">hai pha, hai loại máy</span></button>
+              <button class="node dashed" data-k="mooncake"><span class="n-t">Mooncake</span><span class="n-s">KV cache làm trung tâm</span></button>
+              <button class="node dashed" data-k="when"><span class="n-t">Khi nào đáng tách?</span><span class="n-s">và khi nào không</span></button>
+            </div>
+          </div>
+          <aside class="panel" data-panel></aside>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HÌNH 8 -->
+  <section class="viz" id="f-spec">
+    <div class="viz-head">
+      <span class="fig">Hình 8 · Chạy từng bước + máy tính</span>
+      <h2>Speculative decoding: model nhỏ đoán, model lớn chấm</h2>
+      <p class="sub">Draft model sinh γ = 4 token nháp. Target chạy một forward duy nhất để có γ + 1 phân phối cùng lúc, rồi duyệt từng token. Output vẫn đúng phân phối của target; draft tệ chỉ làm chậm, không làm sai.</p>
+      <span class="hint">Bấm "Tiếp ▶" để xem một vòng draft → verify → accept / reject</span>
+    </div>
+    <div class="canvas" id="spec">
+      <div data-stepbar></div>
+      <div class="rows">
+        <div class="rowlab">Đã có</div><div class="tokrow" data-r="pre"></div>
+        <div class="rowlab">Nháp (draft)</div><div style="min-width:0"><div class="tokrow" data-r="draft"></div><div class="pq" data-r="q"></div></div>
+        <div class="rowlab">Target chấm</div><div style="min-width:0"><div class="pq" data-r="p"></div></div>
+        <div class="rowlab">Kết quả</div><div class="tokrow" data-r="out"></div>
+      </div>
+      <div class="caption" data-caption></div>
+    </div>
+    <div class="viz-grid" id="spec2" style="margin-top:16px">
+      <div class="canvas">
+        <p style="font-weight:700;margin-bottom:10px">Tăng tốc kỳ vọng</p>
+        <div class="controls">
+          <div class="ctl"><label for="sp-a">Acceptance rate α <output id="sp-a-o"></output></label><input id="sp-a" type="range" min="30" max="95" value="80"></div>
+          <div class="ctl"><label for="sp-g">Số token nháp γ <output id="sp-g-o"></output></label><input id="sp-g" type="range" min="1" max="10" value="4"></div>
+          <div class="ctl"><label for="sp-c">Chi phí draft / target c <output id="sp-c-o"></output></label><input id="sp-c" type="range" min="1" max="30" value="5"></div>
+        </div>
+        <div class="formula">tokens/vòng = (1 − α^(γ+1)) / (1 − α)        chi phí/vòng ≈ γ·c + 1
+speedup ≈ (1 − α^(γ+1)) / ((1 − α)(γ·c + 1))</div>
+        <div class="stats" style="margin-top:12px">
+          <div class="stat"><span class="lab">Token / vòng</span><span class="v" id="sp-t"></span></div>
+          <div class="stat"><span class="lab">Chi phí / vòng</span><span class="v" id="sp-cost"></span></div>
+          <div class="stat"><span class="lab">Speedup</span><span class="v" id="sp-s"></span></div>
+        </div>
+        <p style="margin:14px 0 4px;font-size:13px;font-weight:600">Speedup theo γ (cùng α, c). Cột cam = γ tốt nhất</p>
+        <div class="spdbars" id="sp-bars"></div>
+        <div class="spdx" id="sp-x"></div>
+        <p style="margin:16px 0 8px;font-size:13px;font-weight:600">Các cách tạo bản nháp — bấm để xem</p>
+        <div class="flow">
+          <button class="node" data-k="draft"><span class="n-t">Draft model riêng</span><span class="n-s">model nhỏ cùng họ</span></button>
+          <button class="node" data-k="medusa"><span class="n-t">Medusa</span><span class="n-s">nhiều head trên target</span></button>
+          <button class="node" data-k="eagle"><span class="n-t">EAGLE-2/3</span><span class="n-s">draft ở mức feature</span></button>
+          <button class="node" data-k="mtp"><span class="n-t">MTP head</span><span class="n-s">DeepSeek-V3</span></button>
+          <button class="node" data-k="ngram"><span class="n-t">Prompt lookup / n-gram</span><span class="n-s">không cần model</span></button>
+          <button class="node" data-k="spec-no"><span class="n-t">Khi nào không có lợi</span><span class="n-s">batch lớn, α thấp…</span></button>
+        </div>
+      </div>
+      <aside class="panel" data-panel></aside>
+    </div>
+  </section>
+
+  <!-- HÌNH 9 -->
+  <section class="viz" id="f-quant">
+    <div class="viz-head">
+      <span class="fig">Hình 9 · Bấm chọn</span>
+      <h2>Quantization: chọn scheme theo nút thắt, nhìn bộ nhớ, hiểu "group"</h2>
+      <p class="sub">Câu hỏi then chốt: lúc chạy bạn bị giới hạn bởi băng thông bộ nhớ hay compute? Weight-only giúp decode batch nhỏ; weight-activation (FP8) giúp serving batch lớn.</p>
+      <span class="hint">Chọn tab, rồi bấm tình huống / chọn GPU / chọn kiểu granularity</span>
+    </div>
+    <div id="quant-tabs">
+      <div class="tabs" role="tablist">
+        <button data-tab="pick" role="tab">Chọn theo tình huống</button>
+        <button data-tab="mem" role="tab">Model 70B nặng bao nhiêu</button>
+        <button data-tab="gran" role="tab">Granularity và outlier</button>
+      </div>
+      <div data-pane="pick">
+        <div class="viz-grid" id="qpick">
+          <div class="canvas">
+            <div class="groups">
+              <div><div class="gt">Băng thông bộ nhớ là nút thắt</div>
+                <div class="gr">
+                  <button class="node" data-k="local"><span class="n-t">Chạy local, chat 1 người</span><span class="n-s">batch 1–4</span></button>
+                  <button class="node" data-k="longctx"><span class="n-t">Context rất dài / nhiều user</span><span class="n-s">KV cache vượt cả weights</span></button>
+                  <button class="node" data-k="moe"><span class="n-t">MoE lớn</span><span class="n-s">DeepSeek-V3, gpt-oss…</span></button>
+                </div></div>
+              <div><div class="gt">Compute là nút thắt</div>
+                <div class="gr">
+                  <button class="node" data-k="h100"><span class="n-t">Server batch lớn, H100/H200</span><span class="n-s">Hopper có FP8</span></button>
+                  <button class="node" data-k="a100"><span class="n-t">Server trên A100</span><span class="n-s">không có FP8</span></button>
+                  <button class="node" data-k="bw"><span class="n-t">Blackwell B200/GB200</span><span class="n-s">FP4 native</span></button>
+                </div></div>
+              <div><div class="gt">Ký hiệu WxAy</div>
+                <div class="gr">
+                  <button class="node dashed" data-k="w4a16"><span class="n-t">W4A16 / W8A16</span><span class="n-s">weight-only</span></button>
+                  <button class="node dashed" data-k="w8a8"><span class="n-t">W8A8 (INT8 / FP8)</span><span class="n-s">weight + activation</span></button>
+                  <button class="node dashed" data-k="fp4"><span class="n-t">MXFP4 / NVFP4</span><span class="n-s">4-bit số thực, scale theo block</span></button>
+                </div></div>
+            </div>
+          </div>
+          <aside class="panel" data-panel></aside>
+        </div>
+      </div>
+      <div data-pane="mem" hidden>
+        <div class="viz-grid">
+          <div class="canvas mem70">
+            <div class="controls">
+              <div class="ctl"><label for="q-gpu">Bộ nhớ GPU bạn có</label>
+                <select id="q-gpu"><option value="24">1 × 24 GB</option><option value="48">1 × 48 GB</option><option value="80" selected>1 × 80 GB</option><option value="160">2 × 80 GB</option></select></div>
+            </div>
+            <div id="q-rows"></div>
+            <p class="muted" style="font-size:12.5px">Vạch đứt = bộ nhớ GPU đã chọn. Chỉ tính weights, chưa tính KV cache, activation, overhead. Cột phải: trần decode batch 1 trên H100 (3,35 TB/s ÷ bytes), lý thuyết.</p>
+          </div>
+          <aside class="panel">
+            <div class="p-eyebrow">Đọc bảng</div>
+            <h3>Ít bit hơn = đọc ít byte hơn = decode nhanh hơn</h3>
+            <p>Decode batch nhỏ bị giới hạn bởi băng thông: mỗi token phải đọc hết weights một lần. Giảm bit/weight là giảm số byte phải đọc.</p>
+            <ul>
+              <li>"4-bit group 128" thực ra tốn ~4,25 bit/weight vì phải lưu thêm scale.</li>
+              <li>FP8 70 GB vừa 1 GPU 80 GB nhưng gần như không còn chỗ cho KV cache.</li>
+              <li>Bit càng thấp, kernel dequantize càng phức tạp, nên tốc độ thật không tăng tuyến tính.</li>
+            </ul>
+            <div class="doc-links" id="q-mem-docs"></div>
+          </aside>
+        </div>
+      </div>
+      <div data-pane="gran" hidden>
+        <div class="viz-grid">
+          <div class="canvas">
+            <div class="tabs" id="gran-btns">
+              <button class="btn" data-g="tensor">Per-tensor</button>
+              <button class="btn" data-g="channel">Per-channel</button>
+              <button class="btn" data-g="group">Per-group</button>
+              <button class="btn" data-g="micro">Micro-block (MX / NVFP4)</button>
+            </div>
+            <div class="grid-q" id="gran-grid" aria-label="Ma trận weight, mỗi màu là một nhóm dùng chung scale"></div>
+            <p class="muted" style="font-size:12.5px;margin-top:8px">Ma trận thu nhỏ 8 × 16. Mỗi màu = một nhóm dùng chung một scale. Ô có dấu ! là outlier; các ô viền đỏ dùng chung scale với nó nên bị "kéo giãn", mất độ chính xác.</p>
+          </div>
+          <aside class="panel" id="gran-panel"></aside>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HÌNH 10 -->
+  <section class="viz" id="f-compress">
+    <div class="viz-head">
+      <span class="fig">Hình 10 · Bấm chọn</span>
+      <h2>Nên quantize, prune, distill hay train model nhỏ?</h2>
+      <p class="sub">Thứ tự thực dụng: FP8/INT8 trước (gần như miễn phí) → 4-bit nếu thiếu bộ nhớ → vẫn chậm hoặc đắt thì chuyển sang model nhỏ hơn bằng prune + distill. Các cách cộng dồn được: model Minitron vẫn quantize 4-bit khi deploy.</p>
+      <span class="hint">Bấm từng cách để xem chi phí, mức giảm bộ nhớ, tăng tốc thật và rủi ro</span>
+    </div>
+    <div class="viz-grid" id="comp">
+      <div class="canvas">
+        <div class="groups">
+          <div><div class="gt">1 · Nén số (quantization)</div>
+            <div class="flow">
+              <button class="node" data-k="ptq8"><span class="n-t">PTQ 8-bit</span><span class="n-s">FP8 / INT8</span></button><span class="arrow">→</span>
+              <button class="node" data-k="ptq4"><span class="n-t">PTQ 4-bit</span><span class="n-s">weight-only</span></button><span class="arrow">→</span>
+              <button class="node" data-k="qat4"><span class="n-t">QAT 4-bit</span><span class="n-s">fine-tune cùng quantize</span></button>
+            </div></div>
+          <div><div class="gt">2 · Cắt bớt (pruning / sparsity)</div>
+            <div class="flow">
+              <button class="node" data-k="unstr"><span class="n-t">Unstructured 50%</span><span class="n-s">SparseGPT / Wanda</span></button>
+              <button class="node" data-k="s24"><span class="n-t">2:4 sparsity</span><span class="n-s">bán cấu trúc</span></button>
+            </div></div>
+          <div><div class="gt">3 · Model nhỏ hơn</div>
+            <div class="flow">
+              <button class="node" data-k="prune-distill"><span class="n-t">Structured prune + distill</span><span class="n-s">Minitron, Llama 3.2</span></button>
+              <button class="node" data-k="distill"><span class="n-t">Distill vào model nhỏ</span><span class="n-s">SFT / on-policy</span></button>
+              <button class="node" data-k="scratch"><span class="n-t">Train nhỏ từ đầu</span><span class="n-s">khi không có teacher</span></button>
+            </div></div>
+        </div>
+      </div>
+      <aside class="panel" data-panel></aside>
+    </div>
+  </section>
+
+  <!-- HÌNH 11 -->
+  <section class="viz" id="f-size">
+    <div class="viz-head">
+      <span class="fig">Hình 11 · Máy tính</span>
+      <h2>Sizing một deployment và chi phí mỗi triệu token</h2>
+      <p class="sub">VRAM = weights + KV cache + activation tạm + overhead. Engine như vLLM làm ngược lại: load weights, đo activation, phần còn lại (theo --gpu-memory-utilization) cấp hết cho KV cache. Số token KV đó quyết định phục vụ được bao nhiêu người cùng lúc.</p>
+      <span class="hint">Chọn model, precision, GPU; xem thanh bộ nhớ và số người dùng đồng thời. Phần dưới tính $/1M token</span>
+    </div>
+    <div class="viz-grid">
+      <div class="canvas">
+        <div class="controls">
+          <div class="ctl"><label for="sz-m">Model</label>
+            <select id="sz-m"><option value="8">Llama-3-8B (L32, 8 KV head)</option><option value="70">Llama-3-70B (L80, 8 KV head)</option></select></div>
+          <div class="ctl"><label for="sz-w">Weights</label>
+            <select id="sz-w"><option value="2">bf16 (2 byte)</option><option value="1">fp8 / int8 (1 byte)</option><option value="0.55">int4 AWQ/GPTQ (~0,55 byte)</option></select></div>
+          <div class="ctl"><label for="sz-kv">KV cache</label>
+            <select id="sz-kv"><option value="2">bf16</option><option value="1">fp8</option></select></div>
+          <div class="ctl"><label for="sz-g">GPU</label>
+            <select id="sz-g"><option value="24">24 GB</option><option value="48">48 GB</option><option value="80" selected>80 GB</option><option value="141">141 GB (H200)</option></select></div>
+          <div class="ctl"><label for="sz-n">Số GPU (TP)</label>
+            <select id="sz-n"><option>1</option><option>2</option><option>4</option><option>8</option></select></div>
+          <div class="ctl"><label for="sz-u">gpu-memory-utilization <output id="sz-u-o"></output></label><input id="sz-u" type="range" min="70" max="95" value="90"></div>
+          <div class="ctl"><label for="sz-o">Activation + overhead / GPU <output id="sz-o-o"></output></label><input id="sz-o" type="range" min="5" max="60" value="30"></div>
+          <div class="ctl"><label for="sz-len">Token trung bình / request</label>
+            <select id="sz-len"><option value="2048">2K</option><option value="8192" selected>8K</option><option value="32768">32K</option></select></div>
+        </div>
+        <div class="bar" id="sz-bar" style="height:40px"></div>
+        <div class="legend"><span><i style="background:var(--note)"></i>Weights</span><span><i style="background:var(--khaki)"></i>Activation + overhead</span><span><i style="background:var(--teal)"></i>KV cache</span><span><i style="background:var(--border)"></i>Để trống (1 − utilization)</span></div>
+        <div class="stats" style="margin-top:12px">
+          <div class="stat"><span class="lab">Còn cho KV</span><span class="v" id="sz-kvgb"></span></div>
+          <div class="stat"><span class="lab">Số token KV</span><span class="v" id="sz-tok"></span></div>
+          <div class="stat"><span class="lab">Request đồng thời</span><span class="v" id="sz-conc"></span></div>
+        </div>
+        <div id="sz-msg" style="margin-top:10px"></div>
+
+        <p style="margin:22px 0 8px;font-weight:700">Chi phí mỗi 1M output token</p>
+        <div class="controls">
+          <div class="ctl"><label for="ct-p">Giá thuê 1 GPU ($/giờ)</label><input id="ct-p" type="number" min="0.1" step="0.1" value="2.5"></div>
+          <div class="ctl"><label for="ct-t">Throughput bền vững (token/s)</label><input id="ct-t" type="number" min="1" step="100" value="3000"></div>
+          <div class="ctl"><label for="ct-u">Mức tải thật <output id="ct-u-o"></output></label><input id="ct-u" type="range" min="5" max="100" value="100"></div>
+        </div>
+        <div class="formula" id="ct-f"></div>
+        <div class="stats" style="margin-top:10px">
+          <div class="stat"><span class="lab">$/1M token ở full tải</span><span class="v" id="ct-full"></span></div>
+          <div class="stat"><span class="lab">$/1M token ở mức tải thật</span><span class="v" id="ct-real"></span></div>
+        </div>
+      </div>
+      <aside class="panel">
+        <div class="p-eyebrow">Đọc hình</div>
+        <h3>Weights quyết định có chạy được không; phần còn lại quyết định phục vụ được bao nhiêu người</h3>
+        <div class="formula">M_GPU ≥ M_weights + M_KV + M_act + M_overhead
+KV/token = 2 × L × n_kv × d_head × bytes</div>
+        <ul>
+          <li>Thử: 8B bf16 trên 24 GB chỉ còn ~4 GB cho KV ≈ 32K token. Đổi sang int4 → KV gấp ~3,5 lần, batch decode lớn hơn hẳn.</li>
+          <li>Thử: 70B bf16 trên 2 × 80 GB → gần như không còn chỗ cho KV. 4 × 80 GB bf16 hoặc 2 × 80 GB fp8 mới khả thi.</li>
+          <li>TP chia cả weights lẫn KV head. Nếu TP lớn hơn số KV head (vd TP = 16 với 8 KV head), KV phải nhân bản → TP cho model GQA thường dừng ở 8.</li>
+          <li>Little's law: concurrency = request/s × latency. Cần 20 request/s, mỗi request 10 s → giữ ~200 request đồng thời.</li>
+        </ul>
+        <div class="callout callout--note">Utilization quan trọng hơn mọi tối ưu kernel: GPU rảnh 80% thời gian thì chi phí thật gấp 5 lần. Input token (prefill) rẻ hơn output token nhiều lần; tách riêng hai phần theo tỉ lệ input:output thật.</div>
+        <p class="muted" style="font-size:12.5px">Ước lượng của máy tính: int4 = 0,55 byte/param; tài liệu ước 8B int4 ≈ 5,5 GB vì embedding / lm_head thường giữ bf16. GB ở đây tính xấp xỉ như GiB giống ví dụ trong tài liệu.</p>
+        <div class="doc-links" id="sz-docs"></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- HÌNH 12 -->
+  <section class="viz" id="f-check">
+    <div class="viz-head">
+      <span class="fig">Hình 12 · Tích dần</span>
+      <h2>Production checklist</h2>
+      <p class="sub">Mười việc trước khi đưa model ra phục vụ thật. Dấu tích được lưu trên trình duyệt của bạn.</p>
+      <span class="hint">Bấm vào từng dòng để đánh dấu đã làm</span>
+    </div>
+    <div class="viz-grid">
+      <div class="canvas">
+        <div class="progress"><i id="ck-prog"></i></div>
+        <div class="check" id="checklist"></div>
+      </div>
+      <aside class="panel">
+        <div class="p-eyebrow">Theo dõi khi chạy</div>
+        <h3>Đừng scale theo GPU utilization</h3>
+        <p>GPU luôn "100%" khi có bất kỳ batch nào. Tín hiệu tốt hơn: số request chờ trong queue, tỉ lệ KV cache đã dùng, p95 TTFT so với SLO.</p>
+        <ul>
+          <li>Preemption liên tục = batch quá lớn so với KV: giảm max_num_seqs, dùng FP8 KV, hoặc thêm GPU.</li>
+          <li>Prefix caching chỉ có lợi khi request cùng tiền tố tới đúng replica: dùng cache-aware routing thay vì round-robin.</li>
+          <li>Sau quantize luôn đánh giá lại và so cặp với bản gốc.</li>
+        </ul>
+        <div class="doc-links" id="chk-docs"></div>
+      </aside>
+    </div>
+  </section>
+
+  <div class="foot">
+    <span>Nguồn: tài liệu <b>LLM Inference & Deploy (VI)</b>. Số liệu trong máy tính là ước lượng theo công thức của tài liệu.</span>
+    <a href="index.html">← Về bản đồ trực quan</a>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+(function () {
+  const $ = (s, r = document) => r.querySelector(s);
+  const esc = TQ.esc;
+  const D = (a, l) => ['inference', a, l];
+  const docs = (el, list) => { const n = typeof el === 'string' ? $(el) : el; if (n) n.innerHTML = list.map((d) => TQ.docLink(d[0], d[1], d[2])).join(''); };
+  const RC = ['--note', '--tip', '--warn', '--ex', '--teal', '--khaki', '--accent', '--bad'];
+  const col = (i) => `var(${RC[i % RC.length]})`;
+  const f1 = (n) => TQ.fmt(n, 1), f0 = (n) => TQ.fmt(n, 0), f2 = (n) => TQ.fmt(n, 2);
+  const GiB = 1024 ** 3;
+  const kib = (b) => (b >= GiB ? f1(b / GiB) + ' GiB' : b >= 1024 ** 2 ? f1(b / 1024 ** 2) + ' MiB' : f0(b / 1024) + ' KiB');
+  const fig = (id, label) => `<a class="doc-link" href="#${id}" style="background:var(--surface-2);color:var(--text)">${esc(label)}</a>`;
+
+  /* ---------- Hình 1: bậc thang ---------- */
+  const LAD = [
+    ['0', 'Đo baseline', 'SLO, phân phối độ dài thật, đường throughput–latency của bf16', 'luôn luôn', 'biết mình đang tối ưu cái gì', 'gần như không', [D('i3-decision-order', 'Thứ tự áp dụng'), D('i-metrics', 'Các chỉ số đo')], ['f-batch', 'Hình 4']],
+    ['1', 'Chọn engine tốt', 'vLLM / SGLang / TensorRT-LLM: continuous batching, PagedAttention, CUDA graphs có sẵn', 'luôn luôn', 'nhanh hơn nhiều lần code HF generate tự viết', 'thấp', [D('i-engines', 'Các inference engine'), D('i-batching', 'Continuous batching')], ['f-cb', 'Hình 5']],
+    ['2', 'Quantize weights', 'fp8 trên Hopper/Blackwell; int4 AWQ/GPTQ khi thiếu bộ nhớ hoặc batch nhỏ', 'bộ nhớ hoặc băng thông là giới hạn', '~2× bộ nhớ (fp8), ~3,5× (int4); decode nhanh hơn', 'cần eval parity; int4 rủi ro hơn với math/code', [D('i2-opt-choose', 'Chọn scheme'), D('i2-memory-table', 'Bảng 70B')], ['f-quant', 'Hình 9']],
+    ['3', 'KV fp8 + prefix caching + chunked prefill', 'giảm bộ nhớ KV, tái dùng tiền tố chung, chia nhỏ prefill dài', 'concurrency cao, prompt dài hoặc chung prefix', 'gấp đôi token KV; TTFT giảm mạnh khi trúng cache', 'KV fp8 cần kiểm tra long context', [D('i2-kv-quant', 'KV quantization'), D('i-prefix-cache', 'Prefix caching'), D('i-chunked-prefill', 'Chunked prefill')], ['f-paged', 'Hình 6']],
+    ['4', 'Tune batch', 'max-num-seqs, max-num-batched-tokens; chọn điểm vận hành trên đường throughput–latency', 'sau khi có load test', '10–50% throughput ở cùng SLO', 'thấp', [D('i3-latency-throughput', 'Throughput vs latency')], ['f-batch', 'Hình 4']],
+    ['5', 'Routing', 'cache-aware, session affinity, tách pool theo độ dài', 'nhiều replica', 'tăng cache hit, giảm tail latency', 'vừa (thêm hạ tầng)', [D('i3-autoscaling', 'Autoscaling & routing')], ['f-check', 'Hình 12']],
+    ['6', 'Speculative decoding', 'n-gram / prompt lookup, draft model, EAGLE, MTP head', 'batch nhỏ–vừa, cần TPOT thấp; output dự đoán được', '~1,5–3× tốc độ decode mỗi người dùng', 'lợi ích giảm ở batch lớn; cần draft khớp', [D('i-spec-algo', 'Draft–verify'), D('i-spec-when', 'Khi nào không có lợi')], ['f-spec', 'Hình 8']],
+    ['7', 'Nén model sâu hơn', 'distill sang model nhỏ, pruning (Minitron), 2:4 sparsity', 'chi phí là ưu tiên số 1, chấp nhận train thêm', 'model nhỏ hơn hẳn → rẻ hơn hẳn', 'cần compute và data để train', [D('i2-opt-decision', 'Quantize / prune / distill')], ['f-compress', 'Hình 10']],
+    ['8', 'Tách prefill/decode, EP lớn, nhiều node', 'disaggregation, expert parallel cho MoE, cụm nhiều node', 'quy mô lớn, SLO chặt cho cả TTFT và TPOT', 'goodput cao hơn ở quy mô cụm', 'vận hành phức tạp; truyền KV giữa node', [D('i-disagg', 'Disaggregation'), D('i-parallel-inference', 'Parallelism khi inference')], ['f-chunk', 'Hình 7']],
+  ];
+  const lad = $('#ladder');
+  lad.innerHTML = LAD.map((r, i) => `<button class="node" data-k="l${i}" style="--i:${i}"><span class="num">${r[0]}</span><span><span class="n-t">${esc(r[1])}</span><br><span class="n-s">${esc(r[2])}</span></span><span class="chip">${i < 2 ? 'luôn làm' : i < 5 ? 'thường làm' : 'khi cần'}</span></button>`).join('');
+  const ladItems = {};
+  LAD.forEach((r, i) => {
+    ladItems['l' + i] = {
+      eyebrow: 'Bậc ' + r[0], title: r[1],
+      chips: [[r[3], i < 2 ? 'tip' : i < 5 ? 'note' : 'warn']],
+      html: `<p>${esc(r[2])}.</p><ul><li><span class="k">Lợi ích:</span> ${esc(r[4])}</li><li><span class="k">Rủi ro / chi phí:</span> ${esc(r[5])}</li></ul><div class="doc-links">${fig(r[7][0], 'Xem ' + r[7][1] + ' trên trang này')}</div>`,
+      doc: r[6],
+    };
+  });
+  TQ.explorer($('#f-ladder .viz-grid'), ladItems);
+
+  /* ---------- Hình 2: hành trình 1 request ---------- */
+  (function () {
+    const root = $('#journey');
+    const P = ['Thủ', ' đô', ' của', ' Việt', ' Nam', ' là'], O = [' Hà', ' Nội', '.', '⟨EOS⟩'];
+    const steps = [
+      { title: 'Request vào hàng đợi', text: 'Request đến engine và chờ tới lượt. Thời gian chờ này đã tính vào TTFT.' },
+      { title: 'Tokenize', text: 'Văn bản được cắt thành token. Model chỉ thấy dãy token id, không thấy chữ.' },
+      { title: 'Prefill: cả prompt trong một lần forward', text: 'Mọi token prompt tính song song, ghi K, V của cả 6 token vào KV cache. Đây là matmul ma trận × ma trận, arithmetic intensity I ≈ số token (prompt 2.000 token → I ≈ 2.000, lớn hơn ridge ≈ 295 của H100), nên <b>compute-bound</b>. Ví dụ: 8B, 2.000 token, H100 ở 50% MFU → ≈ 65 ms.' },
+      { title: 'Sample token đầu → hết TTFT', text: 'Logits của vị trí cuối qua sampling (temperature, top-p…) cho token " Hà". Khoảng từ lúc gửi tới đây là <b>TTFT</b> = chờ hàng đợi + prefill.' },
+      { title: 'Decode bước 1', text: 'Chỉ đưa 1 token mới " Hà" vào. Muốn có nó, GPU phải đọc <b>toàn bộ weights</b> + KV cache cũ từ HBM, chỉ để tính 1 token: I ≈ 1 FLOP/byte (batch 1), <b>memory-bound</b>. KV cache thêm 1 ô. Khoảng giữa hai token là <b>TPOT</b>.' },
+      { title: 'Decode bước 2', text: 'Lặp lại: đưa " Nội" vào, đọc lại toàn bộ weights, sinh ".". Token t+1 phụ thuộc token t, nên không song song theo thời gian được. Trần lý thuyết 8B bf16 trên H100: 3,35 TB/s ÷ 16 GB ≈ 209 token/s ≈ 5 ms/token.' },
+      { title: 'Gặp EOS → dừng', text: 'Token EOS (hoặc chạm max length) kết thúc vòng lặp. <b>E2E = TTFT + (n_out − 1) × TPOT</b>. Prefill 2.000 token tốn xấp xỉ bằng decode ~13 token: prefill "rẻ" trên mỗi token hơn decode rất nhiều.' },
+      { title: 'Detokenize, stream và giải phóng KV', text: 'Token được ghép lại thành chữ và stream về người dùng. Block KV của request được trả lại pool cho request khác dùng.' },
+    ];
+    const nOut = (i) => (i >= 7 ? 4 : i >= 6 ? 3 : i >= 5 ? 2 : i >= 4 ? 1 : 0);
+    const nKV = (i) => (i >= 7 ? 9 : i >= 6 ? 8 : i >= 5 ? 7 : i >= 3 ? 6 : 0);
+    let last = 0;
+    const render = (i) => {
+      $('[data-r=text]', root).innerHTML = i >= 8 ? '<span class="tok">"Thủ đô của Việt Nam là"</span> → <span class="tok g">"Hà Nội."</span>' : '<span class="tok">"Thủ đô của Việt Nam là"</span>';
+      const no = nOut(i);
+      $('[data-r=tok]', root).innerHTML = i < 2 ? '<span class="muted">(chưa tách token)</span>'
+        : P.map((t) => `<span class="tok p">${esc(t)}</span>`).join('') + O.slice(0, no).map((t, k) => `<span class="tok g${k === no - 1 && i > last ? ' new' : ''}">${esc(t)}</span>`).join('');
+      const n = nKV(i);
+      $('[data-r=kv]', root).innerHTML = n === 0 ? '<span class="muted">trống</span>'
+        : Array.from({ length: i >= 8 ? 9 : n }, (_, k) => `<i class="${i >= 8 ? 'rel' : k >= 6 ? 'g' : ''}"></i>`).join('') +
+          `<span class="lbl">${i >= 8 ? 'đã giải phóng' : n + ' token × 128 KiB (Llama-3-8B) = ' + f0(n * 128) + ' KiB'}</span>`;
+      $('[data-r=phase]', root).innerHTML = i === 3 ? '<span class="chip chip--note">PREFILL · compute-bound · I ≈ n</span>'
+        : i >= 5 && i <= 7 ? '<span class="chip chip--accent">DECODE · memory-bound · I ≈ B = 1</span>'
+        : i === 4 ? '<span class="chip chip--tip">SAMPLE token đầu</span>' : '<span class="muted">—</span>';
+      const seg = [...$('[data-r=tl]', root).children];
+      const need = [1, 3, 5, 6, 7];
+      seg.forEach((s, k) => s.classList.toggle('off', i < need[k]));
+      const br = [...$('[data-r=brk]', root).children];
+      br[0].classList.toggle('off', i < 4); br[1].classList.toggle('off', i < 5); br[2].classList.toggle('off', i < 7);
+      last = i;
+    };
+    TQ.stepper(root, steps, { onStep: render, autoplayMs: 2800 });
+    docs('#journey-docs', [D('i-gen-loop', 'Vòng lặp sinh'), D('i-prefill-decode', 'Prefill và decode'), D('i-metrics', 'TTFT, TPOT, goodput'), D('i-sampling', 'Sampling')]);
+  })();
+
+  /* ---------- Hình 3: KV cache ---------- */
+  (function () {
+    const PRE = { '8b': [32, 8, 128], '70b': [80, 8, 128], mha: [32, 32, 128] };
+    const CTX = [1024, 2048, 8192, 16384, 32768, 65536, 131072];
+    const BS = [1, 2, 4, 8, 16, 32, 64, 128, 256];
+    const el = (id) => $('#' + id);
+    const sync = () => {
+      const p = el('kv-preset').value;
+      if (PRE[p]) [el('kv-L').value, el('kv-n').value, el('kv-d').value] = PRE[p];
+      calc();
+    };
+    const calc = () => {
+      const L = +el('kv-L').value || 1, n = +el('kv-n').value || 1, d = +el('kv-d').value || 1, b = +el('kv-b').value;
+      const c = CTX[+el('kv-c').value], B = BS[+el('kv-B').value];
+      el('kv-c-o').textContent = f0(c) + ' token';
+      el('kv-B-o').textContent = B;
+      const tok = 2 * L * n * d * b, req = tok * c, all = req * B;
+      el('kv-tok').textContent = kib(tok);
+      el('kv-req').textContent = kib(req);
+      el('kv-all').textContent = kib(all);
+      el('kv-formula').textContent = `KV/token = 2 × ${L} × ${n} × ${d} × ${b} byte = ${f0(tok)} byte = ${kib(tok)}\nKV tổng  = ${kib(tok)} × ${f0(c)} token × ${B} request = ${kib(all)}`;
+      const gpu = 80e9, pct = all / gpu * 100;
+      const fill = el('kv-bar-fill');
+      fill.style.flexBasis = Math.min(100, pct) + '%';
+      fill.style.background = pct > 100 ? 'var(--bad)' : 'var(--teal)';
+      fill.textContent = pct >= 8 ? f0(pct) + '%' : '';
+      el('kv-note').innerHTML = pct > 100
+        ? `<b class="bad-t">Vượt ${f1(pct / 100)} lần một GPU 80 GB</b>, chưa tính weights. Cần FP8 KV, ít request hơn, hoặc nhiều GPU.`
+        : `Chiếm ${f1(pct)}% một GPU 80 GB (chưa tính weights). ${pct > 40 ? 'Context dài + batch lớn: KV có thể lớn hơn cả weights.' : ''}`;
+    };
+    el('kv-preset').addEventListener('change', sync);
+    ['kv-L', 'kv-n', 'kv-d'].forEach((id) => el(id).addEventListener('input', () => { el('kv-preset').value = 'custom'; calc(); }));
+    ['kv-b', 'kv-c', 'kv-B'].forEach((id) => el(id).addEventListener('input', calc));
+    sync();
+    docs('#kv-docs', [D('i-kv-size', 'KV cache: công thức'), D('i2-kv-quant', 'KV cache quantization'), D('i3-sizing', 'Sizing deployment')]);
+  })();
+
+  /* ---------- Hình 4: batch & roofline ---------- */
+  (function () {
+    const BS = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512];
+    const BW = 3.35e12, PEAK = 989e12, P = 8e9, W = 16e9, KVT = 131072;
+    const tw = (W / BW) * 1e3;
+    const step = (B, c) => Math.max(tw + B * (c * KVT / BW) * 1e3, (2 * P * B / PEAK) * 1e3);
+    const svg = $('#bt-chart');
+    const X0 = 60, X1 = 560, Y0 = 230, Y1 = 20;
+    const lx = (B) => X0 + (Math.log2(B) / 9) * (X1 - X0);
+    const draw = () => {
+      const B = BS[+$('#bt-B').value], c = +$('#bt-c').value, slo = +$('#bt-slo').value;
+      $('#bt-B-o').textContent = B;
+      const pts = BS.map((b) => { const t = step(b, c); return { b, t, thr: b / t * 1e3 }; });
+      const thrMax = Math.max(...pts.map((p) => p.thr)) * 1.1, tMax = Math.max(slo * 1.3, ...pts.map((p) => p.t)) * 1.05;
+      const yT = (v) => Y0 - (v / thrMax) * (Y0 - Y1), yP = (v) => Y0 - (v / tMax) * (Y0 - Y1);
+      let s = '';
+      for (let k = 0; k <= 4; k++) {
+        const y = Y0 - k * (Y0 - Y1) / 4;
+        s += `<line class="grid" x1="${X0}" x2="${X1}" y1="${y}" y2="${y}"/>`;
+        s += `<text class="lt" x="${X0 - 6}" y="${y + 4}" text-anchor="end">${f0(thrMax * k / 4)}</text>`;
+        s += `<text class="lt" x="${X1 + 6}" y="${y + 4}">${f0(tMax * k / 4)}</text>`;
+      }
+      BS.forEach((b) => (s += `<text class="lt" x="${lx(b)}" y="${Y0 + 16}" text-anchor="middle">${b}</text>`));
+      s += `<text class="lt" x="${(X0 + X1) / 2}" y="${Y0 + 34}" text-anchor="middle">batch size B (thang log)</text>`;
+      s += `<text class="lt" x="${X0 - 6}" y="12" text-anchor="end">tok/s</text><text class="lt" x="${X1 + 6}" y="12">ms</text>`;
+      s += `<line x1="${X0}" x2="${X1}" y1="${yP(slo)}" y2="${yP(slo)}" style="stroke:var(--bad);stroke-width:1.5;stroke-dasharray:6 4"/>`;
+      s += `<text class="lt" x="${X1 - 4}" y="${yP(slo) - 5}" text-anchor="end" style="fill:var(--bad)">SLO ${slo} ms</text>`;
+      s += `<path d="${pts.map((p, k) => (k ? 'L' : 'M') + lx(p.b) + ' ' + yT(p.thr)).join(' ')}" style="fill:none;stroke:var(--accent);stroke-width:2.5"/>`;
+      s += `<path d="${pts.map((p, k) => (k ? 'L' : 'M') + lx(p.b) + ' ' + yP(p.t)).join(' ')}" style="fill:none;stroke:var(--note);stroke-width:2.5"/>`;
+      const t = step(B, c), thr = B / t * 1e3;
+      s += `<line x1="${lx(B)}" x2="${lx(B)}" y1="${Y1}" y2="${Y0}" style="stroke:var(--muted);stroke-dasharray:2 3"/>`;
+      s += `<circle cx="${lx(B)}" cy="${yT(thr)}" r="6" style="fill:var(--accent);stroke:var(--surface);stroke-width:2"/>`;
+      s += `<circle cx="${lx(B)}" cy="${yP(t)}" r="6" style="fill:var(--note);stroke:var(--surface);stroke-width:2"/>`;
+      s += `<line class="ax" x1="${X0}" x2="${X1}" y1="${Y0}" y2="${Y0}"/>`;
+      svg.innerHTML = s;
+      $('#bt-tpot').textContent = f1(t) + ' ms';
+      $('#bt-tpot').className = 'v ' + (t > slo ? 'bad-t' : 'ok-t');
+      $('#bt-thr').textContent = f0(thr) + ' tok/s';
+      const kvNeed = B * c * KVT, kvAvail = 53 * GiB;
+      $('#bt-kv').textContent = kib(kvNeed);
+      $('#bt-kv').className = 'v ' + (kvNeed > kvAvail ? 'bad-t' : '');
+      let mx = 0; for (let b = 1; b <= 4096; b++) if (step(b, c) <= slo) mx = b;
+      $('#bt-max').textContent = mx ? 'B ≈ ' + f0(mx) : 'không có';
+      const growth = t / tw;
+      $('#bt-verdict').textContent = kvNeed > kvAvail ? 'KV không đủ chỗ trên 1 GPU 80 GB'
+        : growth < 1.5 ? 'Vùng "tăng batch gần như miễn phí"'
+        : t <= slo ? 'Đang qua điểm gãy: TPOT tăng rõ nhưng còn trong SLO' : 'TPOT vượt SLO: goodput giảm';
+      // roofline: log scale 1..4000, ridge 295 → 71%
+      const pos = (I) => Math.min(100, (Math.log(I) / Math.log(4000)) * 100);
+      $('#bt-roof').style.setProperty('--ridge', pos(295) + '%');
+      $('#bt-pt').style.left = pos(B) + '%';
+      $('#bt-pt').title = 'linear layer, I ≈ ' + B;
+      $('#bt-att').style.left = pos(4) + '%';
+    };
+    ['bt-B', 'bt-c', 'bt-slo'].forEach((id) => $('#' + id).addEventListener('input', draw));
+    draw();
+    docs('#bt-docs', [D('i-batching-theory', 'Batching và intensity'), D('i-prefill-decode', 'Roofline của prefill/decode'), D('i3-latency-throughput', 'Throughput vs latency'), D('i-metrics', 'Goodput')]);
+  })();
+
+  /* ---------- Hình 5: static vs continuous ---------- */
+  (function () {
+    const LEN = [3, 8, 5, 2, 4, 6, 3, 5], S = 4, T = 14;
+    // static
+    const st = Array.from({ length: S }, () => Array(T + 1).fill(null));
+    const stStart = {};
+    let t0 = 1;
+    for (let b = 0; b < LEN.length; b += S) {
+      const grp = LEN.slice(b, b + S), mx = Math.max(...grp);
+      grp.forEach((L, s) => { stStart[b + s] = t0; for (let t = t0; t < t0 + mx; t++) st[s][t] = t < t0 + L ? { r: b + s, first: t === t0 } : { pad: true }; });
+      t0 += mx;
+    }
+    const stEnd = t0 - 1;
+    // continuous
+    const ct = Array.from({ length: S }, () => Array(T + 1).fill(null));
+    const ctStart = {}, free = Array(S).fill(1);
+    LEN.forEach((L, r) => {
+      let s = 0; for (let k = 1; k < S; k++) if (free[k] < free[s]) s = k;
+      const a = r < S ? 1 : free[s];
+      ctStart[r] = a;
+      for (let t = a; t < a + L; t++) ct[s][t] = { r, first: t === a };
+      free[s] = a + L;
+    });
+    const ctEnd = Math.max(...free) - 1;
+    const pad = st.flat().filter((x) => x && x.pad).length;
+    $('#cb-s-sum').textContent = `xong ở bước ${stEnd} · ${pad} ô padding · R5 bắt đầu bước ${stStart[4]}`;
+    $('#cb-c-sum').textContent = `xong ở bước ${ctEnd} · 0 ô padding · R5 bắt đầu bước ${ctStart[4]}`;
+    const lane = (grid, el, now) => {
+      el.style.gridTemplateColumns = `56px repeat(${T}, minmax(26px,1fr))`;
+      let h = '<div class="h"></div>';
+      for (let t = 1; t <= T; t++) h += `<div class="tn${t === now ? ' now' : ''}">${t}</div>`;
+      grid.forEach((row, s) => {
+        h += `<div class="h">slot ${s + 1}</div>`;
+        for (let t = 1; t <= T; t++) {
+          const x = row[t], cls = ['c'];
+          if (t > now) cls.push('fut'); if (t === now) cls.push('now');
+          if (!x) { cls.push('e'); h += `<div class="${cls.join(' ')}"></div>`; }
+          else if (x.pad) { cls.push('pad'); h += `<div class="${cls.join(' ')}"></div>`; }
+          else h += `<div class="${cls.join(' ')}" style="background:${col(x.r)}">${x.first ? 'R' + (x.r + 1) : ''}</div>`;
+        }
+      });
+      el.innerHTML = h;
+    };
+    const ev = (grid, t) => {
+      const a = [], f = [];
+      grid.forEach((row) => { const x = row[t]; if (x && x.first) a.push('R' + (x.r + 1)); const y = row[t - 1]; if (y && !y.pad && (!x || x.pad || x.r !== y.r)) f.push('R' + (y.r + 1)); });
+      return { a, f };
+    };
+    const steps = [];
+    for (let t = 1; t <= T; t++) {
+      const es = ev(st, t), ec = ev(ct, t);
+      const pads = st.filter((r) => r[t] && r[t].pad).length;
+      let txt = '';
+      txt += `<b>Static:</b> ${t > stEnd ? 'đã xong hết.' : (es.a.length ? 'lô mới vào: ' + es.a.join(', ') + '. ' : '') + (pads ? pads + ' slot chạy padding vì phải chờ request dài nhất của lô.' : 'mọi slot đều có việc.')}<br>`;
+      txt += `<b>Continuous:</b> ${t > ctEnd ? 'đã xong hết, GPU rảnh sớm hơn ' + (stEnd - ctEnd) + ' bước.' : (ec.f.length ? ec.f.join(', ') + ' vừa xong → slot trống. ' : '') + (ec.a.length && t > 1 ? ec.a.join(', ') + ' vào ngay ở bước này.' : t === 1 ? 'R1–R4 vào 4 slot.' : 'tiếp tục decode.')}`;
+      steps.push({ title: 'Bước decode ' + t, text: txt });
+    }
+    TQ.stepper($('#cb'), steps, { onStep: (i) => { lane(st, $('#cb-static'), i); lane(ct, $('#cb-cont'), i); }, autoplayMs: 1500 });
+    docs('#cb-docs', [D('i-batching', 'Static → continuous batching'), D('i-scheduling', 'Scheduling & preemption')]);
+  })();
+
+  /* ---------- Hình 6: PagedAttention ---------- */
+  (function () {
+    const OWN = { A: 0, B1: 3, B2: 4, B: 3, C: 1, D: 2 };
+    const view = $('#paged-view');
+    // mỗi state: blocks {id: [fill, owners[], flags]} và tables
+    const S = [
+      null,
+      { b: { 5: [4, ['A']], 11: [2, ['A']] }, t: { A: [5, 11] }, hot: [5, 11] },
+      { b: { 5: [4, ['A']], 11: [4, ['A']], 2: [1, ['A']] }, t: { A: [5, 11, 2] }, hot: [2] },
+      { b: { 5: [4, ['A', 'B']], 11: [4, ['A']], 2: [1, ['A']], 8: [3, ['B']] }, t: { A: [5, 11, 2], B: [5, 8] }, hot: [5] },
+      { b: { 5: [4, ['A', 'B1', 'B2']], 11: [4, ['A']], 2: [1, ['A']], 8: [4, ['B1']], 14: [4, ['B2']] }, t: { A: [5, 11, 2], B1: [5, 8], B2: [5, 14] }, hot: [8, 14] },
+      { b: { 5: [4, ['B1', 'B2'], 'c'], 11: [4, [], 'c'], 2: [1, [], 'c'], 8: [4, ['B1']], 14: [4, ['B2']], 9: [2, ['C']] }, t: { B1: [5, 8], B2: [5, 14], C: [5, 11, 9] }, hot: [5, 11], extra: { C: 'trùng hash 2 block đầu → bỏ qua prefill 8 token' } },
+      { b: { 5: [4, ['B1', 'B2', 'C'], 'c'], 11: [4, ['C'], 'c'], 9: [2, ['C']], 8: [4, ['B1']], 14: [4, ['B2']], 0: [4, ['D']], 3: [4, ['D']], 12: [2, ['D']] }, t: { B1: [5, 8], B2: [5, 14], C: [5, 11, 9], D: [0, 3, 12] }, hot: [0, 3, 12], extra: { D: 'token đầu khác (timestamp) → không block nào trùng' } },
+    ];
+    const contig = () => {
+      const cells = [];
+      for (let k = 0; k < 32; k++) cells.push(k < 5 ? 'u' : k < 12 ? 'r' : k < 15 ? 'f' : k < 24 ? 'u2' : k < 27 ? 'r' : 'f');
+      return `<p class="lane-title">Cấp liền khối theo max length (kiểu cũ) <span class="chip chip--bad">C cần 8 ô liền nhau → không cấp được</span></p>
+        <div class="lane-wrap"><div class="contig">${cells.map((c) => `<b class="${c}"></b>`).join('')}</div></div>
+        <div class="legend"><span><i style="background:var(--note)"></i>A: 5 token thật</span><span><i style="background:var(--ex)"></i>B: 9 token thật</span><span><i class="hatch2"></i>giữ chỗ cho max length (reserved / internal fragmentation)</span><span><i style="background:var(--surface-2);outline:1px dashed var(--border)"></i>khe trống lẻ: tổng 8 ô nhưng không liền (external fragmentation)</span></div>`;
+    };
+    const pool = (st) => {
+      let h = '<div class="pool">';
+      for (let id = 0; id < 16; id++) {
+        const b = st.b[id];
+        const cls = ['blk']; if (b && b[2] === 'c') cls.push('cache'); if (st.hot.includes(id)) cls.push('hot');
+        h += `<div class="${cls.join(' ')}"><span class="id">#${id}</span>`;
+        if (b) {
+          h += `<div class="fill">${[0, 1, 2, 3].map((k) => `<b style="${k < b[0] ? 'background:' + (b[1].length ? col(OWN[b[1][0]]) : 'var(--tip)') : ''}"></b>`).join('')}</div>`;
+          h += `<div class="own">${b[1].map((o) => `<span style="background:${col(OWN[o])}">${o}</span>`).join('')}${b[2] === 'c' && !b[1].length ? '<span style="background:var(--tip)">cache</span>' : ''}</div>`;
+          if (b[1].length > 1) h += `<span class="rc">ref ${b[1].length}</span>`;
+        }
+        h += '</div>';
+      }
+      h += '</div><div class="btab">';
+      Object.entries(st.t).forEach(([w, arr]) => {
+        h += `<div><span class="who" style="color:${col(OWN[w])}">${w}</span>${arr.map((p, k) => `<span class="m">${k}→#${p}</span>`).join('')}${st.extra && st.extra[w] ? `<span class="muted" style="font-family:var(--font)">${esc(st.extra[w])}</span>` : ''}</div>`;
+      });
+      return h + '</div><div class="legend"><span>ô vuông nhỏ = số token đã ghi trong block (4 ô = đầy)</span><span><i style="background:transparent;outline:1.5px dashed var(--tip)"></i>block giữ lại trong prefix cache</span><span>ref N = số request cùng trỏ vào</span></div>';
+    };
+    const steps = [
+      { title: 'Cách cũ: cấp liền một khối dài bằng max length', text: 'Không biết trước output dài bao nhiêu nên phải giữ chỗ tối đa. Ba kiểu phí: <b>reserved</b> (chỗ cho token tương lai), <b>internal fragmentation</b> (request xong sớm, chỗ không bao giờ dùng), <b>external fragmentation</b> (khe trống lẻ). Paper vLLM ước tính hệ thống cũ chỉ dùng thật ~20–40% bộ nhớ KV.' },
+      { title: 'Paged: chia block, cấp theo nhu cầu', text: 'Request A có prompt 6 token → cần 2 block. Bảng block của A: block logic 0 → vật lý #5, block 1 → #11. Block vật lý nằm đâu cũng được, không cần liền nhau.' },
+      { title: 'Block cuối đầy thì mới cấp block mới', text: 'A sinh thêm 3 token: #11 đầy, cấp thêm #2. Phần phí tối đa chỉ là chỗ trống trong block cuối (dưới 16 token/request với block 16). vLLM báo cáo lãng phí giảm xuống dưới ~4%, throughput tăng 2–4×.' },
+      { title: 'Chia sẻ block giữa các request', text: 'Request B có cùng 4 token đầu (system prompt) với A → B trỏ luôn vào #5, không lưu lại lần nữa. Mỗi block có <b>reference count</b>.' },
+      { title: 'Parallel sampling và copy-on-write', text: 'B sinh 2 nhánh B1, B2 từ cùng prompt (giống group trong GRPO). Cả hai trỏ chung #5. Khi B2 cần ghi vào block chưa đầy đang chia sẻ, hệ thống copy block đó ra bản riêng #14 rồi mới ghi, giống fork() trong Unix. Ví dụ GRPO group 16: chia sẻ prompt tiết kiệm ~19% KV.' },
+      { title: 'Prefix caching: giữ KV của request đã xong', text: 'A xong nhưng block của A được giữ lại trong cache (viền xanh). Request C là lượt chat sau, chứa lượt trước làm tiền tố: hash 2 block đầu trùng → dùng lại #5, #11, chỉ prefill phần mới. Ví dụ system prompt 2.000 token + câu hỏi 100 token: chỉ prefill 100 token, TTFT do prefill giảm ~20 lần.' },
+      { title: 'Đổi 1 token đầu là trượt cache toàn bộ', text: 'Request D chèn timestamp vào đầu system prompt → hash block đầu khác → mọi block sau cũng khác, phải prefill lại từ đầu. Nguyên tắc: <b>phần ổn định đặt trước, phần thay đổi đặt sau</b>.' },
+    ];
+    TQ.stepper($('#paged'), steps, { onStep: (i) => (view.innerHTML = i === 1 ? contig() : pool(S[i - 1])), autoplayMs: 3200 });
+    docs('#paged-docs', [D('i-paged', 'PagedAttention'), D('i-prefix-cache', 'Prefix caching & RadixAttention'), D('i-scheduling', 'Preemption khi hết KV')]);
+  })();
+
+  /* ---------- Hình 7: chunked prefill + disagg ---------- */
+  (function () {
+    const CH = [256, 512, 1024, 2048, 8000], PRE = 8000, BD = 32;
+    const time = (tok) => 5 + tok / 100; // đơn vị tương đối: phần cố định (đọc weights) + phần theo số token
+    const draw = () => {
+      const c = CH[+$('#ck-size').value];
+      $('#ck-size-o').textContent = c >= PRE ? 'không chunk' : f0(c) + ' token';
+      const its = [];
+      for (let k = 0; k < 4; k++) its.push({ p: 0, d: BD });
+      let left = PRE; while (left > 0) { const x = Math.min(c, left); its.push({ p: x, d: BD }); left -= x; }
+      for (let k = 0; k < 4; k++) its.push({ p: 0, d: BD + 1 });
+      const tmax = time(PRE + BD), H = 140;
+      $('#ck-iters').innerHTML = its.map((it) => {
+        const t = time(it.p + it.d), h = (t / tmax) * H, hp = it.p ? h * (it.p / (it.p + it.d)) : 0;
+        return `<div class="it" title="${f0(it.p)} prefill + ${it.d} decode"><div class="d" style="height:${h - hp}px"></div><div class="pf" style="height:${hp}px"></div></div>`;
+      }).join('');
+      const pf = its.filter((x) => x.p);
+      $('#ck-itl').textContent = f1(Math.max(...its.map((x) => time(x.p + x.d)))) + ' đv';
+      $('#ck-ttft').textContent = f1(pf.reduce((s, x) => s + time(x.p + x.d), 0)) + ' đv';
+      $('#ck-n').textContent = pf.length;
+    };
+    $('#ck-size').addEventListener('input', draw);
+    draw();
+    docs('#ck-docs', [D('i-chunked-prefill', 'Chunked prefill & piggybacking'), D('i3-latency-throughput', 'max-num-batched-tokens')]);
+    TQ.tabs($('#chunk-tabs'));
+    const DI = [D('i-disagg', 'Tách prefill và decode')];
+    TQ.explorer($('#dis'), {
+      req: { eyebrow: 'Đầu vào', title: 'Request prompt dài', html: '<p>Router nhận request. Với prompt dài (RAG, agent, code), prefill tốn nhiều compute và nếu chạy chung GPU với decode sẽ làm người khác bị giật.</p>', doc: DI },
+      pf: { eyebrow: 'Pha 1', title: 'Prefill instance', chips: [['compute-bound', 'note']], html: '<p>Chỉ chạy prefill. Cấu hình hướng compute, ví dụ <b>TP lớn</b> để giảm TTFT. Không bị decode chen vào.</p>', doc: DI },
+      xfer: { eyebrow: 'Giữa hai pha', title: 'Chuyển KV cache qua mạng', html: '<p>Prefill xong thì gửi KV cache sang decode instance qua mạng tốc độ cao (NVLink, InfiniBand/RDMA). Đây là chi phí thêm của việc tách.</p>', doc: DI },
+      dec: { eyebrow: 'Pha 2', title: 'Decode instance', chips: [['memory-bound', 'accent']], html: '<p>Chỉ decode. Cấu hình hướng bộ nhớ để chứa <b>batch lớn</b>. TPOT ổn định vì không có prefill dài chen vào.</p>', doc: DI },
+      out: { eyebrow: 'Đầu ra', title: 'Stream token, đo bằng goodput', html: '<p>Goodput = số request/s đạt SLO cả TTFT lẫn TPOT. Tách pha cho phép chọn số lượng và cấu hình song song riêng cho từng pha để tối đa goodput.</p>', doc: [D('i-metrics', 'Goodput'), ...DI] },
+      distserve: { eyebrow: 'OSDI 2024', title: 'DistServe', html: '<p>Tối ưu goodput theo SLO TTFT/TPOT; chọn số lượng và cấu hình song song riêng cho từng pha; đặt instance theo băng thông mạng.</p>', doc: DI },
+      splitwise: { eyebrow: 'ISCA 2024 · Microsoft', title: 'Splitwise', html: '<p>Chạy hai pha trên hai loại máy (có thể khác thế hệ GPU) để tối ưu chi phí và điện năng.</p>', doc: DI },
+      mooncake: { eyebrow: 'Moonshot AI / Kimi', title: 'Mooncake', html: '<p>Kiến trúc "KV-cache-centric": KV cache là tài nguyên trung tâm, lưu phân tán trên DRAM/SSD của cả cụm; scheduler quyết định tái dùng KV và nơi chạy prefill/decode.</p>', doc: DI },
+      when: { eyebrow: 'Quyết định', title: 'Khi nào đáng tách?', chips: [['quy mô lớn', 'warn']], html: '<ul><li><b>Đáng:</b> tải lớn, prompt dài (RAG, agent, code), SLO chặt cho cả TTFT lẫn TPOT.</li><li><b>Không đáng:</b> hệ thống nhỏ vài GPU — chi phí truyền KV và vận hành hai loại instance thường không bõ; chunked prefill là đủ.</li><li>DeepSeek-V3: prefill tối thiểu 4 node / 32 GPU, decode tối thiểu 40 node / 320 GPU.</li></ul>', doc: [...DI, D('i-parallel-inference', 'Ví dụ DeepSeek-V3')] },
+    });
+  })();
+
+  /* ---------- Hình 8: speculative decoding ---------- */
+  (function () {
+    const root = $('#spec');
+    const DR = [' Hà', ' Nội', ',', ' nơi'], Q = [0.7, 0.8, 0.6, 0.5], PP = [0.9, 0.85, 0.2, null];
+    const steps = [
+      { title: 'Đã có prefix', text: 'Đang sinh tiếp sau "Thủ đô của Việt Nam là". Bình thường mỗi token mới cần 1 forward của target (đắt).' },
+      { title: 'Draft sinh γ = 4 token nháp', text: 'Model nhỏ chạy tuần tự 4 forward (rẻ, mỗi forward ~5% chi phí target, c = 0,05) và ghi lại xác suất q của từng token nó đề xuất.' },
+      { title: 'Target verify trong 1 forward', text: 'Target chạy <b>một</b> forward trên prefix + 4 token nháp. Nhờ causal mask, nhận cùng lúc γ + 1 = 5 phân phối p. Vì decode memory-bound, verify 5 token tốn gần như 1 token.' },
+      { title: 'Token 1: q ≤ p → luôn nhận', text: 'q(" Hà") = 0,7 ≤ p = 0,9. Draft đề xuất ít hơn mức "đáng có" nên không có rủi ro dư → chấp nhận với xác suất min(1, p/q) = 1.' },
+      { title: 'Token 2: q ≤ p → nhận', text: 'q(" Nội") = 0,8 ≤ p = 0,85 → chấp nhận.' },
+      { title: 'Token 3: q > p → có thể bị từ chối', text: 'q(",") = 0,6 > p = 0,2: draft "quá tay". Chỉ chấp nhận với xác suất p/q ≈ 0,33. Lần này bị từ chối → sample token thay thế từ phân phối dư p′(x) ∝ max(0, p(x) − q(x)), ra ".".' },
+      { title: 'Bỏ phần sau, rollback KV', text: 'Token 4 bị bỏ, KV cache của các token bị loại được rollback. Vòng này ra <b>3 token</b> chỉ với 1 forward target + 4 forward draft (chi phí ≈ 1 + 4 × 0,05 = 1,2). Nếu cả 4 được nhận, còn được thêm 1 token "thưởng" từ phân phối thứ 5. Output vẫn đúng phân phối của target.' },
+    ];
+    const render = (i) => {
+      $('[data-r=pre]', root).innerHTML = ['Thủ', ' đô', ' của', ' Việt', ' Nam', ' là'].map((t) => `<span class="tok p">${esc(t)}</span>`).join('');
+      $('[data-r=draft]', root).innerHTML = i < 2 ? '<span class="muted">—</span>' : DR.map((t, k) => {
+        let c = 'tok ghost';
+        if (i >= 4 + k && k < 2) c = 'tok ok';
+        if (k === 2 && i >= 6) c = 'tok rej';
+        if (k === 3 && i >= 7) c = 'tok rej';
+        return `<span class="${c}">${esc(t)}</span>`;
+      }).join('');
+      $('[data-r=q]', root).innerHTML = DR.map((_, k) => `<div class="${i < 2 ? 'off' : ''}">q = ${Q[k]}</div>`).join('');
+      $('[data-r=p]', root).innerHTML = i < 3 ? '<div class="off">p = ?</div><div class="off">p = ?</div><div class="off">p = ?</div><div class="off">p = ?</div>'
+        : DR.map((_, k) => {
+            const p = PP[k];
+            if (p == null) return `<div>${i >= 7 ? 'bỏ' : '(chưa cần)'}</div>`;
+            const r = Math.min(1, p / Q[k]);
+            const hl = (k === 0 && i === 4) || (k === 1 && i === 5) || (k === 2 && i === 6);
+            return `<div style="${hl ? 'outline:2px solid var(--accent)' : ''}">p = ${p} · nhận ${f0(r * 100)}%</div>`;
+          }).join('');
+      const out = [];
+      if (i >= 4) out.push('<span class="tok ok">' + esc(' Hà') + '</span>');
+      if (i >= 5) out.push('<span class="tok ok">' + esc(' Nội') + '</span>');
+      if (i >= 6) out.push('<span class="tok g new">.</span><span class="muted" style="font-size:12.5px">← lấy từ p′</span>');
+      if (i >= 7) out.push('<span class="chip chip--tip">3 token / 1 forward target</span>');
+      $('[data-r=out]', root).innerHTML = out.length ? out.join('') : '<span class="muted">—</span>';
+    };
+    TQ.stepper(root, steps, { onStep: render, autoplayMs: 2800 });
+
+    const calc = () => {
+      const a = +$('#sp-a').value / 100, g = +$('#sp-g').value, c = +$('#sp-c').value / 100;
+      $('#sp-a-o').textContent = f2(a); $('#sp-g-o').textContent = g; $('#sp-c-o').textContent = f2(c);
+      const sp = (gg) => (1 - a ** (gg + 1)) / ((1 - a) * (gg * c + 1));
+      $('#sp-t').textContent = f2((1 - a ** (g + 1)) / (1 - a));
+      $('#sp-cost').textContent = f2(g * c + 1);
+      const s = sp(g);
+      $('#sp-s').textContent = f2(s) + '×';
+      $('#sp-s').className = 'v ' + (s < 1 ? 'bad-t' : 'ok-t');
+      const all = Array.from({ length: 10 }, (_, k) => sp(k + 1)), mx = Math.max(...all), best = all.indexOf(mx);
+      $('#sp-bars').innerHTML = all.map((v, k) => `<div class="sb${k === best ? ' best' : ''}${k + 1 === g ? ' cur' : ''}"><span>${f1(v)}×</span><i style="height:${(v / Math.max(mx, 1)) * 85}%"></i></div>`).join('');
+      $('#sp-x').innerHTML = all.map((_, k) => `<span>γ=${k + 1}</span>`).join('');
+    };
+    ['sp-a', 'sp-g', 'sp-c'].forEach((id) => $('#' + id).addEventListener('input', calc));
+    calc();
+    const SV = [D('i-spec-variants', 'Các biến thể tạo nháp')];
+    TQ.explorer($('#spec2'), {
+      draft: { eyebrow: 'Biến thể', title: 'Draft model riêng', chips: [['không cần train', 'tip'], ['bảo toàn phân phối', 'note']], html: '<p>Model nhỏ cùng tokenizer, cùng họ (vd Llama-3.2-1B làm draft cho Llama-3.1-70B). Dễ triển khai.</p><p><span class="k">Nhược:</span> giữ thêm một model và KV của nó; α bị giới hạn bởi khoảng cách năng lực hai model. Distill draft từ target (DistillSpec) cải thiện α.</p>', doc: SV },
+      medusa: { eyebrow: 'Biến thể', title: 'Medusa', chips: [['cần train head', 'warn']], html: '<p>Gắn K decoding head nhỏ lên hidden state cuối của target; head thứ k đoán token ở vị trí t + k + 1. Ứng viên tổ hợp thành cây, kiểm cả cây trong 1 forward bằng tree attention.</p><p><span class="k">Nhược:</span> các head đoán độc lập nên càng xa càng kém; "typical acceptance" không bảo toàn phân phối chính xác.</p>', doc: SV },
+      eagle: { eyebrow: 'Biến thể', title: 'EAGLE / EAGLE-2 / EAGLE-3', chips: [['cần train draft nhỏ', 'warn'], ['bảo toàn phân phối', 'note']], html: '<p>Draft rất nhỏ (~1 lớp decoder) đoán ở tầng <b>feature</b> của target, dễ hơn tầng token → α cao hơn Medusa. EAGLE-2 dùng cây nháp động theo độ tự tin; EAGLE-3 đoán token trực tiếp, kết hợp feature nhiều tầng.</p>', doc: SV },
+      mtp: { eyebrow: 'Biến thể', title: 'MTP head (DeepSeek-V3)', chips: [['có sẵn từ pre-training', 'tip']], html: '<p>Multi-Token Prediction là objective phụ khi train. Khi inference, module MTP dùng lại làm draft: acceptance của token thứ hai ~85–90%, tốc độ sinh tăng ~1,8×. Một quyết định lúc train phục vụ trực tiếp inference.</p>', doc: SV },
+      ngram: { eyebrow: 'Biến thể', title: 'Prompt lookup / n-gram / lookahead', chips: [['chi phí draft ≈ 0', 'tip']], html: '<p>Tìm n-gram cuối của output trong prompt, đề xuất các token theo sau làm nháp. Rất hợp tác vụ chép nhiều: sửa code, tóm tắt trích dẫn, RAG. Lookahead decoding dùng lặp Jacobi để target tự sinh n-gram ứng viên.</p>', doc: SV },
+      'spec-no': { eyebrow: 'Cảnh báo', title: 'Khi nào không có lợi', chips: [['đo trước khi bật', 'bad']], html: '<ul><li><b>Batch lớn:</b> tổng token mỗi bước vượt ridge → verify không còn "miễn phí", token nháp bị từ chối thành compute phí.</li><li><b>Temperature cao, nội dung sáng tạo:</b> α thấp.</li><li><b>Draft quá đắt:</b> c lớn (draft ≥ ~1/5 target) ăn hết lợi ích.</li><li><b>Bộ nhớ:</b> draft và KV của nó chiếm chỗ KV target.</li><li>Kiểm tra cài đặt: output greedy có và không có speculation phải trùng nhau.</li></ul>', doc: [D('i-spec-when', 'Khi nào không có lợi'), D('i-spec-speedup', 'Chọn γ')] },
+    });
+  })();
+
+  /* ---------- Hình 9: quantization ---------- */
+  (function () {
+    TQ.tabs($('#quant-tabs'));
+    const QC = [D('i2-opt-choose', 'Chọn scheme theo phần cứng')];
+    TQ.explorer($('#qpick'), {
+      local: { eyebrow: 'Nút thắt: băng thông bộ nhớ', title: 'Chạy local, chat 1 người (batch 1–4)', chips: [['W4A16', 'accent'], ['GGUF Q4_K_M–Q5_K_M', 'khaki']], html: '<p><span class="k">Chọn:</span> W4A16 (AWQ/GPTQ trên GPU; GGUF Q4_K_M–Q5_K_M trên CPU/Mac).</p><p><span class="k">Vì:</span> đọc ít byte nhất; compute dư thừa nên chi phí dequantize gần như "miễn phí".</p>', doc: [...QC, D('i2-formats', 'Định dạng thực tế')] },
+      longctx: { eyebrow: 'Nút thắt: dung lượng KV', title: 'Context rất dài / nhiều user đồng thời', chips: [['FP8 KV cache', 'accent']], html: '<p><span class="k">Chọn:</span> FP8 KV cache (thấp hơn nếu kiểm chứng kỹ, vd KIVI 2-bit).</p><p><span class="k">Vì:</span> KV cache vượt cả weights. 70B, 8K token × 32 chuỗi ≈ 80 GB KV = một GPU H100.</p>', doc: [...QC, D('i2-kv-quant', 'KV cache quantization')] },
+      moe: { eyebrow: 'Nút thắt: dung lượng weights expert', title: 'MoE lớn (DeepSeek-V3, gpt-oss…)', chips: [['experts 4-bit', 'accent']], html: '<p><span class="k">Chọn:</span> quantize experts mạnh tay (4-bit), giữ attention/router ở độ chính xác cao hơn.</p><p><span class="k">Vì:</span> experts chiếm phần lớn tham số nhưng mỗi token chỉ dùng vài expert. gpt-oss-120b ở MXFP4 vừa 1 GPU 80 GB.</p>', doc: [...QC, D('i2-fp-formats', 'FP8, MXFP4, NVFP4')] },
+      h100: { eyebrow: 'Nút thắt: compute', title: 'Server batch lớn trên H100/H200', chips: [['FP8 W8A8', 'accent'], ['FP8 KV', 'teal']], html: '<p><span class="k">Chọn:</span> FP8 W8A8 + FP8 KV cache.</p><p><span class="k">Vì:</span> tensor core FP8 gấp ~2 lần BF16. W4A16 ở batch lớn có thể <b>chậm hơn</b> FP16 vì phải dequantize mà không được lợi băng thông.</p>', doc: [...QC, D('i2-wa', 'Weight-only vs weight-activation')] },
+      a100: { eyebrow: 'Nút thắt: compute', title: 'Server trên A100 (không có FP8)', chips: [['INT8 W8A8', 'accent']], html: '<p><span class="k">Chọn:</span> INT8 W8A8 (SmoothQuant), hoặc W4A16 nếu batch vừa phải.</p><p><span class="k">Vì:</span> A100 có tensor core INT8. SmoothQuant chuyển "độ khó" outlier từ activation sang weight.</p>', doc: [...QC, D('i2-smoothquant', 'SmoothQuant')] },
+      bw: { eyebrow: 'Nút thắt: compute + bộ nhớ', title: 'Blackwell (B200/GB200)', chips: [['NVFP4 / MXFP4', 'accent']], html: '<p><span class="k">Chọn:</span> NVFP4 / MXFP4.</p><p><span class="k">Vì:</span> tensor core FP4 native. NVFP4 dùng block 16 phần tử với scale FP8 nên thường giữ chất lượng tốt hơn MXFP4 (block 32, scale lũy thừa của 2).</p>', doc: [...QC, D('i2-fp-formats', 'FP8, MXFP4, NVFP4')] },
+      w4a16: { eyebrow: 'Ký hiệu', title: 'Weight-only: W4A16, W8A16', html: '<p>Weights lưu 4/8 bit, nhưng trong kernel được dequantize về FP16/BF16 trước khi nhân. Phép nhân vẫn ở 16 bit.</p><ul><li>Lợi: giảm byte đọc từ bộ nhớ → tốt cho decode batch nhỏ.</li><li>Không tăng FLOPs, thêm chút chi phí dequantize.</li></ul>', doc: [D('i2-wa', 'WxAy')] },
+      w8a8: { eyebrow: 'Ký hiệu', title: 'Weight-activation: W8A8 (INT8 / FP8)', html: '<p>Cả hai đầu vào matmul ở bit thấp → dùng được tensor core INT8/FP8, tăng throughput tính toán. Lợi lớn khi batch lớn (compute-bound).</p><p>Khó hơn vì activation có outlier và đổi theo từng input. FP8 W8A8 (weights per-channel, activations per-token động) là lựa chọn "an toàn" trên H100. W4A8 là bản lai.</p>', doc: [D('i2-wa', 'WxAy'), D('i2-outliers', 'Outliers trong activation')] },
+      fp4: { eyebrow: 'Định dạng', title: 'MXFP4 và NVFP4', html: '<div class="formula">MXFP4: E2M1, 1 scale E8M0 / 32 phần tử\nNVFP4: E2M1, 1 scale FP8 E4M3 / 16 phần tử\n       + 1 scale FP32 per-tensor</div><p>FP có nấc dày gần 0, thưa ở xa — hợp phân phối hình chuông và chịu outlier tốt hơn INT. Scale theo block nhỏ giúp một outlier chỉ ảnh hưởng 16–32 phần tử láng giềng.</p>', doc: [D('i2-fp-formats', 'FP8, MXFP4, NVFP4')] },
+    });
+
+    // bảng 70B
+    const R70 = [['BF16', 16, 140, 24], ['FP8 / INT8', 8, 70, 48], ['INT4 group 128', 4.25, 37, 90], ['3-bit', 3.25, 28, 115], ['2-bit (QuIP#, AQLM)', 2.1, 19, 170]];
+    const drawMem = () => {
+      const g = +$('#q-gpu').value, MAX = 170;
+      $('#q-rows').innerHTML = R70.map((r) => {
+        const fit = r[2] <= g;
+        return `<div class="row"><div><b style="font-size:13.5px">${esc(r[0])}</b><br><span class="muted mono" style="font-size:11.5px">~${f2(r[1])} bit/weight</span></div>
+          <div class="lbar"><i class="${fit ? 'fit' : 'no'}" style="width:${(r[2] / MAX) * 100}%"></i><em>${r[2]} GB</em><span class="cap" style="left:${(g / MAX) * 100}%"></span><span class="sp2">~${r[3]} tok/s</span></div></div>`;
+      }).join('');
+    };
+    $('#q-gpu').addEventListener('input', drawMem);
+    drawMem();
+    docs('#q-mem-docs', [D('i2-memory-table', 'Bảng 70B'), D('i2-granularity', 'Granularity')]);
+
+    // granularity
+    const GR = {
+      tensor: { n: 'Per-tensor', one: 'cả ma trận', cost: '~0', note: 'Đơn giản nhất nhưng dễ bị outlier phá: một giá trị lớn kéo giãn thước đo của toàn bộ ma trận.', grp: () => 0 },
+      channel: { n: 'Per-channel (per-row)', one: 'mỗi output channel (một hàng)', cost: 'rất nhỏ', note: 'Mặc định cho weights INT8; scale nhân được ra sau matmul. Outlier chỉ ảnh hưởng hàng của nó. Với activation, tương tự là per-token (mỗi hàng activation, tính lúc chạy).', grp: (r) => r },
+      group: { n: 'Per-group (vd group 128)', one: 'mỗi 128 weights liên tiếp trong một hàng', cost: '16 bit / 128 = 0,125 bit/weight', note: 'Chuẩn cho 4-bit weight-only (GPTQ/AWQ). Vì vậy "4-bit group 128" thực ra tốn ~4,125–4,25 bit/weight. Hình thu nhỏ: nhóm 8 ô.', grp: (r, c) => r * 2 + Math.floor(c / 8) },
+      micro: { n: 'Micro-block (MX, NVFP4)', one: '16–32 phần tử', cost: '8 bit / 16–32 phần tử', note: 'Phần cứng mới (Blackwell) hỗ trợ trực tiếp. Block càng nhỏ, outlier càng ít láng giềng bị ảnh hưởng. Hình thu nhỏ: nhóm 4 ô.', grp: (r, c) => r * 4 + Math.floor(c / 4) },
+    };
+    const OUT = [2, 5];
+    const drawG = (k) => {
+      const g = GR[k];
+      [...document.querySelectorAll('#gran-btns [data-g]')].forEach((b) => b.classList.toggle('is-on', b.dataset.g === k));
+      const og = g.grp(OUT[0], OUT[1]);
+      let h = '';
+      for (let r = 0; r < 8; r++) for (let c = 0; c < 16; c++) {
+        const id = g.grp(r, c), isO = r === OUT[0] && c === OUT[1], same = id === og;
+        h += `<b style="background:${col(id)};opacity:${id % 2 ? 0.62 : 1};${same ? 'outline:2px solid var(--bad);outline-offset:-2px;' : ''}">${isO ? '!' : ''}</b>`;
+      }
+      $('#gran-grid').innerHTML = h;
+      const nSame = [...Array(128).keys()].filter((i) => g.grp(Math.floor(i / 16), i % 16) === og).length;
+      $('#gran-panel').innerHTML = TQ.renderItem({
+        eyebrow: 'Granularity', title: g.n,
+        chips: [['1 scale cho: ' + g.one, 'note'], ['chi phí scale: ' + g.cost, 'khaki']],
+        html: `<p>${esc(g.note)}</p><p><span class="k">Outlier ảnh hưởng:</span> ${nSame} / 128 ô trong hình.</p><div class="callout callout--note">Scale dùng chung càng ít số thì càng "vừa khít" nhóm đó, nhưng phải lưu nhiều scale hơn. Mọi phương pháp tốt đều xử lý outlier: tách riêng (LLM.int8), san bằng (SmoothQuant, AWQ), xoay (QuaRot), hoặc dùng block nhỏ.</div>`,
+        doc: [D('i2-granularity', 'Granularity'), D('i2-basics', 'Scale, zero-point'), D('i2-outliers', 'Outliers')],
+      });
+    };
+    document.querySelectorAll('#gran-btns [data-g]').forEach((b) => b.addEventListener('click', () => drawG(b.dataset.g)));
+    drawG('tensor');
+  })();
+
+  /* ---------- Hình 10: nén model ---------- */
+  (function () {
+    const OD = [D('i2-opt-decision', 'Bảng so sánh')];
+    const row = (cost, mem, speed, risk, when) => `<table class="tbl"><tr><th>Chi phí làm</th><td>${cost}</td></tr><tr><th>Giảm bộ nhớ</th><td>${mem}</td></tr><tr><th>Tăng tốc thật</th><td>${speed}</td></tr><tr><th>Rủi ro chất lượng</th><td>${risk}</td></tr><tr><th>Khi nào dùng</th><td>${when}</td></tr></table>`;
+    TQ.explorer($('#comp'), {
+      ptq8: { eyebrow: 'Quantization', title: 'PTQ 8-bit (FP8 / INT8)', chips: [['làm đầu tiên', 'tip']], html: row('phút–giờ, không cần train', '2×', 'có (batch lớn nhờ tensor core FP8/INT8; batch nhỏ nhờ ít byte)', 'rất thấp', 'gần như luôn nên làm khi serving'), doc: [...OD, D('i2-fp-formats', 'FP8')] },
+      ptq4: { eyebrow: 'Quantization', title: 'PTQ 4-bit weight-only', chips: [['khi thiếu bộ nhớ', 'note']], html: row('giờ', '~3,5–4×', 'có ở batch nhỏ; ít / âm ở batch lớn', 'thấp–vừa (reasoning dài nhạy hơn)', 'chạy local, GPU ít bộ nhớ') + '<p class="muted" style="font-size:13px">GPTQ bù lỗi bằng Hessian 2XXᵀ; AWQ bảo vệ kênh có activation lớn bằng scaling. Cả hai cần calibration data giống thực tế.</p>', doc: [...OD, D('i2-gptq', 'GPTQ'), D('i2-awq', 'AWQ')] },
+      qat4: { eyebrow: 'Quantization', title: 'QAT 4-bit', html: row('một đợt fine-tune', '~4×', 'như PTQ 4-bit', 'thấp', 'khi PTQ 4-bit mất quá nhiều và có ngân sách train'), doc: [...OD, D('i2-qat', 'PTQ vs QAT')] },
+      unstr: { eyebrow: 'Pruning', title: 'Unstructured sparsity 50%', chips: [['khó tăng tốc trên GPU', 'warn']], html: row('giờ (SparseGPT / Wanda)', 'ít (cần format sparse)', 'hầu như không trên GPU', 'vừa', 'nghiên cứu; CPU / phần cứng chuyên dụng') + '<p class="muted" style="font-size:13px">Wanda: độ quan trọng của weight = |weight| × |activation|.</p>', doc: [...OD, D('i2-unstructured', 'Unstructured pruning')] },
+      s24: { eyebrow: 'Pruning', title: '2:4 sparsity', html: row('giờ + nên fine-tune', '~1,8×', 'hạn chế, chỉ ở phần matmul', 'vừa–cao nếu không train lại', 'khi đã tối ưu xong các thứ khác'), doc: [...OD, D('i2-24-sparsity', '2:4 sparsity')] },
+      'prune-distill': { eyebrow: 'Model nhỏ hơn', title: 'Structured prune + distill', chips: [['Minitron, Llama 3.2', 'ex']], html: row('chục–trăm tỉ token', 'tùy kiến trúc đích (2–4×)', 'có, trên mọi phần cứng', 'thấp sau khi distill đủ', 'tạo cả một họ model nhỏ từ model lớn sẵn có'), doc: [...OD, D('i2-structured', 'Structured pruning'), D('i2-kd-practice', 'Distill trong thực tế')] },
+      distill: { eyebrow: 'Model nhỏ hơn', title: 'Distill vào model nhỏ (SFT / on-policy)', html: row('vừa (sinh data từ teacher + train)', 'tùy cỡ student', 'có', 'student có trần năng lực thấp hơn', 'chuyển một năng lực cụ thể (reasoning, tool use) sang model rẻ') + '<p class="muted" style="font-size:13px">Distill với temperature truyền "dark knowledge"; nhân T² để giữ độ lớn gradient. Forward KL dàn trải, reverse KL tập trung.</p>', doc: [...OD, D('i2-kd-theory', 'Lý thuyết distillation')] },
+      scratch: { eyebrow: 'Model nhỏ hơn', title: 'Train model nhỏ từ đầu', chips: [['đắt nhất', 'bad']], html: row('rất cao', 'tùy cỡ', 'có', '—', 'khi không có teacher phù hợp hoặc cần kiến trúc / tokenizer mới'), doc: OD },
+    });
+  })();
+
+  /* ---------- Hình 11: sizing + chi phí ---------- */
+  (function () {
+    const M = { 8: { P: 8, L: 32, n: 8, d: 128 }, 70: { P: 70, L: 80, n: 8, d: 128 } };
+    const el = (id) => $('#' + id);
+    el('sz-g').addEventListener('change', () => { el('sz-o').value = +el('sz-g').value <= 24 ? 15 : 30; calc(); });
+    const calc = () => {
+      const m = M[el('sz-m').value], wb = +el('sz-w').value, kb = +el('sz-kv').value, g = +el('sz-g').value, n = +el('sz-n').value;
+      const u = +el('sz-u').value / 100, o = +el('sz-o').value / 10, len = +el('sz-len').value;
+      el('sz-u-o').textContent = f2(u); el('sz-o-o').textContent = f1(o) + ' GB';
+      const total = g * n, usable = total * u, W = m.P * wb, O = o * n, KV = usable - W - O;
+      const kvTok = 2 * m.L * m.n * m.d * kb;
+      const tokens = KV > 0 ? (KV * GiB) / kvTok : 0;
+      const seg = (v, c, lab) => { const p = Math.max(0, v) / total * 100; return `<span style="flex-basis:${p}%;background:${c}" title="${lab}: ${f1(v)} GB">${p > 9 ? lab + ' ' + f0(v) : ''}</span>`; };
+      el('sz-bar').innerHTML = W > usable ? `<span style="flex-basis:100%;background:var(--bad)">Weights ${f0(W)} GB > ${f0(usable)} GB dùng được</span>`
+        : seg(W, 'var(--note)', 'W') + seg(Math.min(O, usable - W), 'var(--khaki)', 'O') + seg(KV, 'var(--teal)', 'KV') + seg(total - usable, 'var(--border)', '');
+      el('sz-kvgb').textContent = KV > 0 ? f1(KV) + ' GB' : '≈ 0';
+      el('sz-tok').textContent = tokens > 0 ? f0(tokens / 1000) + 'K' : '0';
+      const conc = tokens / len;
+      el('sz-conc').textContent = conc >= 1 ? '~' + f0(conc) : '< 1';
+      let msg = '';
+      if (W > usable) msg = '<div class="callout callout--bad"><b>Không load được:</b> weights lớn hơn VRAM được phép dùng. Thêm GPU (TP) hoặc quantize.</div>';
+      else if (conc < 2) msg = '<div class="callout callout--warn"><b>Load được nhưng gần như không phục vụ được ai:</b> gần như không còn chỗ cho KV cache.</div>';
+      else msg = `<div class="callout callout--tip">KV/token = 2 × ${m.L} × ${m.n} × ${m.d} × ${kb} = ${f0(kvTok / 1024)} KiB. Đủ cho ~${f0(conc)} request × ${f0(len / 1024)}K token chạy cùng lúc.</div>`;
+      if (n > m.n) msg += `<div class="callout callout--warn" style="margin-top:8px">TP = ${n} lớn hơn số KV head (${m.n}) → KV head bị nhân bản trên nhiều GPU, tốn KV hơn con số ở trên.</div>`;
+      if (n > 1) msg += '<p class="muted" style="font-size:12.5px;margin-top:6px">TP cần all-reduce mỗi layer → chỉ nên dùng trong một node có NVLink.</p>';
+      el('sz-msg').innerHTML = msg;
+      cost();
+    };
+    const cost = () => {
+      const p = +el('ct-p').value || 0, t = +el('ct-t').value || 1, u = +el('ct-u').value / 100, n = +el('sz-n').value;
+      el('ct-u-o').textContent = f0(u * 100) + '%';
+      const full = (p * n) / (t * 3600) * 1e6;
+      el('ct-f').textContent = `($${f2(p)}/h × ${n} GPU) / (${f0(t)} tok/s × 3600) × 10^6 = $${f2(full)} / 1M token`;
+      el('ct-full').textContent = '$' + f2(full);
+      el('ct-real').textContent = '$' + f2(full / u);
+      el('ct-real').className = 'v ' + (u < 0.5 ? 'warn-t' : '');
+    };
+    ['sz-m', 'sz-w', 'sz-kv', 'sz-n', 'sz-u', 'sz-o', 'sz-len'].forEach((id) => el(id).addEventListener('input', calc));
+    ['ct-p', 'ct-t', 'ct-u'].forEach((id) => el(id).addEventListener('input', cost));
+    calc();
+    docs('#sz-docs', [D('i3-sizing', 'Sizing một deployment'), D('i3-cost', 'Chi phí mỗi triệu token'), D('i-parallel-inference', 'Parallelism khi inference')]);
+  })();
+
+  /* ---------- Hình 12: checklist ---------- */
+  (function () {
+    const ITEMS = [
+      'Xác định SLO: p95 TTFT, p95 TPOT, throughput mục tiêu, phân phối độ dài input/output thật (lấy từ log, không đoán).',
+      'Sizing theo công thức; chọn precision (bf16 → fp8 → int4) theo ngân sách bộ nhớ và kết quả eval.',
+      'Eval chất lượng bản quantized so với bản gốc trên benchmark + bộ prompt nội bộ.',
+      'Load test với phân phối request thật (Poisson / bursty), quét max-num-seqs và chunk size, vẽ đường throughput–latency, chọn điểm vận hành.',
+      'Bật prefix caching, chunked prefill; cân nhắc speculative decoding nếu batch nhỏ và cần TPOT thấp.',
+      'Routing: cache-aware, session affinity; tách pool long-context nếu cần.',
+      'Autoscaling theo queue / KV usage; giảm cold start (weights trên NVMe local, pool ấm).',
+      'Giới hạn & an toàn: rate limit, giới hạn max_tokens, timeout, kiểm tra input quá dài, guardrail.',
+      'Observability: dashboard các chỉ số, alert theo SLO, log mẫu request để debug.',
+      'Pin version engine + driver + CUDA; canary rollout khi nâng cấp, so output và latency trước/sau.',
+    ];
+    const KEY = 'tq-inference-checklist';
+    let saved = [];
+    try { saved = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { saved = []; }
+    const box = $('#checklist');
+    box.innerHTML = ITEMS.map((t, i) => `<label class="${saved.includes(i) ? 'done' : ''}"><input type="checkbox" id="chk-${i}" ${saved.includes(i) ? 'checked' : ''}><span>${esc(t)}</span></label>`).join('');
+    const upd = () => {
+      const on = [...box.querySelectorAll('input')].map((x, i) => (x.checked ? i : -1)).filter((i) => i >= 0);
+      box.querySelectorAll('label').forEach((l, i) => l.classList.toggle('done', on.includes(i)));
+      $('#ck-prog').style.width = (on.length / ITEMS.length) * 100 + '%';
+      try { localStorage.setItem(KEY, JSON.stringify(on)); } catch (e) { /* bỏ qua */ }
+    };
+    box.addEventListener('change', upd);
+    upd();
+    docs('#chk-docs', [D('i3-checklist', 'Production checklist'), D('i3-autoscaling', 'Autoscaling & routing'), D('i3-observability', 'Observability'), D('i3-regression-eval', 'Regression eval khi deploy')]);
+  })();
+})();
+</script>
+</body>
+</html>

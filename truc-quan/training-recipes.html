@@ -1,0 +1,1268 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Training Recipes trực quan</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="shared.css">
+<style>
+/* màu theo env — dùng xuyên suốt trang */
+.env-none{--c:var(--muted);--cb:var(--surface-2)}
+.env-data{--c:var(--khaki);--cb:var(--khaki-bg)}
+.env-hf{--c:var(--note);--cb:var(--note-bg)}
+.env-unsloth{--c:var(--tip);--cb:var(--tip-bg)}
+.env-unsloth_vllm{--c:var(--teal);--cb:var(--teal-bg)}
+.env-quant{--c:var(--warn);--cb:var(--warn-bg)}
+.env-serve{--c:var(--ex);--cb:var(--ex-bg)}
+.env-lf{--c:var(--accent);--cb:var(--accent-soft)}
+.env-modelopt{--c:var(--bad);--cb:var(--bad-bg)}
+.echip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11.5px;font-weight:500;padding:2px 9px;border-radius:999px;background:var(--cb);color:var(--c);white-space:nowrap}
+.echip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--c)}
+
+/* legend env */
+.env-legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+
+/* ---- metro ---- */
+.metro{display:grid}
+.m-row{display:grid;grid-template-columns:34px minmax(0,1fr);column-gap:12px}
+.m-rail{position:relative;min-height:22px}
+.m-rail::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:6px;transform:translateX(-50%);background:var(--c);border-radius:3px}
+.m-row.first .m-rail::before{top:50%}
+.m-row.last .m-rail::before{bottom:50%}
+.m-row.opt .m-rail::before{background:repeating-linear-gradient(to bottom,var(--c) 0 7px,transparent 7px 12px)}
+.m-dot{position:absolute;left:50%;top:50%;width:20px;height:20px;transform:translate(-50%,-50%);border-radius:50%;background:var(--surface);border:4px solid var(--c);z-index:1}
+.m-row.opt .m-dot{border-style:dashed}
+.m-row.station{padding-block:5px}
+.m-node{width:100%}
+.m-node .n-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.m-node .code{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--c);background:var(--cb);padding:1px 7px;border-radius:5px}
+.m-node.is-done .n-t::after{content:"  ✓";color:var(--tip)}
+.m-switch .m-rail::before{background:var(--c)}
+.m-dia{position:absolute;left:50%;top:50%;width:12px;height:12px;transform:translate(-50%,-50%) rotate(45deg);background:var(--c);z-index:1;border:2px solid var(--surface)}
+.m-label{font-size:12.5px;padding-block:6px;color:var(--muted);display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.m-label code{background:var(--cb);color:var(--c);font-weight:500}
+.m-loop .m-rail::before{background:repeating-linear-gradient(to bottom,var(--accent) 0 4px,transparent 4px 8px);width:3px}
+.m-loop .m-label{color:var(--accent);font-weight:600}
+.m-fork .m-label{font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.06em;font-size:11.5px}
+.progress{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);margin-top:12px}
+.progress .bar{flex:1;height:8px}
+.progress .bar>span{background:var(--tip)}
+
+/* panel trạm */
+.io{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:stretch}
+.io .box{background:var(--surface-2);border-radius:8px;padding:8px 10px;font-size:12px;min-width:0;overflow-wrap:anywhere}
+.io .box b{display:block;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.io .box code{font-size:11.5px;background:none;padding:0;display:block}
+.io .box.script{background:var(--cb);}
+.io .arrow{font-size:13px}
+@media (max-width:520px){.io{grid-template-columns:minmax(0,1fr)}.io .arrow{transform:rotate(90deg);justify-self:center}}
+.splits{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px}
+.sp{font-family:var(--mono);font-size:11.5px;padding:2px 9px;border-radius:6px;border:1.5px solid var(--border);color:var(--muted)}
+.sp.use{border-color:var(--tip);color:var(--tip);background:var(--tip-bg)}
+.sp.make{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.sp.forbid{border-color:var(--bad);color:var(--bad);background:var(--bad-bg);text-decoration:line-through}
+.sp.no{opacity:.55}
+.panel h4{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:4px 0 0}
+.checklist{display:grid;gap:6px}
+.checklist label{display:flex;gap:9px;align-items:flex-start;font-size:14px;cursor:pointer;line-height:1.45}
+.checklist input{margin-top:3px;accent-color:var(--tip);width:16px;height:16px;flex:none}
+.checklist label:has(input:checked) span{color:var(--muted);text-decoration:line-through}
+
+/* env map */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.tile{border:1px solid var(--border);border-radius:8px;padding:8px 9px;background:var(--surface);transition:opacity .25s,border-color .25s;min-width:0}
+.tile .num{font-family:var(--mono);font-weight:500;font-size:13px}
+.tile .nm{font-size:11.5px;color:var(--muted);line-height:1.3;overflow-wrap:anywhere}
+.tile .dots{display:flex;gap:3px;margin-top:6px;flex-wrap:wrap}
+.tile .dots i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.tile.dim{opacity:.22}
+.tile.on{border-color:var(--c);box-shadow:inset 0 0 0 1.5px var(--c)}
+.env-btns{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.env-btns .node{padding:6px 10px;flex-direction:row}
+.env-btns .node .n-t{font-family:var(--mono);font-size:12.5px;font-weight:500;color:var(--c)}
+
+/* data picker */
+.pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.fields{display:grid;gap:5px}
+.field{display:flex;gap:8px;align-items:baseline;font-size:13.5px}
+.field code{flex:none}
+.field.off{opacity:.45}
+.field .st{font-size:11px;font-weight:700;flex:none;width:56px}
+.yaml{font-family:var(--mono);font-size:12px;background:var(--code-bg);border-radius:8px;padding:10px 12px;overflow-x:auto;white-space:pre;line-height:1.6}
+.yaml mark{background:var(--warn-bg);color:var(--warn);border-radius:3px;padding:0 2px;font-weight:600}
+
+/* split demo */
+.splitdemo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.scol{border:1px dashed var(--border);border-radius:9px;padding:10px;min-height:120px;min-width:0}
+.scol h4{font-family:var(--mono);font-size:12px;margin-bottom:8px;color:var(--muted);font-weight:500}
+.films{display:flex;flex-wrap:wrap;gap:6px}
+.film{font-family:var(--mono);font-size:11px;width:46px;height:40px;border-radius:5px;display:grid;place-items:center;color:#fff;font-weight:500;position:relative}
+.film.leak{outline:2.5px solid var(--bad);outline-offset:2px}
+.p1{background:#3c6fa8}.p2{background:#7a5bb0}.p3{background:#2f8a5a}.p4{background:#a7701a}.p5{background:#9a4a2a}.p6{background:#2c7f84}
+.leakbox{display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+
+/* ladder */
+.ladder{display:grid;gap:6px}
+.rung{display:grid;grid-template-columns:38px minmax(0,1fr);gap:10px;align-items:center;border:1.5px solid var(--border);border-radius:9px;padding:8px 12px;background:var(--surface)}
+.rung .rn{font-family:var(--mono);font-weight:500;font-size:13px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2);color:var(--muted)}
+.rung .rt{font-weight:600;font-size:14px}
+.rung .rs{font-size:12.5px;color:var(--muted)}
+.rung.hl{border-color:var(--accent);background:var(--accent-soft)}
+.rung.hl .rn{background:var(--accent);color:#fff}
+.oom-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+
+/* logs */
+.logrow{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:center;width:100%}
+.logrow .lab{font-weight:700;font-size:13.5px}
+.logrow .lab small{display:block;font-weight:400;color:var(--muted);font-size:11.5px;font-family:var(--mono)}
+.spark{display:grid;gap:2px;min-width:0}
+.spark span{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.spark.ok span{color:var(--tip)} .spark.bad span{color:var(--bad)}
+.spark svg{width:100%;height:auto;background:var(--surface-2);border-radius:6px}
+@media (max-width:560px){.logrow{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.logrow .lab{grid-column:1/-1}}
+
+/* quiz */
+.qcard{border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;display:grid;gap:10px;background:var(--surface-2)}
+.qcard .qq{font-weight:700;font-size:16px}
+.qcard .qn{font-size:13px;color:var(--muted)}
+.qbtns{display:flex;gap:8px;flex-wrap:wrap}
+.trail{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;align-items:center}
+.trail .t{font-size:12px;border:1px solid var(--border);border-radius:999px;padding:2px 10px;color:var(--muted)}
+.trail .t b{color:var(--text)}
+.result{border:1.5px solid var(--tip);background:var(--tip-bg);border-radius:10px;padding:14px 16px;display:grid;gap:8px}
+.result .rk{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--tip);font-weight:700}
+.result h3{font-size:18px}
+.treemini{margin-top:14px;font-family:var(--mono);font-size:12px;line-height:1.7;white-space:pre;overflow-x:auto;color:var(--muted)}
+.treemini .on{color:var(--accent);font-weight:600}
+
+/* methods grid */
+.methods{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.iso{display:flex;gap:10px;margin-top:6px;font-size:10.5px;color:var(--muted)}
+.iso span{display:inline-flex;align-items:center;gap:3px}
+.iso i{width:9px;height:9px;border-radius:50%;display:inline-block;border:1.5px solid var(--muted)}
+.iso i.y{background:var(--tip);border-color:var(--tip)}
+.iso i.p{background:linear-gradient(90deg,var(--warn) 50%,transparent 50%);border-color:var(--warn)}
+.iso i.n{background:transparent;border-color:var(--bad)}
+
+/* budget */
+.budget .bar{height:42px}
+.envout{font-family:var(--mono);font-size:12.5px;background:var(--code-bg);border-radius:8px;padding:10px 12px;white-space:pre;overflow-x:auto}
+.verdict{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+
+/* eval pipeline */
+.pipe{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:center}
+.pbox{border:1.5px solid var(--border);border-radius:9px;padding:9px 10px;background:var(--surface);font-size:12.5px;min-width:0;overflow-wrap:anywhere}
+.pbox b{display:block;font-size:13px}
+.pbox code{font-size:11.5px}
+.pbox.file{background:var(--surface-2);border-style:dashed}
+.pbox.hl{border-color:var(--accent);background:var(--accent-soft)}
+@media (max-width:640px){.pipe{grid-template-columns:minmax(0,1fr)}}
+
+/* CI */
+.ci svg{width:100%;height:auto}
+.ci .seg{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="crumb" href="index.html">← Bản đồ trực quan</a>
+    <h1>Training Recipes trực quan</h1>
+    <p class="lead">Bản bấm-được của <em>Cẩm nang Training Recipes</em>: đi từng trạm từ cài env tới serve, chọn config theo dữ liệu, chọn recipe theo mục tiêu, xử lý OOM, đọc log, chia GPU và đánh giá. Mỗi khung giải thích có link nhảy về đúng mục trong cẩm nang.</p>
+    <div class="doc-row" data-doclinks="camnang"></div>
+  </header>
+
+  <nav class="jump" aria-label="Các hình">
+    <a href="#f-metro">1 · Lộ trình A/B/C</a>
+    <a href="#f-env">2 · Env</a>
+    <a href="#f-data">3 · Dữ liệu → config</a>
+    <a href="#f-split">4 · Chia theo bệnh nhân</a>
+    <a href="#f-choose">5 · Chọn recipe</a>
+    <a href="#f-oom">6 · Hết VRAM</a>
+    <a href="#f-logs">7 · Đọc log</a>
+    <a href="#f-par">8 · Nhiều GPU</a>
+    <a href="#f-share">9 · Chia 1 GPU</a>
+    <a href="#f-budget">10 · gpu_budget</a>
+    <a href="#f-eval">11 · Đánh giá</a>
+    <a href="#f-ci">12 · Chấp nhận model</a>
+    <a href="#f-ops">13 · Cập nhật & an toàn</a>
+  </nav>
+
+  <!-- 1. METRO -->
+  <section class="viz" id="f-metro">
+    <div class="viz-head">
+      <span class="fig">Hình 1</span>
+      <h2>Lộ trình từ dữ liệu thô tới model chạy thật</h2>
+      <p class="sub">Ba trạm đầu dùng chung. Sau đó chọn luồng: A đọc ảnh X-quang, B chatbot hỏi đáp, C suy luận có đáp án. Màu đường ray là env đang dùng; hình thoi là chỗ phải đổi env. Trạm nét đứt là tuỳ chọn.</p>
+      <span class="hint">Chọn luồng, rồi bấm từng trạm để xem lệnh, file vào/ra và việc cần kiểm tra</span>
+    </div>
+    <div class="tabs" id="flowTabs" role="tablist">
+      <button data-tab="A" role="tab">A · X-quang VLM</button>
+      <button data-tab="B" role="tab">B · Chatbot text</button>
+      <button data-tab="C" role="tab">C · Suy luận &lt;think&gt;</button>
+    </div>
+    <div class="viz-grid" id="metroRoot">
+      <div class="canvas">
+        <div class="env-legend" id="envLegend"></div>
+        <div class="metro" id="metro"></div>
+        <div class="progress"><span id="progTxt">0/0 trạm đã kiểm</span><div class="bar"><span id="progBar" style="flex-basis:0%"></span></div></div>
+      </div>
+      <aside class="panel" data-panel aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <!-- 2. ENV -->
+  <section class="viz" id="f-env">
+    <div class="viz-head">
+      <span class="fig">Hình 2</span>
+      <h2>Mỗi nhóm recipe một env — recipe nào chạy trong env nào</h2>
+      <p class="sub">Các thư viện ghim version xung đột nhau nên không có một env nào cài được tất cả. Mỗi ô dưới là một thư mục <code>recipes/NN_*</code>; chấm màu là env nó cần.</p>
+      <span class="hint">Bấm tên env để làm sáng các recipe chạy trong env đó</span>
+    </div>
+    <div class="viz-grid" id="envRoot">
+      <div class="canvas">
+        <div class="env-btns" id="envBtns"></div>
+        <div class="tiles" id="tiles"></div>
+      </div>
+      <aside class="panel" data-panel></aside>
+    </div>
+  </section>
+
+  <!-- 3. DATA PICKER -->
+  <section class="viz" id="f-data">
+    <div class="viz-head">
+      <span class="fig">Hình 3</span>
+      <h2>Dữ liệu của bạn là gì? → config mẫu của recipe 00</h2>
+      <p class="sub">Luôn bắt đầu bằng cách copy config gần nhất rồi sửa vài trường. Chạy <code>--dry-run</code> trước để xem cột được ánh xạ thế nào.</p>
+      <span class="hint">Bấm loại dữ liệu bạn đang có</span>
+    </div>
+    <div class="viz-grid" id="dataRoot">
+      <div class="canvas"><div class="pick" id="pick"></div></div>
+      <aside class="panel" data-panel></aside>
+    </div>
+  </section>
+
+  <!-- 4. SPLIT -->
+  <section class="viz" id="f-split">
+    <div class="viz-head">
+      <span class="fig">Hình 4</span>
+      <h2>Vì sao phải chia theo bệnh nhân, không theo dòng</h2>
+      <p class="sub">6 bệnh nhân, 12 phim (mỗi màu là một bệnh nhân). Đơn vị chia là <code>group_id</code>, tức bệnh nhân, không bao giờ là dòng.</p>
+      <span class="hint">Bấm hai cách chia để so sánh số bệnh nhân bị "rò" sang tập test</span>
+    </div>
+    <div class="canvas" id="splitRoot">
+      <div class="tabs">
+        <button data-tab="row">Chia theo dòng (sai)</button>
+        <button data-tab="group">Chia theo bệnh nhân (đúng)</button>
+      </div>
+      <div class="splitdemo" id="splitCols"></div>
+      <div class="leakbox" id="leakBox"></div>
+    </div>
+  </section>
+
+  <!-- 5. CHOOSE -->
+  <section class="viz" id="f-choose">
+    <div class="viz-head">
+      <span class="fig">Hình 5</span>
+      <h2>Chọn recipe theo thứ bạn đang có</h2>
+      <p class="sub">Cây quyết định của Docs 02 chia theo <em>tín hiệu học</em>: bạn có text thô, cặp hỏi–đáp, cặp tốt/tệ, đáp án kiểm chứng được, hay một model thầy.</p>
+      <span class="hint">Bấm vào thứ bạn có</span>
+    </div>
+    <div class="viz-grid" id="chooseRoot">
+      <div class="canvas"><div class="pick" id="choosePick"></div>
+        <div class="callout callout--note" style="margin-top:12px">Bước 0 luôn là <b>recipe 00</b> (dữ liệu). Sau train luôn là <b>07 merge → 08 quantize → 10/19 serve → 11 đánh giá</b>.</div>
+      </div>
+      <aside class="panel" data-panel></aside>
+    </div>
+  </section>
+
+  <!-- 6. OOM -->
+  <section class="viz" id="f-oom">
+    <div class="viz-head">
+      <span class="fig">Hình 6</span>
+      <h2>Hết VRAM (CUDA out of memory): leo từng bậc, rẻ trước đắt sau</h2>
+      <p class="sub">Thứ tự theo Docs 05. Mỗi lần chỉ đổi một thứ rồi chạy lại.</p>
+      <span class="hint">Bấm "Vẫn OOM" để lên bậc tiếp theo</span>
+    </div>
+    <div class="viz-grid wide" id="oomRoot">
+      <div class="canvas">
+        <div class="stepbar" data-stepbar></div>
+        <div class="ladder" id="ladder"></div>
+        <div class="oom-actions">
+          <button class="btn btn--primary" id="oomNext">Vẫn OOM → thử bậc tiếp</button>
+          <button class="btn" id="oomDone">Hết OOM rồi — làm lại từ đầu</button>
+        </div>
+        <div class="caption" data-caption></div>
+        <div class="callout callout--note" style="margin-top:12px">Bản rút gọn trong HUONG_DAN: QLoRA (<code>model.load_in_4bit=true</code>) → giảm <code>per_device_train_batch_size</code>, tăng <code>gradient_accumulation_steps</code> → <code>gradient_checkpointing: true</code> → giảm <code>max_length</code> / <code>data.max_image_size</code> → <code>use_liger_kernel</code> → ZeRO-2/3 offload. Không biết có vừa không thì chạy <code>memory_estimator.py</code> trước.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. LOGS -->
+  <section class="viz" id="f-logs">
+    <div class="viz-head">
+      <span class="fig">Hình 7</span>
+      <h2>Đọc log: đường cong nào là bình thường, đường nào phải dừng</h2>
+      <p class="sub">Hình chỉ minh hoạ hình dạng đường, không phải số đo thật.</p>
+      <span class="hint">Bấm một chỉ số để xem bất thường thì làm gì</span>
+    </div>
+    <div class="viz-grid" id="logRoot">
+      <div class="canvas"><div class="flow-v" id="logRows"></div></div>
+      <aside class="panel" data-panel></aside>
+    </div>
+  </section>
+
+  <!-- 8. PARALLEL -->
+  <section class="viz" id="f-par">
+    <div class="viz-head">
+      <span class="fig">Hình 8</span>
+      <h2>Nhiều GPU: chọn DDP, ZeRO hay FSDP2</h2>
+      <p class="sub">Trả lời từng câu theo cây quyết định của Docs 09. P = số tham số (tỉ), N = số GPU; <code>2P + 16P/N</code> tính ra GB. Chọn phương án ít giao tiếp nhất mà vẫn vừa bộ nhớ.</p>
+      <span class="hint">Bấm Có / Không cho từng câu hỏi</span>
+    </div>
+    <div class="viz-grid wide">
+      <div class="canvas" id="parQuiz">
+        <div class="trail" data-trail></div>
+        <div data-card></div>
+        <div class="treemini" data-tree></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. SHARE -->
+  <section class="viz" id="f-share">
+    <div class="viz-head">
+      <span class="fig">Hình 9</span>
+      <h2>Chỉ có 1 GPU mà muốn chạy 2 việc (train + serve)</h2>
+      <p class="sub">Trái: checklist của Docs 17 dạng câu hỏi. Phải: so sánh các cách chia GPU — ba chấm là cô lập <b>bộ nhớ · compute · lỗi</b> (xanh = có, nửa vàng = một phần, viền đỏ = không).</p>
+      <span class="hint">Trả lời câu hỏi bên trái, hoặc bấm một cách chia GPU bên phải</span>
+    </div>
+    <div class="two">
+      <div class="canvas" id="shareQuiz">
+        <div class="trail" data-trail></div>
+        <div data-card></div>
+      </div>
+      <div class="viz-grid wide" id="methodRoot" style="gap:12px">
+        <div class="canvas"><div class="methods" id="methods"></div></div>
+        <aside class="panel" data-panel></aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. BUDGET -->
+  <section class="viz" id="f-budget">
+    <div class="viz-head">
+      <span class="fig">Hình 10</span>
+      <h2>Tính ngân sách VRAM như <code>docker/gpu_budget.py</code></h2>
+      <p class="sub">Cùng công thức với script: fraction = làm tròn xuống 2 chữ số của GB ÷ tổng; cần = train + serve + 2 × headroom; còn trống = tổng − đang dùng. Cảnh báo khi tổng fraction &gt; 0,90 hoặc cần &gt; còn trống.</p>
+      <span class="hint">Kéo thanh trượt hoặc bấm một ví dụ có sẵn</span>
+    </div>
+    <div class="canvas budget" id="budget">
+      <div class="seg" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        <button class="btn" data-preset="4090">RTX 4090: train 13 / serve 7</button>
+        <button class="btn" data-preset="default">Mặc định 55% / 30%</button>
+        <button class="btn" data-preset="busy">Mặc định + desktop chiếm 1 GiB</button>
+      </div>
+      <div class="controls">
+        <div class="ctl"><label for="bTotal">Tổng VRAM (GiB) <output id="oTotal"></output></label><input type="range" id="bTotal" min="8" max="96" step="0.01"></div>
+        <div class="ctl"><label for="bUsed">Đang bị chiếm (GiB) <output id="oUsed"></output></label><input type="range" id="bUsed" min="0" max="8" step="0.1"></div>
+        <div class="ctl"><label for="bTrain">--train-gb <output id="oTrain"></output></label><input type="range" id="bTrain" min="1" max="80" step="0.5"></div>
+        <div class="ctl"><label for="bServe">--serve-gb <output id="oServe"></output></label><input type="range" id="bServe" min="1" max="60" step="0.5"></div>
+        <div class="ctl"><label for="bHead">--headroom-gb <output id="oHead"></output></label><input type="range" id="bHead" min="0.5" max="3" step="0.1"></div>
+      </div>
+      <div class="bar" id="bBar"></div>
+      <div class="legend">
+        <span><i style="background:var(--muted)"></i>đang bị chiếm</span>
+        <span><i style="background:var(--ex)"></i>serve (vLLM/SGLang)</span>
+        <span><i style="background:var(--note)"></i>train</span>
+        <span><i style="background:var(--warn)"></i>headroom × 2</span>
+        <span><i style="background:var(--surface-2);border:1px solid var(--border)"></i>còn trống</span>
+      </div>
+      <div class="verdict" id="bVerdict"></div>
+      <div class="two" style="margin-top:12px">
+        <div><h4 style="font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Lệnh</h4><pre class="code" id="bCmd"></pre></div>
+        <div><h4 style="font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Dòng ghi vào docker/.env</h4><div class="envout" id="bEnv"></div></div>
+      </div>
+      <div class="callout callout--warn" style="margin-top:12px">Thứ tự chạy: <b>server trước</b> (vLLM cấp phát trước phần của nó), <b>train sau</b> với cap cứng <code>PYTORCH_ALLOC_CONF=per_process_memory_fraction:…</code>, rồi theo dõi <code>nvidia-smi -l 2</code>. GPU không có "OOM killer". <span id="bDoc"></span></div>
+    </div>
+  </section>
+
+  <!-- 11. EVAL PIPELINE -->
+  <section class="viz" id="f-eval">
+    <div class="viz-head">
+      <span class="fig">Hình 11</span>
+      <h2>Sau train: từ test.jsonl tới bảng so sánh model</h2>
+      <p class="sub">Quy trình chuẩn của recipe 11. Mọi model sinh câu trả lời greedy với cùng <code>max_tokens</code>, trên tập test (bệnh nhân chưa thấy).</p>
+      <span class="hint">Bấm Tiếp ▶ để đi từng bước</span>
+    </div>
+    <div class="canvas" id="evalRoot">
+      <div class="stepbar" data-stepbar></div>
+      <div class="pipe">
+        <div class="pbox file" data-on="1-" data-hl="1"><b>test.jsonl</b>bệnh nhân chưa thấy</div>
+        <div class="pbox" data-on="1-" data-hl="1"><b>vllm_offline.py</b><code>recipes/10_inference</code></div>
+        <div class="pbox file" data-on="1-" data-hl="1,2,3"><b>preds/X.jsonl</b>câu trả lời của model</div>
+        <div class="pbox" data-on="2-" data-hl="2"><b>compute_metrics.py</b><code>--bootstrap 1000</code></div>
+        <div class="pbox file" data-on="2-" data-hl="2,4"><b>results/X.json</b>+ <code>X.samples.jsonl</code></div>
+        <div class="pbox" data-on="3-" data-hl="3"><b>llm_judge.py</b> / <b>report_judge_findings.py</b><code>judge local :8001</code></div>
+        <div class="pbox" data-on="4-" data-hl="4"><b>paired_compare.py</b>A vs B, có khoảng tin cậy</div>
+        <div class="pbox" data-on="5-" data-hl="5"><b>compare_results.py</b>bảng tổng hợp</div>
+      </div>
+      <div class="caption" data-caption></div>
+      <pre class="code" id="evalCmd" style="margin-top:10px"></pre>
+      <div class="doc-links" id="evalDocs"></div>
+    </div>
+  </section>
+
+  <!-- 12. CI ACCEPT -->
+  <section class="viz" id="f-ci">
+    <div class="viz-head">
+      <span class="fig">Hình 12</span>
+      <h2>Khi nào được nói "model mới tốt hơn" hay "bản quantize chấp nhận được"</h2>
+      <p class="sub">Nhìn cận dưới của khoảng tin cậy (CI) paired, không nhìn trung bình. Đơn vị: điểm phần trăm.</p>
+      <span class="hint">Chọn câu hỏi, rồi bấm ví dụ hoặc kéo hai đầu CI</span>
+    </div>
+    <div class="canvas ci" id="ciRoot">
+      <div class="tabs">
+        <button data-tab="sft">SFT có tốt hơn base?</button>
+        <button data-tab="quant">Bản quantize có chấp nhận được?</button>
+      </div>
+      <div class="seg" id="ciPresets"></div>
+      <div class="controls">
+        <div class="ctl"><label for="ciLo">Cận dưới CI <output id="oLo"></output></label><input type="range" id="ciLo" min="-3" max="3" step="0.1"></div>
+        <div class="ctl"><label for="ciHi">Cận trên CI <output id="oHi"></output></label><input type="range" id="ciHi" min="-3" max="3" step="0.1"></div>
+        <div class="ctl" id="ciMarginCtl"><label for="ciM">Margin <output id="oM"></output></label><input type="range" id="ciM" min="0.2" max="2" step="0.1"></div>
+      </div>
+      <svg id="ciSvg" viewBox="0 0 640 120" role="img" aria-label="Khoảng tin cậy trên trục số"></svg>
+      <div class="verdict" id="ciVerdict"></div>
+    </div>
+  </section>
+
+  <!-- 13. OPS -->
+  <section class="viz" id="f-ops">
+    <div class="viz-head">
+      <span class="fig">Hình 13</span>
+      <h2>Nâng version thư viện & checklist an toàn dữ liệu y tế</h2>
+      <span class="hint">Chọn tab, bấm Tiếp ▶ hoặc tick từng mục</span>
+    </div>
+    <div class="canvas" id="opsRoot">
+      <div class="tabs">
+        <button data-tab="up">Nâng version (Docs 19)</button>
+        <button data-tab="safe">Trước khi dùng dữ liệu thật (Docs 18)</button>
+      </div>
+      <div data-pane="up" id="upRoot">
+        <div class="stepbar" data-stepbar></div>
+        <div class="flow" id="upFlow"></div>
+        <div class="caption" data-caption></div>
+        <div class="doc-links" id="upDocs"></div>
+      </div>
+      <div data-pane="safe">
+        <div class="two">
+          <div><h4 style="font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Checklist trước khi dùng dữ liệu thật</h4><div class="checklist" id="safeList"></div></div>
+          <div><h4 style="font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Quy tắc bắt buộc</h4>
+            <div class="flow-v">
+              <div class="callout callout--warn">Ẩn danh trước khi train (recipe 00 <code>pii</code>), giữ <code>PII_SALT</code> bí mật và cố định.</div>
+              <div class="callout callout--warn">Dataset / model y tế để <b>private</b> (<code>--push</code> của các script luôn tạo repo private).</div>
+              <div class="callout callout--warn">Judge, teacher, red-team chạy <b>local</b>; chỉ dùng API ngoài với dữ liệu đã ẩn danh + có thoả thuận xử lý dữ liệu.</div>
+              <div class="callout callout--warn">Model chỉ là công cụ hỗ trợ; kết quả lâm sàng phải được bác sĩ kiểm tra.</div>
+            </div>
+          </div>
+        </div>
+        <div class="doc-links" id="safeDocs"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>Nguồn: <em>training-recipes-cam-nang.html</em> (repo training_recipes, cập nhật 10/2026). Code trong repo chưa chạy trên GPU khi viết: luôn kiểm tra môi trường → smoke 10 bước → chạy thật.</span>
+    <a href="index.html">← Về bản đồ trực quan</a>
+  </footer>
+</div>
+
+<script src="shared.js"></script>
+<script>
+(function () {
+  const esc = TQ.esc;
+  const D = (a, l) => ['camnang', a, l];
+
+  /* ---------------- ENV ---------------- */
+  const ENVS = {
+    data: { name: 'data', use: 'recipe 00 chuẩn bị dữ liệu (chỉ CPU)', file: 'recipes/00_data_preparation/requirements.txt' },
+    hf: { name: 'hf', use: 'SFT/VLM HF (02, 03), DPO/GRPO TRL kể cả VLM (04, 05), 06, merge (07), 12, 13–16, 20', file: 'torch trước, rồi requirements/hf_trl.txt' },
+    unsloth: { name: 'unsloth', use: 'SFT/VLM 1 GPU nhanh (*_unsloth.py), CPT (01), export GGUF (07)', file: 'requirements/unsloth.txt' },
+    unsloth_vllm: { name: 'unsloth_vllm', use: 'GRPO Unsloth có vLLM (train_grpo_unsloth.py)', file: 'requirements/unsloth_vllm.txt' },
+    quant: { name: 'quant', use: 'quantize (08)', file: 'requirements/quantization.txt' },
+    serve: { name: 'serve', use: 'vLLM serve/offline (10, 19), đánh giá + judge + lm-eval (11)', file: 'requirements/serving_eval.txt' },
+    lf: { name: 'lf', use: '09 LLaMA-Factory', file: 'pip install llamafactory==0.9.5' },
+    modelopt: { name: 'modelopt', use: '08 quantize_modelopt.py', file: 'requirements/modelopt.txt (cần transformers < 5.15 → xung đột với quant)' },
+  };
+  const echip = (e, extra) => `<span class="echip env-${e}">${esc(extra || e)}</span>`;
+
+  /* ---------------- STATIONS ---------------- */
+  const SHARED = [
+    { k: 'S1', title: 'Cài môi trường', sub: '6 env tách biệt, driver ↔ CUDA', env: 'none', dir: 'gốc repo',
+      envNote: 'Tạo từng env: data, hf, unsloth, unsloth_vllm, quant, serve. Không cài chung.',
+      io: { in: ['nvidia-smi thấy GPU'], script: 'conda create + pip install', out: ['env hf, serve, data, …'] },
+      cmds: `# ví dụ env hf (Linux / WSL2)
+conda create -n hf python=3.12 -y && conda activate hf
+pip install torch==2.14.0 torchvision --index-url https://download.pytorch.org/whl/cu130
+pip install -r requirements/hf_trl.txt
+# GRPO có use_vllm: cài torch==2.13.0 NGAY TỪ ĐẦU (vllm 0.30 ghim torch 2.13)
+# env serve
+conda create -n serve python=3.12 -y && conda activate serve && pip install uv && \\
+    uv pip install -r requirements/serving_eval.txt --torch-backend=auto
+# env dữ liệu (CPU)
+conda create -n data python=3.12 -y && conda activate data && pip install -r recipes/00_data_preparation/requirements.txt`,
+      checks: ['nvidia-smi thấy GPU', 'Driver ≥ 580 → wheel cu130; driver cũ hơn → cu126', 'Định chạy GRPO có use_vllm → env hf cài torch==2.13.0 ngay từ đầu'],
+      pitfalls: ['Không cài chung một env: unsloth đòi transformers ≤ 5.5, llm-compressor đòi ≥ 5.15 → không sống chung được.', 'Không chắc driver: uv pip install torch torchvision --torch-backend=auto để uv tự dò.'],
+      doc: [D('a-guide-env', 'Bước 1 — Cài môi trường'), D('a-env-why', 'Vì sao tách env'), D('a-env-cuda', 'Driver ↔ CUDA')] },
+    { k: 'S2', title: 'Kiểm tra môi trường + đăng nhập', sub: 'check_env, make test, smoke tier 0 → 2', env: 'hf', dir: 'gốc repo',
+      envNote: 'Chạy trong env bạn sắp dùng. Tier 2 phải chạy trong env khớp từng recipe (bước nào import lỗi sẽ thành SKIP).',
+      io: { in: ['sample_data/*.jsonl'], script: 'check_env.py · smoke_test_all.sh', out: ['results/smoke/<ngày>_<git sha>_tier2.md'] },
+      cmds: `python scripts/check_env.py --import      # version, CUDA, GPU, import thật từng gói
+make test                                 # unit test CPU (reward, metric, datakit, VLM data)
+bash scripts/smoke_test_all.sh --tier 0   # cú pháp mọi file, parse YAML/JSON
+bash scripts/smoke_test_all.sh --tier 2 --only sft_hf,dpo,grpo_trl,dpo_vlm,grpo_vlm,vllm_offline   # 1 GPU, vài bước mỗi recipe
+hf auth login                       # model gated (MedGemma, Llama...) cần chấp nhận điều khoản trên trang model trước
+export HF_HOME=/data/hf_cache       # cache model ra ổ lớn
+export PII_SALT=<chuỗi bí mật, giữ cố định>   # recipe 00 dùng để băm mã bệnh nhân`,
+      checks: ['File smoke: PASS = chạy được', 'SKIP = thiếu gói/GPU trong env đang dùng → chạy lại trong đúng env', 'FAIL = gửi file log', 'Đã hf auth login và đặt PII_SALT'],
+      pitfalls: ['Gặp lỗi: chép nguyên traceback + output của python scripts/check_env.py.'],
+      doc: [D('a-guide-env', 'Kiểm tra bắt buộc'), D('a-check-env', 'check_env.py'), D('a-smoke', 'smoke test 3 tầng'), D('a-make', 'Makefile')] },
+    { k: 'S3', title: 'Recipe 00 — chuẩn bị dữ liệu', sub: 'làm sạch, ẩn PII, chia theo bệnh nhân', env: 'data', dir: 'recipes/00_data_preparation',
+      io: { in: ['CSV / Excel / SQL', 'ảnh / DICOM / PDF'], script: 'prepare_data.py', out: ['data/prepared/<tên>/<version>/<định dạng>/{train,validation,test}.jsonl', 'report.md'] },
+      split: { train: 'make', validation: 'make', test: 'make' },
+      cmdsByFlow: {
+        A: `conda activate data && cd recipes/00_data_preparation
+cp configs/vlm_from_excel.yaml configs/my_xray.yaml     # chọn config gần nhất với dữ liệu của bạn rồi sửa
+python prepare_data.py --config configs/my_xray.yaml --dry-run      # xem mapping + 3 mẫu, không ghi gì
+python prepare_data.py --config configs/my_xray.yaml`,
+        B: `conda activate data && cd recipes/00_data_preparation
+python prepare_data.py --config configs/sft_from_csv.yaml source.path=/data/qa.csv`,
+        C: `conda activate data && cd recipes/00_data_preparation
+python prepare_data.py --config configs/mcq_to_grpo.yaml source.path=/data/mcq.csv     # gold -> chữ cái A–E`,
+      },
+      checks: ['report.md: rejected_ratio thấp, lý do loại hợp lý (thiếu câu trả lời, ảnh hỏng, trùng)', 'leakage group_id giữa các split = 0 (script tự dừng nếu không)', 'Ảnh: n_converted, kích thước, không có ảnh trắng/đen toàn bộ', 'Xem phân bố độ dài token để chọn max_length'],
+      pitfalls: ['Phải sửa: source.path, columns.rename, ids.group (mã bệnh nhân), images.roots, pii.drop_columns, split — xem Hình 3.'],
+      doc: [D('a-guide-data', 'Bước 2 — Chuẩn bị dữ liệu'), D('b-r00-h', 'Recipe 00'), D('b-r00-split', 'Chia tập không rò rỉ')] },
+  ];
+
+  const FLOWS = {
+    A: { name: 'Luồng A — X-quang VLM', route: '00 → 03 SFT VLM → 07 merge → 11 đánh giá → (04 DPO-VLM | 05 GRPO-VLM) → 08 quantize → 19 serve', rows: [
+      { k: 'A1', title: 'SFT VLM', sub: 'train_vlm_hf.py, LoRA Qwen2.5-VL', env: 'hf', dir: 'recipes/03_sft_vlm',
+        io: { in: ['$D/train.jsonl', '$D/validation.jsonl'], script: 'train_vlm_hf.py', out: ['outputs/qwen25vl-7b-lora-xray-findings (adapter LoRA)'] },
+        split: { train: 'use', validation: 'use', test: 'no' },
+        cmds: `conda activate hf && cd recipes/03_sft_vlm
+D=../../data/prepared/xray_excel/v1/vlm_messages      # đổi theo run.name / run.version của bạn
+# smoke 10 bước
+python train_vlm_hf.py --config configs/lora_hf_qwen25vl.yaml data.format=messages \\
+    data.path=$D/train.jsonl data.eval_path=$D/validation.jsonl data.eval_split=null \\
+    training.max_steps=10 training.save_strategy=no training.eval_strategy=no
+# chạy thật (nhiều GPU)
+accelerate launch --config_file ../../configs/accelerate/ddp.yaml --num_processes 4 \\
+    train_vlm_hf.py --config configs/lora_hf_qwen25vl.yaml data.format=messages \\
+    data.path=$D/train.jsonl data.eval_path=$D/validation.jsonl data.eval_split=null`,
+        checks: ['Smoke 10 bước chạy hết không lỗi', 'Log "trained tokens of sample 0" là câu trả lời của bác sĩ, không phải câu hỏi/system', 'Xem số token ảnh mỗi mẫu (VRAM tỉ lệ với nó, chỉnh bằng data.max_image_size)'],
+        pitfalls: ['data.eval_split=null bắt buộc khi dùng file local.', '1 GPU 16–24 GB: train_vlm_unsloth.py --config configs/qlora_unsloth_qwen3vl.yaml (env unsloth).', 'MedGemma: configs/lora_hf_medgemma4b.yaml — gated, chấp nhận điều khoản trước.'],
+        doc: [D('a-flow-a', 'A1. SFT VLM'), D('d-vlm-h', 'Recipe 03')] },
+      { k: 'A2', title: 'Merge LoRA', sub: 'merge_lora.py --verify', env: 'hf', dir: 'recipes/03_sft_vlm',
+        io: { in: ['outputs/qwen25vl-7b-lora-xray-findings'], script: '../07_merge_export/merge_lora.py', out: ['outputs/qwen25vl-7b-lora-xray-findings-merged'] },
+        cmds: `python ../07_merge_export/merge_lora.py --adapter outputs/qwen25vl-7b-lora-xray-findings \\
+    --output outputs/qwen25vl-7b-lora-xray-findings-merged --verify`,
+        checks: ['In ra top-1 agreement ≈ 1.0', 'Không có dòng WARNING'],
+        pitfalls: ['QLoRA: thêm --base <repo bf16 gốc>. Không bao giờ merge vào model 4-bit.'],
+        doc: [D('a-flow-a', 'A2. Merge LoRA'), D('i-merge-rules', 'Năm quy tắc merge')] },
+      { k: 'A3', title: 'Đánh giá trên tập test', sub: 'vllm_offline → compute_metrics → judge', env: 'serve', dir: 'recipes/11_evaluation',
+        io: { in: ['…-merged', '$D/test.jsonl'], script: 'vllm_offline.py · compute_metrics.py · report_judge_findings.py', out: ['preds/xray_sft.jsonl', 'results/xray_sft.json', 'results/findings_xray_sft.jsonl'] },
+        split: { train: 'no', validation: 'no', test: 'use' },
+        cmds: `cd ../11_evaluation
+python ../10_inference/vllm_offline.py --model ../03_sft_vlm/outputs/qwen25vl-7b-lora-xray-findings-merged \\
+    --input $D/test.jsonl --output preds/xray_sft.jsonl --max-image-size 448
+python compute_metrics.py --pred preds/xray_sft.jsonl --task report --out results/xray_sft.json --bootstrap 1000
+# judge theo từng dấu hiệu (GREEN-like), judge chạy LOCAL ở cổng riêng
+NAME=judge PORT=8001 bash ../10_inference/vllm_serve.sh llm Qwen/Qwen3-32B
+python report_judge_findings.py --pred preds/xray_sft.jsonl --model judge --base-url http://localhost:8001/v1 \\
+    --out results/findings_xray_sft.jsonl`,
+        checks: ['--max-image-size bằng data.max_image_size lúc train (mặc định 448; MedGemma 896)', 'So 2 model bằng paired_compare.py: chỉ tin chênh lệch khi CI không chứa 0', 'Đã hiệu chỉnh judge với bác sĩ trên 50–100 báo cáo trước khi tin số của judge'],
+        pitfalls: ['Judge chạy ở cổng 8001, tên judge, để không đè lên model đang được đánh giá.'],
+        doc: [D('a-flow-a', 'A3. Đánh giá'), D('j-r11-findings', 'report_judge_findings.py'), D('j-d15-accept', 'Quy tắc chấp nhận')] },
+      { k: 'A4', title: 'DPO-VLM — giảm "bịa" dấu hiệu', sub: 'tuỳ chọn · dự đoán trên TRAIN → judge → ghép cặp → DPO', env: 'serve', envEnd: 'hf', opt: true, dir: 'recipes/11_evaluation → recipes/04_preference',
+        envNote: 'Bước 1–2 (dự đoán, judge) cần vLLM (serve); bước 3–4 (ghép cặp, DPO) trong hf.',
+        io: { in: ['$D/train.jsonl (TRAIN)'], script: 'make_vlm_dpo_pairs.py · train_preference_vlm.py', out: ['data/xray_dpo.jsonl', 'model DPO'] },
+        split: { train: 'use', validation: 'no', test: 'forbid' },
+        cmds: `# 1) model SFT dự đoán trên tập TRAIN (không bao giờ test), 2) judge theo finding, 3) ghép cặp, 4) DPO
+python ../10_inference/vllm_offline.py --model ../03_sft_vlm/outputs/qwen25vl-7b-lora-xray-findings-merged \\
+    --input $D/train.jsonl --output preds/train_sft.jsonl --temperature 0.7 --max-tokens 512
+python report_judge_findings.py --pred preds/train_sft.jsonl --model judge --base-url http://localhost:8001/v1 \\
+    --out results/findings_train_sft.jsonl
+cd ../04_preference
+python make_vlm_dpo_pairs.py --source $D/train.jsonl --pred ../11_evaluation/preds/train_sft.jsonl \\
+    --findings ../11_evaluation/results/findings_train_sft.jsonl --out data/xray_dpo.jsonl
+python train_preference_vlm.py --config configs/dpo_vlm_qwen25vl.yaml data.path=data/xray_dpo.jsonl`,
+        checks: ['rewards/accuracies lên 0.7–0.9', 'rewards/chosen không tụt mạnh', 'Merge (A2) rồi đánh giá lại (A3), so cặp với model SFT'],
+        pitfalls: ['chosen = báo cáo bác sĩ, rejected = báo cáo lỗi của model.', 'make_vlm_dpo_pairs.py từ chối chạy trên tập test.', 'rewards/chosen tụt → loss_type: [sigmoid, sft].'],
+        doc: [D('a-flow-a', 'A4. DPO-VLM'), D('e-r04-h', 'Recipe 04')] },
+      { loop: '↺ quay lại A2 merge → A3 đánh giá lại, so cặp với SFT' },
+      { k: 'A5', title: 'GRPO-VLM — câu hỏi đóng có/không', sub: 'tuỳ chọn · reward = đúng/sai so với nhãn', env: 'hf', opt: true, force: true, dir: 'recipes/05_reasoning/grpo',
+        io: { in: ['{ảnh, câu hỏi đóng, Có/Không} từ recipe 00'], script: 'train_grpo_vlm.py', out: ['model GRPO'] },
+        split: { train: 'use', validation: 'no', test: 'no' },
+        cmds: `# mapping trong config recipe 00:
+mapping:
+  required: [image_path, tran_dich]     # ô nhãn TRỐNG -> loại dòng (nếu không, int("") = 0 -> gán "Không" SAI)
+  turns:
+    - user: "Có tràn dịch màng phổi không?"
+      images: ["{{ image_path }}"]
+      assistant: "{{ 'Có' if (tran_dich | int) == 1 else 'Không' }}"   # cột CSV/Excel đọc vào là chuỗi -> ép int
+
+cd recipes/05_reasoning/grpo
+python train_grpo_vlm.py --config configs/grpo_vlm_qwen25vl.yaml \\
+    data.path=../../../data/prepared/<tên>/v1/vlm_messages/train.jsonl`,
+        checks: ['Tỉ lệ Có/Không trong khoảng 30–70% (script cảnh báo nếu lệch)', 'Đọc log_completions xem model thật sự sinh gì', 'Đánh giá bằng recipes/11_evaluation/vlm_benchmarks/score_vqa.py'],
+        pitfalls: ['Lệch tỉ lệ → model học đoán theo tỉ lệ (luôn "Không" vẫn được reward cao) thay vì nhìn phim.'],
+        doc: [D('a-flow-a', 'A5. GRPO-VLM'), D('e-r05-h', 'Recipe 05')] },
+      { k: 'A6', title: 'Quantize FP8', sub: 'llm-compressor fp8_dynamic', env: 'quant', dir: 'recipes/08_quantization',
+        io: { in: ['…-merged (bf16)'], script: 'quantize_llmcompressor.py', out: ['outputs/qwen25vl-xray-FP8'] },
+        cmds: `conda activate quant && cd recipes/08_quantization
+python quantize_llmcompressor.py --model ../03_sft_vlm/outputs/qwen25vl-7b-lora-xray-findings-merged \\
+    --output outputs/qwen25vl-xray-FP8 --scheme fp8_dynamic          # GPU Ada/Hopper+; GPU cũ: awq_w4a16 + --calib-data`,
+        checks: ['GPU có FP8 (Ada RTX 40xx/L40S, Hopper H100+) → fp8_dynamic', 'GPU cũ (A100, RTX 30xx) → awq_w4a16 + --calib-data'],
+        pitfalls: ['Quantize từ model bf16 đã merge, không từ model đã bị quantize.'],
+        doc: [D('a-flow-a', 'A6. Quantize + serve'), D('i-quant-h', 'Recipe 08')] },
+      { k: 'A7', title: 'Serve + gọi thử', sub: 'serve_profile.sh vlm_xray → model "clara"', env: 'serve', dir: 'recipes/19_inference_optimization',
+        io: { in: ['outputs/qwen25vl-xray-FP8'], script: 'serve_profile.sh · openai_client.py', out: ['API http://localhost:8000/v1'] },
+        cmds: `conda activate serve && cd ../19_inference_optimization
+API_KEY=<bí mật> bash serve_profile.sh vlm_xray ../08_quantization/outputs/qwen25vl-xray-FP8
+python ../10_inference/openai_client.py --base-url http://localhost:8000/v1 --model clara \\
+    --image phim.png --prompt "Mô tả phim X-quang này."`,
+        checks: ['Profile vlm_xray: tên model clara, ảnh 448 px', 'Đánh giá lại (A3) và so cặp với bản bf16: paired_compare.py --margin 0.01'],
+        pitfalls: ['MedGemma: bash ../10_inference/vllm_serve.sh vlm <dir>.', 'openai_client.py tự chuyển ảnh 16-bit → 8-bit; gửi thẳng ảnh 16-bit qua client khác sẽ ra ảnh trắng.'],
+        doc: [D('a-flow-a', 'A6. Quantize + serve'), D('j-r10-img16', 'Bẫy ảnh 16-bit'), D('j-r19-profile', 'serve_profile.sh')] },
+      { loop: '↺ đánh giá lại bản FP8 (A3), so cặp với bf16 --margin 0.01 — xem Hình 12' },
+    ] },
+    B: { name: 'Luồng B — Chatbot hỏi đáp y khoa', route: '00 → ước lượng VRAM → 02 SFT → 07 merge → 11 đánh giá → (04 DPO) → 08 quantize → 19 serve', rows: [
+      { k: 'B1', title: 'Ước lượng VRAM', sub: 'memory_estimator.py', env: 'hf', dir: 'recipes/02_sft_llm',
+        io: { in: ['tên model, method, seq, VRAM GPU'], script: '../12_training_optimization/memory_estimator.py', out: ['ước lượng có vừa không'] },
+        cmds: `conda activate hf && cd ../02_sft_llm
+python ../12_training_optimization/memory_estimator.py --model Qwen/Qwen3-8B --method lora --seq 4096 --gpu-mem 24`,
+        checks: ['Vừa VRAM → sang B2', 'Không vừa → đổi method (qlora) hoặc xem Hình 6 (OOM) / Hình 8 (nhiều GPU)'],
+        doc: [D('a-flow-b', 'Luồng B'), D('f-memory-h', 'Docs 08 — Memory math')] },
+      { k: 'B2', title: 'SFT LLM', sub: 'train_sft_hf.py, LoRA Qwen3-8B', env: 'hf', dir: 'recipes/02_sft_llm',
+        io: { in: ['$D/train.jsonl', '$D/validation.jsonl'], script: 'train_sft_hf.py', out: ['outputs/qwen3-8b-lora-medical'] },
+        split: { train: 'use', validation: 'use', test: 'no' },
+        cmds: `D=../../data/prepared/medical_qa_sft/v1/messages
+python train_sft_hf.py --config configs/lora_hf.yaml data.path=$D/train.jsonl data.eval_path=$D/validation.jsonl \\
+    data.test_size=0 training.max_steps=10                  # smoke; bỏ max_steps để chạy thật`,
+        checks: ['Smoke 10 bước chạy hết', 'Chạy thật: loss giảm, eval_loss không tăng (Hình 7)'],
+        pitfalls: ['1 GPU 16–24 GB: train_sft_unsloth.py --config configs/qlora_unsloth.yaml (env unsloth).', 'Nhiều GPU / full fine-tune: configs/full_hf_deepspeed.yaml + accelerate launch.'],
+        doc: [D('a-flow-b', 'Luồng B'), D('d-sft-h', 'Recipe 02')] },
+      { k: 'B3', title: 'Merge LoRA', sub: 'merge_lora.py --verify', env: 'hf', dir: 'recipes/02_sft_llm',
+        io: { in: ['outputs/qwen3-8b-lora-medical'], script: '../07_merge_export/merge_lora.py', out: ['outputs/merged'] },
+        cmds: `python ../07_merge_export/merge_lora.py --adapter outputs/qwen3-8b-lora-medical --output outputs/merged --verify`,
+        checks: ['top-1 agreement ≈ 1.0, không có WARNING'],
+        pitfalls: ['QLoRA: --base <repo bf16 gốc>; không merge vào 4-bit.'],
+        doc: [D('a-flow-b', 'Luồng B'), D('i-merge-rules', 'Năm quy tắc merge')] },
+      { k: 'B4', title: 'Đánh giá trên tập test', sub: 'vllm_offline → compute_metrics', env: 'serve', dir: 'recipes/02_sft_llm',
+        io: { in: ['outputs/merged', '$D/test.jsonl'], script: 'vllm_offline.py · compute_metrics.py', out: ['preds/sft.jsonl', 'results/sft.json'] },
+        split: { train: 'no', validation: 'no', test: 'use' },
+        cmds: `conda activate serve
+python ../10_inference/vllm_offline.py --model outputs/merged --input $D/test.jsonl --output preds/sft.jsonl
+python ../11_evaluation/compute_metrics.py --pred preds/sft.jsonl --task report --out results/sft.json --bootstrap 1000`,
+        checks: ['--task đúng loại: report (câu dài), exact (đáp án ngắn), mcq, number', 'Câu trả lời tự do: chấm thêm bằng llm_judge.py (judge local)'],
+        doc: [D('a-flow-b', 'Luồng B'), D('j-r11-h', 'Recipe 11')] },
+      { k: 'B5', title: 'DPO (có cặp tốt/tệ)', sub: 'tuỳ chọn · train_preference.py', env: 'hf', opt: true, force: true, dir: 'recipes/04_preference',
+        io: { in: ['cặp chosen/rejected (dpo_pairs.yaml)'], script: 'train_preference.py', out: ['model DPO'] },
+        split: { train: 'use', validation: 'no', test: 'forbid' },
+        cmds: `python train_preference.py --config configs/dpo_lora.yaml`,
+        checks: ['rewards/accuracies 0.7–0.9', 'rewards/chosen không tụt mạnh'],
+        pitfalls: ['~0.5 = cặp nhiễu → robust_dpo.yaml.'],
+        doc: [D('a-flow-b', 'Luồng B'), D('e-r04-h', 'Recipe 04')] },
+      { loop: '↺ merge lại → đánh giá lại (B3 → B4), so cặp với SFT' },
+      { k: 'B6', title: 'Quantize FP8', sub: 'quantize_llmcompressor.py', env: 'quant', dir: 'recipes/02_sft_llm',
+        io: { in: ['outputs/merged'], script: '../08_quantization/quantize_llmcompressor.py', out: ['outputs/merged-FP8'] },
+        cmds: `python ../08_quantization/quantize_llmcompressor.py --model outputs/merged --output outputs/merged-FP8 --scheme fp8_dynamic`,
+        checks: ['fp8_dynamic cần GPU Ada/Hopper+; GPU cũ: awq_w4a16 + --calib-data'],
+        doc: [D('a-quickstart', 'Bắt đầu nhanh'), D('i-quant-h', 'Recipe 08')] },
+      { k: 'B7', title: 'Serve + benchmark + so cặp', sub: 'serve_profile.sh throughput', env: 'serve', dir: 'recipes/02_sft_llm',
+        io: { in: ['outputs/merged-FP8'], script: 'serve_profile.sh · bench_point.sh · paired_compare.py', out: ['API + số đo tốc độ + CI'] },
+        cmds: `bash ../19_inference_optimization/serve_profile.sh throughput outputs/merged-FP8
+bash ../19_inference_optimization/bench/bench_point.sh medical outputs/merged
+python ../10_inference/vllm_offline.py --model outputs/merged-FP8 --input <test.jsonl> --output preds/fp8.jsonl
+python ../11_evaluation/compute_metrics.py --pred preds/fp8.jsonl --task mcq --out results/fp8.json --bootstrap 1000
+python ../11_evaluation/paired_compare.py results/fp8.samples.jsonl results/bf16.samples.jsonl --metric correct --margin 0.01`,
+        checks: ['Bản FP8 không kém bf16 quá margin (cận dưới CI > −margin)', 'Dùng --task hợp với bài (ví dụ README dùng mcq)'],
+        doc: [D('a-quickstart', 'Bắt đầu nhanh'), D('j-r19-flow', 'Recipe 19 — 7 bước')] },
+    ] },
+    C: { name: 'Luồng C — Suy luận <think>', route: '00 (mcq_to_grpo) → trace CoT → SFT-CoT → merge → lọc độ khó → GRPO', rows: [
+      { k: 'C1', title: 'Sinh trace CoT bằng teacher local', sub: 'generate_cot_traces.py', env: 'serve', dir: 'recipes/05_reasoning',
+        io: { in: ['data/medqa_vi.jsonl'], script: 'data/generate_cot_traces.py', out: ['data/medqa_vi_cot.jsonl'] },
+        cmds: `conda activate serve && cd ../05_reasoning
+# teacher LOCAL sinh trace, chỉ giữ trace đúng (endpoint ngoài bị chặn nếu không có --allow-external-api)
+python data/generate_cot_traces.py --input data/medqa_vi.jsonl --output data/medqa_vi_cot.jsonl \\
+    --model <teacher> --base-url http://localhost:8000/v1 --answer-type mcq`,
+        checks: ['Teacher chạy local bằng vLLM ở localhost:8000', 'Chỉ giữ trace có đáp án cuối khớp gold'],
+        pitfalls: ['Gold phải là chữ cái A–E (mcq_to_grpo.yaml chuẩn hoá). Gold là nội dung đáp án → reward = 0 âm thầm.'],
+        doc: [D('a-flow-c', 'Luồng C'), D('e-r05-h', 'Recipe 05')] },
+      { k: 'C2', title: 'SFT-CoT (cold start)', sub: 'dạy định dạng <think>…</think> + đáp án', env: 'unsloth', dir: 'recipes/05_reasoning/sft_cot',
+        io: { in: ['data/medqa_vi_cot.jsonl'], script: '../../02_sft_llm/train_sft_unsloth.py', out: ['sft_cot/outputs/qwen3-4b-sft-cot-medical'] },
+        cmds: `conda activate unsloth && cd sft_cot && python ../../02_sft_llm/train_sft_unsloth.py --config config_qwen3_cot_unsloth.yaml`,
+        checks: ['Model sinh đúng định dạng <think>…</think> rồi đáp án'],
+        pitfalls: ['Bước này để RL không phải học định dạng từ số 0.'],
+        doc: [D('a-flow-c', 'Luồng C'), D('e-r05-h', 'Recipe 05')] },
+      { k: 'C3', title: 'Merge SFT-CoT', sub: 'merge_lora.py --verify', env: 'hf', dir: 'recipes/05_reasoning',
+        io: { in: ['sft_cot/outputs/qwen3-4b-sft-cot-medical'], script: '../07_merge_export/merge_lora.py', out: ['sft_cot/outputs/qwen3-4b-sft-cot-merged'] },
+        cmds: `conda activate hf && cd ..
+python ../07_merge_export/merge_lora.py --adapter sft_cot/outputs/qwen3-4b-sft-cot-medical \\
+    --output sft_cot/outputs/qwen3-4b-sft-cot-merged --verify`,
+        checks: ['top-1 agreement ≈ 1.0, không có WARNING'],
+        doc: [D('a-flow-c', 'Luồng C'), D('i-merge-h', 'Recipe 07')] },
+      { k: 'C4', title: 'Lọc độ khó', sub: 'k = 8 lời giải/câu, giữ câu đúng 20–80%', env: 'hf', dir: 'recipes/05_reasoning',
+        io: { in: ['data/medqa_vi.jsonl', 'model SFT-CoT merged'], script: 'data/filter_by_difficulty.py', out: ['data/medqa_vi_grpo.jsonl'] },
+        cmds: `python data/filter_by_difficulty.py --input data/medqa_vi.jsonl --output data/medqa_vi_grpo.jsonl \\
+    --model sft_cot/outputs/qwen3-4b-sft-cot-merged --k 8 --min-pass 0.2 --max-pass 0.8`,
+        extra: 'difficulty',
+        checks: ['env hf có vLLM (cài torch 2.13.0 từ đầu)', 'Đã bỏ câu 0/8 và 8/8'],
+        pitfalls: ['Câu quá dễ hoặc quá khó cho mọi rollout cùng reward → advantage GRPO = 0 → không học được gì, chỉ tốn compute.'],
+        doc: [D('a-flow-c', 'Luồng C'), D('e-r05-h', 'Recipe 05')] },
+      { k: 'C5', title: 'GRPO 4 GPU', sub: 'train_grpo_trl.py từ model SFT-CoT', env: 'hf', dir: 'recipes/05_reasoning/grpo',
+        io: { in: ['data/medqa_vi_grpo.jsonl', 'qwen3-4b-sft-cot-merged'], script: 'train_grpo_trl.py', out: ['model GRPO'] },
+        cmds: `cd grpo && accelerate launch --config_file ../../../configs/accelerate/ddp.yaml --num_processes 4 \\
+    train_grpo_trl.py --config configs/grpo_trl_qwen3.yaml \\
+    model.name_or_path=../sft_cot/outputs/qwen3-4b-sft-cot-merged data.path=../data/medqa_vi_grpo.jsonl`,
+        checks: ['reward tăng dần; completions/clipped_ratio thấp', 'reward.answer_type đúng: mcq | number | exact | yesno'],
+        pitfalls: ['Reward = 0 mãi: gold sai định dạng / system prompt sai → đọc log_completions.', 'Model lớn / nhiều node: recipe 17 (verl).'],
+        doc: [D('a-flow-c', 'Luồng C'), D('e-r17-h', 'Recipe 17 — verl')] },
+      { k: 'C6', title: 'Sau train', sub: 'merge → đánh giá → quantize → serve', env: 'none', dir: 'như A2 → A7',
+        io: { in: ['model GRPO'], script: '07 → 11 → 08 → 19', out: ['model đã đánh giá, sẵn sàng serve'] },
+        cmds: `# xem Hình 11 (đánh giá) và Hình 12 (quy tắc chấp nhận)`,
+        checks: ['Đánh giá trên test với --task mcq, có --bootstrap 1000'],
+        doc: [D('c-decision-tree', 'Sau train: 07 → 08 → 10/19 → 11')] },
+    ] },
+  };
+
+  const CK_KEY = 'tq-recipes-checks';
+  let checks = {};
+  try { checks = JSON.parse(localStorage.getItem(CK_KEY) || '{}') || {}; } catch (e) { checks = {}; }
+  const saveChecks = () => { try { localStorage.setItem(CK_KEY, JSON.stringify(checks)); } catch (e) {} };
+
+  let curFlow = 'A';
+  const stationsOf = (f) => [...SHARED, ...FLOWS[f].rows.filter((r) => r.k)];
+  const ALL = {};
+  SHARED.forEach((s) => (ALL[s.k] = s));
+  Object.values(FLOWS).forEach((f) => f.rows.forEach((r) => r.k && (ALL[r.k] = r)));
+
+  const isDone = (st) => st.checks && st.checks.length && st.checks.every((_, i) => checks[st.k + ':' + i]);
+
+  function addCopyTo(root) {
+    root.querySelectorAll('pre.code').forEach((pre) => {
+      if (pre.querySelector('.copy')) return;
+      const b = document.createElement('button');
+      b.className = 'copy'; b.type = 'button'; b.textContent = 'Copy';
+      b.onclick = () => {
+        const c = pre.cloneNode(true); c.querySelector('.copy').remove();
+        const txt = c.textContent.trim();
+        const ok = () => { b.textContent = 'Đã copy'; setTimeout(() => (b.textContent = 'Copy'), 1400); };
+        const sel = () => { const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); };
+        if (navigator.clipboard) navigator.clipboard.writeText(txt).then(ok, sel); else sel();
+      };
+      pre.appendChild(b);
+    });
+  }
+
+  const splitHtml = (sp) => {
+    if (!sp) return '';
+    const lab = { use: 'dùng', make: 'tạo ra', no: 'không dùng', forbid: 'cấm dùng' };
+    return '<h4>Tập dữ liệu</h4><div class="splits">' +
+      ['train', 'validation', 'test'].map((t) => `<span class="sp ${sp[t]}" title="${lab[sp[t]]}">${t}</span>`).join('') +
+      (sp.test === 'forbid' ? '<span class="chip chip--bad">không bao giờ dùng test</span>' : '') +
+      (sp.test === 'use' && sp.train === 'no' ? '<span class="chip chip--tip">chỉ test</span>' : '') + '</div>';
+  };
+
+  const difficultyHtml = () => {
+    const cells = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((n) => {
+      const p = n / 8, keep = p >= 0.2 && p <= 0.8;
+      return `<div style="flex:1;min-width:0;text-align:center"><div style="height:${10 + n * 5}px;background:${keep ? 'var(--tip)' : 'var(--border)'};border-radius:3px 3px 0 0"></div><div style="font-family:var(--mono);font-size:10.5px;color:var(--muted)">${n}/8</div></div>`;
+    }).join('');
+    return `<h4>Câu nào được giữ</h4><div style="display:flex;align-items:flex-end;gap:3px">${cells}</div><p style="font-size:12.5px;color:var(--muted)">Xanh = tỉ lệ đúng trong [0,2; 0,8] → giữ. Xám = quá khó (0/8) hoặc quá dễ (8/8) → bỏ.</p>`;
+  };
+
+  function stationHtml(st) {
+    const envs = [st.env, st.envEnd].filter((e, i, a) => e && e !== 'none' && a.indexOf(e) === i);
+    const envLine = (envs.length ? envs.map((e) => echip(e, 'env ' + e)).join(' ') : '<span class="chip">nhiều env</span>') +
+      ` <span class="chip">cd ${esc(st.dir)}</span>` + (st.opt ? ' <span class="chip chip--warn">tuỳ chọn</span>' : '');
+    const io = st.io ? `<div class="io env-${st.env}">
+        <div class="box"><b>Vào</b>${st.io.in.map((x) => `<code>${esc(x)}</code>`).join('')}</div><span class="arrow">→</span>
+        <div class="box script"><b>Chạy</b><code>${esc(st.io.script)}</code></div><span class="arrow">→</span>
+        <div class="box"><b>Ra</b>${st.io.out.map((x) => `<code>${esc(x)}</code>`).join('')}</div></div>` : '';
+    const cmds = st.cmdsByFlow ? st.cmdsByFlow[curFlow] : st.cmds;
+    const ck = (st.checks || []).map((c, i) => `<label><input type="checkbox" data-ck="${st.k}:${i}"${checks[st.k + ':' + i] ? ' checked' : ''}><span>${esc(c)}</span></label>`).join('');
+    const pit = (st.pitfalls || []).length ? `<div class="callout callout--warn"><ul>${st.pitfalls.map((p) => `<li>${esc(p)}</li>`).join('')}</ul></div>` : '';
+    return `<div class="chips">${envLine}</div>` +
+      (st.envNote ? `<p style="font-size:13px;color:var(--muted)">${esc(st.envNote)}</p>` : '') +
+      io + splitHtml(st.split) + (st.extra === 'difficulty' ? difficultyHtml() : '') +
+      `<h4>Lệnh</h4><pre class="code">${esc(cmds)}</pre>` +
+      (ck ? `<h4>Kiểm tra trước khi đi tiếp</h4><div class="checklist">${ck}</div>` : '') + pit;
+  }
+
+  function buildItems() {
+    const items = {};
+    stationsOf(curFlow).forEach((st) => {
+      items[st.k] = { eyebrow: st.k.startsWith('S') ? 'Trạm chung · ' + st.k : FLOWS[curFlow].name + ' · ' + st.k, title: st.title, html: stationHtml(st), doc: st.doc };
+    });
+    return items;
+  }
+
+  const envLegend = document.getElementById('envLegend');
+  envLegend.innerHTML = ['data', 'hf', 'unsloth', 'quant', 'serve'].map((e) => echip(e)).join('') + '<span class="chip">nét đứt = tuỳ chọn</span>';
+
+  function renderMetro() {
+    const metro = document.getElementById('metro');
+    const rows = [];
+    let prevEnv = null;
+    const seq = [...SHARED.map((s) => ({ ...s })), { fork: FLOWS[curFlow].name }, ...FLOWS[curFlow].rows];
+    seq.forEach((r) => {
+      if (r.fork) { rows.push(`<div class="m-row m-fork env-${prevEnv || 'none'}"><div class="m-rail"></div><div class="m-label">Rẽ nhánh → ${esc(r.fork)}</div></div>`); return; }
+      if (r.loop) { rows.push(`<div class="m-row m-loop"><div class="m-rail"></div><div class="m-label">${esc(r.loop)}</div></div>`); return; }
+      const e = r.env;
+      if (e !== 'none' && (e !== prevEnv || r.force) && prevEnv !== null) {
+        rows.push(`<div class="m-row m-switch env-${e}"><div class="m-rail"><span class="m-dia"></span></div><div class="m-label">đổi env <code>conda activate ${esc(e)}</code></div></div>`);
+      } else if (e !== 'none' && prevEnv === null) {
+        rows.push(`<div class="m-row m-switch env-${e}"><div class="m-rail"><span class="m-dia"></span></div><div class="m-label">đổi env <code>conda activate ${esc(e)}</code></div></div>`);
+      }
+      rows.push(`<div class="m-row station env-${e}${r.opt ? ' opt' : ''}"><div class="m-rail"><span class="m-dot"></span></div>
+        <button class="node m-node${r.opt ? ' dashed' : ''}${isDone(r) ? ' is-done' : ''}" data-k="${r.k}">
+          <span class="n-head"><span class="code">${r.k}</span><span class="n-t">${esc(r.title)}</span></span>
+          <span class="n-s">${esc(r.sub || '')}</span></button></div>`);
+      prevEnv = r.envEnd || (e === 'none' ? prevEnv : e);
+      if (e === 'none' && prevEnv === null) prevEnv = 'none';
+    });
+    metro.innerHTML = rows.join('');
+    const all = metro.querySelectorAll('.m-row');
+    all[0].classList.add('first'); all[all.length - 1].classList.add('last');
+    const items = buildItems();
+    TQ.explorer('#metroRoot', items, { onShow: (k) => wirePanel(k) });
+    updateProgress();
+  }
+
+  function wirePanel(k) {
+    const panel = document.querySelector('#metroRoot [data-panel]');
+    addCopyTo(panel);
+    panel.querySelectorAll('[data-ck]').forEach((cb) => cb.addEventListener('change', () => {
+      checks[cb.dataset.ck] = cb.checked; saveChecks();
+      const node = document.querySelector(`#metro [data-k="${k}"]`);
+      if (node) node.classList.toggle('is-done', isDone(ALL[k]));
+      updateProgress();
+    }));
+  }
+
+  function updateProgress() {
+    const st = stationsOf(curFlow).filter((s) => s.checks && s.checks.length);
+    const done = st.filter(isDone).length;
+    document.getElementById('progTxt').textContent = `${done}/${st.length} trạm đã tick đủ mục kiểm tra`;
+    document.getElementById('progBar').style.flexBasis = (st.length ? (done / st.length) * 100 : 0) + '%';
+  }
+
+  TQ.tabs('#flowTabs', (t) => { curFlow = t; renderMetro(); });
+
+  /* ---------------- ENV MAP ---------------- */
+  const RECIPES = [
+    ['00', 'data_preparation', ['data']], ['01', 'continued_pretrain', ['unsloth']], ['02', 'sft_llm', ['hf', 'unsloth']],
+    ['03', 'sft_vlm', ['hf', 'unsloth']], ['04', 'preference', ['hf']], ['05', 'reasoning', ['hf', 'unsloth_vllm']],
+    ['06', 'mae_vision_pretrain', ['hf']], ['07', 'merge_export', ['hf', 'unsloth', 'quant']], ['08', 'quantization', ['quant', 'modelopt']],
+    ['09', 'llamafactory', ['lf']], ['10', 'inference', ['hf', 'unsloth', 'serve']], ['11', 'evaluation', ['serve', 'hf']],
+    ['12', 'training_optimization', ['hf']], ['13', 'advanced_parallelism', ['hf']], ['14', 'tool_calling_sft', ['hf']],
+    ['15', 'distillation', ['hf']], ['16', 'reward_model_rl', ['hf']], ['17', 'rl_verl', []], ['18', 'model_merging', []],
+    ['19', 'inference_optimization', ['serve']], ['20', 'embedding_reranker', ['hf']], ['21', 'other_frameworks', []],
+  ];
+  const ENV_DETAIL = {
+    data: 'Chỉ CPU. Chạy prepare_data.py của recipe 00.',
+    hf: 'Env chính. Có use_vllm (GRPO, filter_by_difficulty.py) thì cài torch==2.13.0 ngay từ đầu vì vllm 0.30 ghim torch 2.13. Recipe 07: merge_lora.py; 10: hf_generate.py; 11: perplexity.py.',
+    unsloth: 'unsloth 2026.9.12 chỉ cho transformers ≤ 5.5.0, trl ≤ 0.24.0, torch < 2.13. Recipe 07: export_unsloth.py; 10: unsloth_generate.py.',
+    unsloth_vllm: 'Chỉ cho 05 train_grpo_unsloth.py (fast_inference).',
+    quant: 'llmcompressor 0.14.0 cần transformers ≥ 5.15, ≤ 5.17 → không sống chung với unsloth. Dùng cho 08 (+ 07 merge).',
+    serve: 'vllm 0.30.0 ghim torch==2.13.0 và cần transformers ≥ 5.10.4. Dùng cho 10 vLLM, 11 (metric, judge, lm-eval, VQA), 19.',
+    lf: 'llamafactory 0.9.5 cần transformers ≤ 5.6.0, trl ≤ 0.24, peft ≤ 0.18.1.',
+    modelopt: 'Env phụ cho 08 quantize_modelopt.py; cần transformers < 5.15 nên xung đột với quant.',
+  };
+  const envBtns = document.getElementById('envBtns');
+  envBtns.innerHTML = Object.keys(ENVS).map((e) => `<button class="node env-${e}" data-k="${e}"><span class="n-t">${e}</span></button>`).join('');
+  document.getElementById('tiles').innerHTML = RECIPES.map(([n, nm, envs]) =>
+    `<div class="tile" data-envs="${envs.join(' ')}"><div class="num">${n}</div><div class="nm">${nm}</div><div class="dots">${envs.length ? envs.map((e) => `<i class="env-${e}" title="${e}"></i>`).join('') : '<span style="font-size:10.5px;color:var(--muted)">xem README</span>'}</div></div>`).join('');
+  const envItems = {};
+  Object.entries(ENVS).forEach(([e, v]) => {
+    const rs = RECIPES.filter((r) => r[2].includes(e)).map((r) => r[0]);
+    envItems[e] = { eyebrow: 'Env', title: 'env ' + v.name, chips: [['recipe ' + rs.join(', '), '']],
+      html: `<p><span class="k">Dùng cho:</span> ${esc(v.use)}</p><p><span class="k">Cài:</span> <code>${esc(v.file)}</code></p><div class="callout callout--note">${esc(ENV_DETAIL[e])}</div>` +
+        (e === 'data' ? '' : `<pre class="code">conda create -n ${e} python=3.12 -y && conda activate ${e}</pre>`),
+      doc: [D('a-env-why', 'Vì sao tách env'), D('a-requirements', 'Thư mục requirements/'), D('a-env-install', 'Các bước cài')] };
+  });
+  TQ.explorer('#envRoot', envItems, { initial: 'hf', onShow: (e) => {
+    document.querySelectorAll('#tiles .tile').forEach((t) => {
+      const on = t.dataset.envs.split(' ').includes(e);
+      t.classList.toggle('dim', !on); t.classList.toggle('on', on);
+      t.className = t.className.replace(/\benv-\S+/g, '').trim() + ' env-' + e;
+    });
+    addCopyTo(document.querySelector('#envRoot [data-panel]'));
+  } });
+
+  /* ---------------- DATA PICKER ---------------- */
+  const CFG = [
+    ['sft_from_csv.yaml', 'CSV câu hỏi–trả lời', 'bảng hỏi–đáp phẳng', 'messages', '02 SFT', { img: 0, group: 'patient_id' }],
+    ['vlm_from_excel.yaml', 'Excel nhiều sheet + cột đường dẫn ảnh X-quang', 'Excel nhiều sheet, ô gộp', 'vlm_messages, chia theo thời gian', '03', { img: 1, group: 'patient_id', yaml: 1 }],
+    ['vlm_bv175_multiturn.yaml', 'CSV ca chụp + ảnh <StudyInstanceUID>.png (dữ liệu thật của repo)', 'CSV + ảnh + metadata DICOM + nhãn detector', 'vlm_messages, llamafactory; 3 view', '03, 09', { img: 1, group: 'PatientID' }],
+    ['vlm_from_dicom.yaml', 'Thư mục DICOM + bảng kết quả', 'thư mục .dcm', 'PNG 8-bit đã windowing + metadata', '03', { img: 1, note: 'Báo cáo phải ghép theo StudyInstanceUID; cần pip install "pydicom>=3.0".' }],
+    ['vlm_from_hf.yaml', 'Dataset HF có cột ảnh (vd THP2903/BV175_xray_findings)', 'dataset Hub có cột Image', 'vlm_messages', '03', { img: 1, nogroup: 'Dataset không có cột mã bệnh nhân → hash_group: false, chia theo dòng (mức ca chụp). Nhớ ghim revision.' }],
+    ['mcq_to_grpo.yaml', 'Trắc nghiệm → GRPO', 'trắc nghiệm (phương án cột A–D)', 'grpo (gold = chữ cái) + messages', '05, 17', { img: 0, nogroup: 'Đề thi công khai: pii.enabled: false, hash_group: false.' }],
+    ['reasoning_from_traces.yaml', 'Trace suy luận → SFT-CoT', 'trace suy luận', 'messages có <think>', '05 sft_cot', { img: 0 }],
+    ['dpo_pairs.yaml', 'Nhiều câu trả lời có điểm / xếp hạng → DPO', 'câu trả lời có điểm / xếp hạng / đúng-sai', 'preference, llamafactory', '04, 16', { img: 0, group: 'prompt_id' }],
+    ['kto_from_ratings.yaml', 'Đánh giá thích / không thích → KTO', '👍/👎 hoặc điểm 1–5', 'kto', '04', { img: 0, group: 'prompt_id' }],
+    ['cpt_from_pdf.yaml', 'PDF / tài liệu → continued pretraining', 'thư mục PDF/DOCX/HTML/MD', 'text đã bỏ header/footer, chia đoạn', '01', { img: 0, group: 'doc_id' }],
+    ['sft_multiturn_from_jsonl.yaml', 'Hội thoại nhiều lượt', 'hội thoại sẵn (sharegpt / messages / …)', 'messages', '02', { img: 0, group: 'patient' }],
+    ['tool_calling.yaml', 'Tool calling / function calling', 'LLaMA-Factory function_call / observation', 'messages + tool_calls + tools', '14', { img: 0 }],
+    ['sql_source_example.yaml', 'Bảng trong CSDL SQL', 'bảng CSDL (URL qua biến môi trường)', 'messages', '02', { img: 0 }],
+  ];
+  const FIELDS = [['source.path', 'file / thư mục nguồn'], ['columns.rename', 'tên cột tiếng Việt → tên chuẩn'], ['ids.group', 'mã bệnh nhân — khoá chia split'], ['images.roots', 'thư mục ảnh'], ['pii.drop_columns', 'họ tên, địa chỉ, SĐT'], ['split', 'cách chia train/validation/test']];
+  const YAML_EX = `run:
+  name: xray_excel
+  version: v1
+source:
+  type: excel
+  path: <mark>/data/xquang_2025.xlsx</mark>            # <- your file
+  sheets: all
+columns:
+  rename: <mark>{"Mã BN": patient_id, "Ảnh": image_path, "Mô tả": findings, "Kết luận": impressions, …}</mark>
+ids:
+  group: <mark>"{{ patient_id }}"</mark>
+task: vlm
+pii:
+  drop_columns: <mark>[Họ tên, Địa chỉ, SĐT]</mark>
+images:
+  roots: <mark>[/data/img]</mark>
+split:
+  method: <mark>time</mark>          # newest months = test
+  time_cuts: {validation: "2025-10", test: "2025-11"}
+export:
+  targets: [vlm_messages]`;
+  document.getElementById('pick').innerHTML = CFG.map((c, i) => `<button class="node" data-k="c${i}"><span class="n-tag">${c[5].img ? 'có ảnh' : 'text'}</span><span class="n-t">${esc(c[1])}</span><span class="n-s"><code>${esc(c[0])}</code></span></button>`).join('');
+  const dataItems = {};
+  CFG.forEach((c, i) => {
+    const m = c[5];
+    const fields = FIELDS.map(([f, d]) => {
+      let st = 'sửa', off = false;
+      if (f === 'images.roots' && !m.img) { st = 'bỏ qua'; off = true; }
+      if (f === 'ids.group' && m.nogroup) { st = 'xem dưới'; }
+      return `<div class="field${off ? ' off' : ''}"><span class="st" style="color:${off ? 'var(--muted)' : 'var(--warn)'}">${st}</span><code>${f}</code><span>${d}</span></div>`;
+    }).join('');
+    const name = c[0].replace('.yaml', '');
+    dataItems['c' + i] = { eyebrow: 'Config mẫu', title: c[0], chips: [['ra: ' + c[3], 'accent'], ['dùng cho recipe ' + c[4], 'note']],
+      html: `<p><span class="k">Dữ liệu vào:</span> ${esc(c[2])}</p>` +
+        (m.group ? `<p><span class="k">Đơn vị chia:</span> <code>ids.group: "{{ ${esc(m.group)} }}"</code></p>` : '') +
+        (m.nogroup ? `<div class="callout callout--note">${esc(m.nogroup)}</div>` : '') + (m.note ? `<div class="callout callout--note">${esc(m.note)}</div>` : '') +
+        `<h4>Các trường phải sửa</h4><div class="fields">${fields}</div>` +
+        (m.yaml ? `<h4>Ví dụ (rút gọn) — chỗ tô vàng là chỗ sửa</h4><div class="yaml">${YAML_EX.replace(/<(?!\/?mark>)/g, '&lt;')}</div>` : '') +
+        `<h4>Lệnh</h4><pre class="code">conda activate data && cd recipes/00_data_preparation
+cp configs/${name}.yaml configs/my_${name}.yaml
+python prepare_data.py --config configs/my_${name}.yaml --dry-run
+python prepare_data.py --config configs/my_${name}.yaml</pre>`,
+      doc: [D('a-guide-data', 'Bảng dữ liệu → config'), D('b-r00-configs', '13 config mẫu'), D('b-r00-quick', 'Năm bước nhanh')] };
+  });
+  TQ.explorer('#dataRoot', dataItems, { initial: 'c1', onShow: () => addCopyTo(document.querySelector('#dataRoot [data-panel]')) });
+
+  /* ---------------- SPLIT DEMO ---------------- */
+  const FILMS = [['P1', 1], ['P1', 2], ['P1', 3], ['P2', 1], ['P3', 1], ['P3', 2], ['P4', 1], ['P4', 2], ['P5', 1], ['P6', 1], ['P6', 2], ['P6', 3]];
+  const ROW = ['train', 'train', 'test', 'train', 'validation', 'train', 'train', 'test', 'train', 'test', 'train', 'validation'];
+  const GRP = { P1: 'train', P2: 'validation', P3: 'train', P4: 'test', P5: 'train', P6: 'train' };
+  function renderSplit(mode) {
+    const assign = FILMS.map((f, i) => (mode === 'row' ? ROW[i] : GRP[f[0]]));
+    const sets = {};
+    FILMS.forEach((f, i) => { (sets[f[0]] = sets[f[0]] || new Set()).add(assign[i]); });
+    const leakP = Object.keys(sets).filter((p) => sets[p].size > 1);
+    const testLeak = Object.keys(sets).filter((p) => sets[p].has('test') && sets[p].size > 1);
+    document.getElementById('splitCols').innerHTML = ['train', 'validation', 'test'].map((s) =>
+      `<div class="scol"><h4>${s}.jsonl</h4><div class="films">${FILMS.map((f, i) => assign[i] === s ? `<span class="film ${f[0].toLowerCase()}${leakP.includes(f[0]) ? ' leak' : ''}" title="Bệnh nhân ${f[0]}, phim ${f[1]}">${f[0]}·${f[1]}</span>` : '').join('')}</div></div>`).join('');
+    document.getElementById('leakBox').innerHTML = mode === 'row'
+      ? `<span class="big" style="color:var(--bad)">${leakP.length}</span><span>bệnh nhân nằm ở nhiều tập (viền đỏ), ${testLeak.length} người có phim ở cả test. Model "nhớ" bệnh nhân → điểm test bị thổi phồng. Report sẽ báo <code>leakage group_id</code> ≠ 0 và script dừng.</span>`
+      : `<span class="big" style="color:var(--tip)">0</span><span>bệnh nhân bị rò. Mọi phim của một bệnh nhân đi cùng nhau. Mặc định <code>split.method: hash</code> băm <code>group_id</code> nên thêm dữ liệu mới không làm nhóm cũ đổi tập. ${TQ.docLink('camnang', 'b-r00-split', 'Chia tập không rò rỉ')}</span>`;
+  }
+  TQ.tabs('#splitRoot', renderSplit);
+
+  /* ---------------- CHOOSER ---------------- */
+  const CHOOSE = [
+    ['raw', 'Text thô (sách, guideline, bài báo)', 'CPT', { sig: 'dự đoán token tiếp theo trên toàn bộ text', fam: 'Continued pretraining (CPT)', rec: '01', more: 'Config dữ liệu: cpt_from_pdf.yaml.', doc: 'd-cpt-h' }],
+    ['qa', 'Cặp câu hỏi – câu trả lời mẫu', 'SFT', { sig: 'bắt chước câu trả lời mẫu, loss chỉ trên phần trả lời', fam: 'SFT', rec: '02', sub: [['1 GPU 16–24GB', '02 configs/qlora_unsloth.yaml'], ['1–2 GPU 40–80GB', '02 configs/lora_hf.yaml (hoặc lora_*_qwen35.yaml)'], ['Nhiều GPU + data lớn', '02 configs/full_hf_deepspeed.yaml (ZeRO-3 / FSDP2)']], doc: 'd-sft-h' }],
+    ['tool', 'Hội thoại gọi hàm / công cụ', 'SFT tool', { sig: 'bắt chước lời gọi công cụ mẫu', fam: 'SFT tool calling', rec: '14', more: 'Ví dụ: tra liều, tính eGFR.', doc: 'd-tool-h' }],
+    ['img', 'Ảnh X-quang + báo cáo / câu hỏi', 'SFT VLM', { sig: 'bắt chước báo cáo của bác sĩ trên ảnh', fam: 'SFT VLM', rec: '03', sub: [['Cặp báo cáo tốt ≻ báo cáo bịa (cùng ảnh)', '04 train_preference_vlm.py (DPO cho VLM)'], ['Câu đóng có/không, MCQ trên ảnh', '05 grpo/train_grpo_vlm.py (GRPO cho VLM)']], doc: 'd-vlm-h' }],
+    ['pair', 'Cặp câu tốt ≻ câu tệ cho cùng prompt', 'DPO', { sig: 'tăng xác suất câu tốt so với câu tệ', fam: 'Preference optimization (DPO-family)', rec: '04', more: 'DPO / IPO / RPO / ORPO / KTO …', doc: 'e-r04-h' }],
+    ['verif', 'Câu hỏi có đáp án kiểm chứng tự động', 'RLVR', { sig: 'reward 0/1 do code chấm', fam: 'RLVR (GRPO-family)', rec: '05, 17', sub: [['≤ 8B, 1 node', '05 grpo'], ['Model lớn, nhiều node', '17_rl_verl']], more: 'MCQ, số, JSON, có/không.', doc: 'e-r05-h' }],
+    ['open', 'Câu hỏi mở, không có đáp án chuẩn', 'RM + RL', { sig: 'reward do reward model học từ preference chấm', fam: 'RM + RL (RLOO/GRPO)', rec: '16', doc: 'e-r16-h' }],
+    ['teacher', 'Một model lớn tốt hơn (teacher)', 'Distill', { sig: 'output hoặc phân phối xác suất của teacher', fam: 'Distillation', rec: '05 (sft_cot), 15', sub: [['Có trace từ model lớn', '05 sft_cot (hoặc 15 on-policy)'], ['Model nhỏ học từ model lớn (rẻ khi deploy)', '15_distillation']], doc: 'e-r15-h' }],
+    ['ckpt', 'Nhiều checkpoint đã train', 'Merge', { sig: 'không train thêm, chỉ cộng/trộn trọng số', fam: 'Model merging', rec: '18', more: 'Gộp checkpoint / lấy lại khả năng chat.', doc: 'i-merging-h' }],
+    ['rag', 'Cần tìm đúng tài liệu cho RAG', 'RAG', { sig: '—', fam: 'Embedding + reranker', rec: '20', doc: 'j-r20-h' }],
+    ['mae', 'Ảnh không nhãn, muốn pretrain encoder', 'MAE', { sig: 'tự giám sát (MAE)', fam: 'MAE + classifier', rec: '06', doc: 'i-mae-h' }],
+    ['nocode', 'Không muốn viết code', 'YAML', { sig: '—', fam: 'Framework YAML', rec: '09 / 21', more: '09 LLaMA-Factory; 21 Axolotl, ms-swift, NeMo AutoModel.', doc: 'd-lf-h' }],
+    ['slow', 'Train chậm / OOM / context rất dài', 'Hệ thống', { sig: 'không phải phương pháp học — kỹ thuật hệ thống', fam: 'Tối ưu train / song song nâng cao', rec: '12 / 13', more: 'Dùng kèm bất kỳ recipe train nào. Xem Hình 6 và Hình 8.', doc: 'f-rec12-h' }],
+  ];
+  document.getElementById('choosePick').innerHTML = CHOOSE.map((c) => `<button class="node" data-k="${c[0]}"><span class="n-tag">${esc(c[2])}</span><span class="n-t">${esc(c[1])}</span></button>`).join('');
+  const chooseItems = {};
+  CHOOSE.forEach(([k, have, tag, v]) => {
+    chooseItems[k] = { eyebrow: 'Bạn có: ' + have, title: 'Recipe ' + v.rec, chips: [[v.fam, 'accent']],
+      html: `<p><span class="k">Tín hiệu học:</span> ${esc(v.sig)}</p>` + (v.more ? `<p>${esc(v.more)}</p>` : '') +
+        (v.sub ? `<h4>Nhánh con</h4><div class="flow-v">${v.sub.map(([q, a]) => `<div style="display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center;font-size:13.5px"><span>${esc(q)}</span><span class="arrow">→</span><code>${esc(a)}</code></div>`).join('')}</div>` : ''),
+      doc: [D('c-decision-tree', 'Cây quyết định'), D('a-choose-recipe', 'Chọn recipe nào'), D(v.doc, 'Recipe ' + v.rec.split(/[ ,/]/)[0])] };
+  });
+  TQ.explorer('#chooseRoot', chooseItems, { initial: 'img' });
+
+  /* ---------------- OOM LADDER ---------------- */
+  const OOM = [
+    ['Biết OOM ở đâu', 'profile_step.py --mode memory · memory_estimator.py', 'In <code>torch.cuda.max_memory_allocated()</code> sau forward / backward / optimizer step của step đầu (<code>recipes/12_training_optimization/profile_step.py --mode memory --config ...</code>), ước lượng trước bằng <code>memory_estimator.py</code>. Trong Docker: kiểm tra container khác có đang giữ VRAM không.'],
+    ['Miễn phí', 'expandable_segments · max_length = p99', '<code>export PYTORCH_ALLOC_CONF=expandable_segments:True</code>; đặt <code>max_length</code> = p99 độ dài thật (đo bằng <code>scripts/inspect_dataset.py</code>).'],
+    ['Bỏ padding', 'padding_free: true + flash-attn2', '<code>padding_free: true</code> + <code>attn_implementation: kernels-community/flash-attn2</code> (SFT text).'],
+    ['OOM lúc tính loss', 'chunked_nll · use_liger_kernel', 'Giữ mặc định TRL <code>loss_type: chunked_nll</code>, hoặc <code>use_liger_kernel: true</code> (DPO/GRPO/KTO).'],
+    ['Batch nhỏ hơn', 'batch ↓, gradient_accumulation ↑', 'Giảm <code>per_device_train_batch_size</code> + tăng <code>gradient_accumulation_steps</code> (giữ global batch).'],
+    ['OOM ở backward', 'gradient_checkpointing · activation_offloading', '<code>gradient_checkpointing: true</code> (HF) / <code>use_gradient_checkpointing: "unsloth"</code>; vẫn thiếu → <code>activation_offloading: true</code>.'],
+    ['OOM ở optimizer step đầu', 'adamw_8bit / paged_adamw_8bit', '<code>optim: adamw_8bit</code> / <code>paged_adamw_8bit</code> (1 GPU/DDP).'],
+    ['VLM: bớt pixel ảnh', 'max_pixels · size.longest_edge', 'Giảm số pixel ảnh (Qwen2.5-VL <code>max_pixels</code>, Qwen3-VL <code>size.longest_edge</code>) → ít token ảnh hơn.'],
+    ['LoRA → QLoRA', 'load_in_4bit: true', '<code>load_in_4bit: true</code> — không dùng cho Qwen3.5 / MoE.'],
+    ['Nhiều GPU', 'DDP → ZeRO-3 / FSDP2 → offload', 'DDP → ZeRO-3 / FSDP2 (ZeRO-2 không chia weights nên gần như không giúp LoRA) → ZeRO-3 offload CPU/NVMe. Xem Hình 8.'],
+    ['Sequence rất dài', 'context parallel / Ulysses', 'Context parallel / Ulysses (Recipe 13).'],
+  ];
+  document.getElementById('ladder').innerHTML = OOM.map((r, i) => `<div class="rung" data-on="${i + 1}-" data-hl="${i + 1}"><span class="rn">${i}</span><div><div class="rt">${esc(r[0])}</div><div class="rs">${esc(r[1])}</div></div></div>`).join('');
+  const oomSteps = OOM.map((r) => ({ title: r[0], text: r[2] }));
+  oomSteps[oomSteps.length - 1].text += '<br>Ghi chú: OOM chỉ ở bước eval → giảm <code>per_device_eval_batch_size</code>, <code>eval_accumulation_steps: 1</code> hoặc <code>prediction_loss_only: true</code>. <code>nvidia-smi</code> luôn cao hơn số PyTorch báo 0,5–2 GB — bình thường.';
+  const oom = TQ.stepper('#oomRoot', oomSteps, { autoplayMs: 2600 });
+  document.getElementById('oomNext').onclick = () => oom.go(oom.step + 1);
+  document.getElementById('oomDone').onclick = () => oom.go(1);
+  document.querySelector('#oomRoot .caption').insertAdjacentHTML('afterend', `<div class="doc-links">${TQ.docLink('camnang', 'f-tr-oom', 'Docs 05 — Hết VRAM')}${TQ.docLink('camnang', 'a-low-vram', 'Ít VRAM, chia GPU, nhiều GPU')}${TQ.docLink('camnang', 'f-memory-h', 'Docs 08 — Memory math')}</div>`);
+
+  /* ---------------- LOGS ---------------- */
+  const W = 160, H = 56;
+  const path = (f, n = 40) => Array.from({ length: n + 1 }, (_, i) => { const x = i / n; return `${i ? 'L' : 'M'}${(4 + x * (W - 8)).toFixed(1)},${(H - 4 - f(x) * (H - 8)).toFixed(1)}`; }).join(' ');
+  const noise = (x, s) => Math.sin(x * 57.3 + s) * 0.025 + Math.sin(x * 23.1 + s * 2) * 0.02;
+  const svg = (inner) => `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">${inner}</svg>`;
+  const ln = (d, c, dash) => `<path d="${d}" fill="none" stroke="${c}" stroke-width="2"${dash ? ' stroke-dasharray="4 3"' : ''} stroke-linecap="round"/>`;
+  const band = (lo, hi) => `<rect x="4" y="${H - 4 - hi * (H - 8)}" width="${W - 8}" height="${(hi - lo) * (H - 8)}" fill="var(--tip)" opacity=".15"/>`;
+  const LOGS = [
+    { k: 'loss', lab: 'SFT loss / eval_loss', small: 'liền = train, đứt = eval',
+      ok: svg(ln(path((x) => 0.15 + 0.75 * Math.exp(-3.2 * x) + noise(x, 1)), 'var(--note)') + ln(path((x) => 0.25 + 0.68 * Math.exp(-2.8 * x)), 'var(--accent)', 1)),
+      bad: svg(ln(path((x) => 0.08 + 0.8 * Math.exp(-3.5 * x) + noise(x, 2)), 'var(--note)') + ln(path((x) => 0.3 + 0.62 * Math.exp(-5 * x) + 0.35 * Math.max(0, x - 0.4)), 'var(--bad)', 1)),
+      item: { title: 'SFT loss / eval_loss', html: '<p><span class="k">Bình thường:</span> giảm dần, eval không tăng.</p><div class="callout callout--bad"><b>eval tăng = overfit</b> → ít epoch hơn, dừng sớm (<code>load_best_model_at_end</code>).</div>', doc: [D('a-read-logs', 'Đọc log & khi nào dừng'), D('c-hp-symptoms', 'Dấu hiệu cần chỉnh')] } },
+    { k: 'grad', lab: 'grad_norm', small: '',
+      ok: svg(ln(path((x) => 0.35 + noise(x, 3) * 2), 'var(--note)')),
+      bad: svg(ln(path((x) => 0.3 + noise(x, 4) * 2 + (Math.abs(x - 0.62) < 0.03 ? 0.6 : 0)), 'var(--bad)') + `<text x="${W - 34}" y="14" font-size="10" class="t-mono" style="fill:var(--bad)">NaN</text>`),
+      item: { title: 'grad_norm', html: '<p><span class="k">Bình thường:</span> ổn định.</p><div class="callout callout--bad"><b>Nhảy vọt / NaN</b> → giảm lr, kiểm tra dữ liệu rỗng / quá dài.</div>', doc: [D('a-read-logs', 'Đọc log & khi nào dừng'), D('f-trouble-h', 'Docs 05 — Troubleshooting')] } },
+    { k: 'dpo', lab: 'DPO rewards/accuracies', small: 'dải xanh = 0,7–0,9',
+      ok: svg(band(0.7, 0.9) + ln(path((x) => 0.5 + 0.32 * (1 - Math.exp(-4 * x)) + noise(x, 5)), 'var(--note)')),
+      bad: svg(band(0.7, 0.9) + ln(path((x) => 0.5 + noise(x, 6) * 1.5), 'var(--bad)')),
+      item: { title: 'DPO rewards/accuracies', html: '<p><span class="k">Bình thường:</span> lên 0,7–0,9.</p><div class="callout callout--bad"><b>~0,5</b> = cặp nhiễu (chosen không thật sự tốt hơn) → <code>robust_dpo.yaml</code>.<br><b>rewards/chosen tụt mạnh</b> = model hạ xác suất cả hai câu → thêm loss SFT: <code>loss_type: [sigmoid, sft]</code>.</div><p style="font-size:13px;color:var(--muted)">rewards/accuracies = tỉ lệ cặp mà reward(chosen) &gt; reward(rejected).</p>', doc: [D('a-read-logs', 'Đọc log — DPO'), D('e-r04-h', 'Recipe 04')] } },
+    { k: 'grpo', lab: 'GRPO reward', small: '',
+      ok: svg(ln(path((x) => 0.15 + 0.6 * (1 - Math.exp(-2.5 * x)) + noise(x, 7)), 'var(--note)')),
+      bad: svg(ln(path(() => 0.02), 'var(--bad)') + `<text x="8" y="${H - 10}" font-size="10" class="t-mono" style="fill:var(--bad)">reward = 0</text>`),
+      item: { title: 'GRPO reward', html: '<p><span class="k">Bình thường:</span> tăng dần; <code>completions/clipped_ratio</code> thấp.</p><div class="callout callout--bad"><b>Reward = 0 mãi:</b> gold sai định dạng / system prompt sai đáp án → đọc <code>log_completions</code>.<br><b>clipped_ratio cao:</b> nhiều câu bị cắt vì vượt <code>max_completion_length</code>.</div>', doc: [D('a-read-logs', 'Đọc log — GRPO'), D('e-r05-h', 'Recipe 05')] } },
+  ];
+  document.getElementById('logRows').innerHTML = LOGS.map((l) => `<button class="node" data-k="${l.k}"><span class="logrow"><span class="lab">${esc(l.lab)}<small>${esc(l.small)}</small></span><span class="spark ok"><span>Bình thường</span>${l.ok}</span><span class="spark bad"><span>Bất thường</span>${l.bad}</span></span></button>`).join('') +
+    '<div class="callout callout--note">Mọi recipe: số liệu tốt chỉ có giá trị khi đo trên bệnh nhân chưa thấy và có khoảng tin cậy.</div>';
+  const logItems = {}; LOGS.forEach((l) => (logItems[l.k] = { eyebrow: 'Chỉ số', ...l.item }));
+  TQ.explorer('#logRoot', logItems);
+
+  /* ---------------- QUIZ ENGINE ---------------- */
+  function quiz(rootSel, Q, start, R, treeText) {
+    const root = document.querySelector(rootSel);
+    const card = root.querySelector('[data-card]');
+    const trail = root.querySelector('[data-trail]');
+    const tree = root.querySelector('[data-tree]');
+    let path = [];
+    const draw = (cur) => {
+      trail.innerHTML = path.length ? path.map((p) => `<span class="t">${esc(Q[p.q].short)}: <b>${p.a ? 'Có' : 'Không'}</b></span>`).join('<span class="arrow">→</span>') : '<span class="t">Bắt đầu</span>';
+      if (tree && treeText) tree.innerHTML = treeText(path, cur);
+      if (Q[cur]) {
+        const q = Q[cur];
+        card.innerHTML = `<div class="qcard"><div class="qq">${esc(q.q)}</div>${q.note ? `<div class="qn">${q.note}</div>` : ''}<div class="qbtns"><button class="btn btn--primary" data-a="1">Có</button><button class="btn" data-a="0">Không</button>${path.length ? '<button class="btn" data-back>← Quay lại</button>' : ''}</div></div>`;
+        card.querySelectorAll('[data-a]').forEach((b) => (b.onclick = () => { path.push({ q: cur, a: b.dataset.a === '1' }); draw(b.dataset.a === '1' ? q.yes : q.no); }));
+      } else {
+        const r = R[cur];
+        card.innerHTML = `<div class="result"><div class="rk">Chọn</div>${TQ.renderItem(r)}<div class="qbtns"><button class="btn" data-back>← Quay lại</button><button class="btn" data-reset>Làm lại</button></div></div>`;
+        addCopyTo(card);
+        card.querySelector('[data-reset]').onclick = () => { path = []; draw(start); };
+      }
+      const back = card.querySelector('[data-back]');
+      if (back) back.onclick = () => { const p = path.pop(); draw(p.q); };
+    };
+    draw(start);
+  }
+
+  /* ---------------- PARALLEL ---------------- */
+  const PQ = {
+    q1: { short: 'LoRA vừa 1 GPU', q: 'Train LoRA/QLoRA và model (16-bit hoặc 4-bit) vừa 1 GPU?', yes: 'r_ddp', no: 'q2' },
+    q2: { short: 'Full FT: 2P+16P/N vừa', q: 'Full fine-tune: 2P + 16P/N vừa 1 GPU?', note: 'Ví dụ Qwen3-8B (P ≈ 8,2) với 8×80GB: ZeRO-2 cần ~31–35 GB/GPU cho model states. LoRA mà base không vừa 1 GPU thì bảng Docs 04 khuyên ZeRO-3 / FSDP2 (tránh ZeRO-2).', yes: 'r_zero2', no: 'q3' },
+    q3: { short: '16P/N vừa trong node', q: '16P/N vừa GPU, với N = số GPU trong node?', note: 'Qwen3-8B, 8×80GB, ZeRO-3: ~16–21 GB/GPU cho model states. Với 2×80GB thì ~76 GB/GPU → không đủ chỗ cho activations, cần ≥ 4×80GB.', yes: 'r_zero3', no: 'q4' },
+    q4: { short: 'Nhiều node', q: 'Có nhiều node (nhiều máy)?', yes: 'q5', no: 'r_offload' },
+    q5: { short: 'Mạng ≥ 200 Gb/s/GPU', q: 'Mạng liên node nhanh (≥ 200 Gb/s/GPU)?', note: 'InfiniBand nhanh: shard toàn cụm. Ethernet/RoCE chậm: tránh ZeRO-3 full shard qua mạng chậm.', yes: 'r_full', no: 'r_hsdp' },
+  };
+  const addOn = '<h4>Sau khi chọn, kiểm tra thêm</h4><ul><li>seq_len ≥ 32k, activations OOM → FSDP2 + CP (<code>fsdp2_cp.yaml</code>) hoặc DeepSpeed + Ulysses SP (<code>deepspeed_alst_sp.yaml</code>)</li><li>MoE → Expert parallel (recipes/13)</li><li>≥ 64 GPU hoặc pretrain dense ≥ 70B → Megatron-Bridge / torchtitan (docs/11)</li></ul>';
+  const PDOC = [D('g-decision', 'Cây quyết định'), D('g-choose', 'Bảng tình huống → chọn gì'), D('g-cfg-choose', 'Bảng chọn file accelerate')];
+  const launch = (f) => `<pre class="code">accelerate launch --config_file configs/accelerate/${f} ...</pre>`;
+  const PR = {
+    r_ddp: { title: 'DDP', chips: [['ddp.yaml', 'accent']], html: '<p>Mỗi GPU giữ một bản model, chia batch.</p>' + launch('ddp.yaml') + '<div class="callout callout--warn">Tránh ZeRO-2 với LoRA: không giảm VRAM vì không chia weights.</div>' + addOn, doc: PDOC },
+    r_zero2: { title: 'ZeRO-2', chips: [['zero2.json qua deepspeed_json.yaml', 'accent']], html: '<p>Chia gradient + optimizer states; weights vẫn đủ ở mỗi GPU. Dùng <code>deepspeed_json.yaml</code> + <code>zero2.json</code> để có <code>overlap_comm</code>.</p>' + launch('deepspeed_json.yaml') + addOn, doc: PDOC },
+    r_zero3: { title: 'ZeRO-3 hoặc FSDP2 trong node', chips: [['deepspeed_zero3.yaml', 'accent'], ['fsdp2.yaml', 'accent']], html: '<p>Shard cả weights. QLoRA nhiều GPU: không dùng FSDP2 + QLoRA (không hỗ trợ) → ZeRO-3 + QLoRA hoặc <code>fsdp1_qlora.yaml</code>.</p>' + launch('deepspeed_zero3.yaml') + launch('fsdp2.yaml') + addOn, doc: PDOC },
+    r_offload: { title: 'ZeRO-3 offload CPU/NVMe — hoặc thêm GPU', chips: [['deepspeed_zero3_offload.yaml', 'accent'], ['zero3_nvme.json', '']], html: '<p>Full FT 8–70B cần thêm CPU offload thì cần ~27 B/param RAM. Ít GPU nhiều RAM: ZeRO-2 + optimizer offload (<code>deepspeed_zero2_offload.yaml</code>) → ZeRO-3 offload → ZeRO-Infinity <code>zero3_nvme.json</code>.</p>' + launch('deepspeed_zero3_offload.yaml') + addOn, doc: PDOC },
+    r_full: { title: 'ZeRO-3 / FSDP2 full shard toàn cụm', chips: [['multi-node', 'note']], html: '<p>Nếu nghẽn all-gather → HSDP / ZeRO++ hpZ. Không làm TP qua node.</p>' + addOn, doc: [...PDOC, D('h-multinode-h', 'Docs 10 — Multi-node')] },
+    r_hsdp: { title: 'HSDP hoặc ZeRO++', chips: [['fsdp2_hsdp_2node.yaml', 'accent'], ['zeropp.json', 'accent']], html: '<p>Shard trong node, nhân bản giữa node để giảm giao tiếp qua mạng chậm. Tăng GA để giảm số lần sync.</p>' + launch('fsdp2_hsdp_2node.yaml') + addOn, doc: [...PDOC, D('h-multinode-h', 'Docs 10 — Multi-node')] },
+  };
+  const parTree = (path, cur) => {
+    const visited = new Set(path.map((p) => p.q).concat(cur));
+    const L = [
+      ['q1', 'LoRA/QLoRA vừa 1 GPU? ──────────── có ──► DDP', 'r_ddp'],
+      ['q2', 'Full FT: 2P + 16P/N vừa 1 GPU? ──── có ──► ZeRO-2', 'r_zero2'],
+      ['q3', '16P/N vừa GPU trong node? ───────── có ──► ZeRO-3 / FSDP2', 'r_zero3'],
+      ['q4', 'Có nhiều node? ── không ──► ZeRO-3 offload / thêm GPU', 'r_offload'],
+      ['q5', 'Mạng ≥ 200 Gb/s/GPU? ── có ──► full shard │ không ──► HSDP / ZeRO++', 'r_full r_hsdp'],
+    ];
+    return L.map(([q, t, r]) => `<span class="${visited.has(q) || r.split(' ').includes(cur) ? 'on' : ''}">${esc(t)}</span>`).join('\n');
+  };
+  quiz('#parQuiz', PQ, 'q1', PR, parTree);
+
+  /* ---------------- SHARE GPU ---------------- */
+  const SQ = {
+    s1: { short: 'Chạy tuần tự', q: 'Có thể chạy tuần tự không (ts / Slurm)?', yes: 'r_queue', no: 's2' },
+    s2: { short: 'GPU thứ hai', q: 'Máy có GPU thứ hai?', yes: 'r_two', no: 's3' },
+    s3: { short: 'MIG', q: 'GPU có MIG (A100/H100/RTX PRO Blackwell)?', note: 'GeForce (RTX 4090/5090) không có MIG.', yes: 'r_mig', no: 'r_budget' },
+  };
+  const SDOC = [D('k-checklist', 'Checklist chạy song song'), D('k-sharing-table', 'Bảng so sánh')];
+  const SR = {
+    r_queue: { title: 'Xếp hàng chạy lần lượt', chips: [['an toàn nhất', 'tip']], html: '<p>Một máy: GPU task-spooler. Job chỉ chạy khi GPU rảnh. Ví dụ xếp train → merge → eval rồi đi ngủ:</p><pre class="code">ts -G 1 bash recipes/02_sft_llm/run.sh unsloth configs/qlora_unsloth.yaml\nts -G 1 bash recipes/11_evaluation/lm_eval.sh vllm outputs/merged\nts -l</pre><p>Trên WSL2 dùng <code>ts -S 1</code> để chạy tuần tự tuyệt đối.</p>', doc: [D('k-queue', 'Hàng đợi job'), ...SDOC] },
+    r_two: { title: 'Mỗi job một GPU nguyên', chips: [['CUDA_VISIBLE_DEVICES', 'accent']], html: '<p>Dùng <code>CUDA_VISIBLE_DEVICES</code> / <code>compose.multi-gpu.yml</code>. Cách duy nhất vừa đơn giản vừa chắc chắn.</p>', doc: SDOC },
+    r_mig: { title: 'Chia slice MIG', chips: [['cô lập phần cứng', 'tip']], html: '<p>Mỗi job train dùng 1 slice. NCCL không chạy giữa các slice: không DDP/FSDP/TP qua nhiều slice. Slice 1g.10gb đủ cho vLLM 4B–8B AWQ, không đủ train 8B.</p>', doc: [D('k-mig', 'MIG'), ...SDOC] },
+    r_budget: { title: 'Ngân sách mềm (gpu_budget.py)', chips: [['cẩn thận', 'warn']], html: '<ol><li>VRAM đang dùng ≈ 0, không notebook giữ model</li><li>Tính ngân sách: train + vLLM + 1–1,5 GB/process ≤ 90% (Hình 10)</li><li>vLLM: hạ <code>--gpu-memory-utilization</code>, <code>--max-model-len</code>, <code>--max-num-seqs</code></li><li>Train: <code>per_process_memory_fraction</code>, giảm batch / seq, bật gradient_checkpointing</li><li>Chạy server trước, train sau; theo dõi <code>nvidia-smi -l 2</code> 5 phút đầu</li><li>Port khác nhau, checkpoint thường xuyên</li></ol>', doc: [D('k-budget-h', 'gpu_budget.py và playbook'), ...SDOC] },
+  };
+  quiz('#shareQuiz', SQ, 's1', SR);
+
+  // y = có, p = một phần, n = không ; thứ tự: bộ nhớ, compute, lỗi
+  const METHODS = [
+    ['cvd', 'CUDA_VISIBLE_DEVICES', 'yyy', 'Chọn GPU nguyên chiếc', 'chỉ giữa các GPU khác nhau', 'giữa GPU', 'giữa GPU', 'có', 'có', 'thấp', 'Mỗi job 1 GPU nguyên. Với MIG nhận luôn MIG-<uuid>.'],
+    ['none', 'Chạy chung không cấu hình', 'nnn', 'Nhiều process time-share mặc định', 'không', 'không', 'không', 'job nhỏ', 'tạm', 'không', ''],
+    ['soft', 'Ngân sách mềm', 'pnn', 'Mỗi app tự giới hạn / cấp phát trước', 'tự giác', 'không', 'không', 'tạm', 'có', 'thấp', 'Chỉ an toàn khi mọi tenant đều đặt ngân sách và tổng ≤ ~90%.'],
+    ['ts', 'Hàng đợi 1 máy (ts -G N)', 'yyy', 'Chạy lần lượt khi GPU rảnh', 'có (vì không chồng nhau)', 'có', 'có', 'tốt nhất cho 24 GB', 'có', 'rất thấp', ''],
+    ['slice', 'k8s time-slicing', 'nnn', 'Device plugin quảng bá N bản sao/GPU', 'không', 'không (chia đều thời gian)', 'không', 'không', 'nhẹ', 'TB (k8s)', 'Hợp notebook/demo nhẹ; không dùng cho train.'],
+    ['mps', 'MPS', 'pyn', '1 MPS server ghép nhiều client chạy đồng thời', 'giới hạn mềm/client', 'có, % SM', 'không — lỗi fatal lan', 'tạm', 'có (nhiều model nhỏ)', 'TB', 'Volta+, chỉ Linux (không WSL). Hợp nhiều server inference nhỏ; không hợp train quan trọng.'],
+    ['mig', 'MIG', 'yyy', 'Phân vùng phần cứng (SM, L2, bộ nhớ riêng)', 'có, phần cứng', 'có', 'có', '1 slice/job; không NCCL giữa slice', 'có', 'TB', 'A100, A30, H100, H20, H200, B200, GB200, RTX PRO Blackwell. Model cần > 1 slice → dùng GPU nguyên.'],
+    ['hami', 'HAMi', 'ppn', 'Device plugin + hook CUDA API', 'ép bằng phần mềm', '% core', 'không', 'tạm', 'có', 'TB–cao', 'Cho cụm k8s muốn "xin 12 GB VRAM" thay vì 1 GPU.'],
+    ['kai', 'KAI Scheduler', 'pnn', 'Scheduler có queue, gang, gpu-fraction', 'tuỳ mode', 'không / một phần', 'không', 'có (gang, queue)', 'có', 'cao', 'Ép giới hạn bằng hook phần mềm, không phải phần cứng.'],
+  ];
+  document.getElementById('methods').innerHTML = METHODS.map((m) => `<button class="node" data-k="${m[0]}"><span class="n-t">${esc(m[1])}</span><span class="iso">${['bộ nhớ', 'compute', 'lỗi'].map((l, i) => `<span><i class="${m[2][i]}"></i>${l}</span>`).join('')}</span></button>`).join('');
+  const mItems = {};
+  METHODS.forEach((m) => (mItems[m[0]] = { eyebrow: 'Cách chia GPU', title: m[1], chips: [['Train: ' + m[7], ''], ['Infer: ' + m[8], ''], ['Độ khó: ' + m[9], '']],
+    html: `<p><span class="k">Cơ chế:</span> ${esc(m[3])}</p><table class="tbl"><tr><th>Cô lập bộ nhớ</th><td>${esc(m[4])}</td></tr><tr><th>Cô lập compute</th><td>${esc(m[5])}</td></tr><tr><th>Cô lập lỗi</th><td>${esc(m[6])}</td></tr></table>` + (m[10] ? `<div class="callout callout--note">${esc(m[10])}</div>` : ''),
+    doc: [D('k-sharing-table', 'Bảng so sánh tổng'), D(m[0] === 'mig' ? 'k-mig' : m[0] === 'mps' ? 'k-mps' : m[0] === 'ts' ? 'k-queue' : 'k-timeslice-hami-kai', 'Chi tiết')] }));
+  TQ.explorer('#methodRoot', mItems, { initial: 'soft' });
+
+  /* ---------------- BUDGET ---------------- */
+  const $ = (id) => document.getElementById(id);
+  const B = { total: $('bTotal'), used: $('bUsed'), train: $('bTrain'), serve: $('bServe'), head: $('bHead') };
+  const frac = (gb, total) => Math.floor((gb / total) * 100 + 1e-9) / 100;
+  function setB(v) { Object.entries(v).forEach(([k, x]) => (B[k].value = x)); calcB(); }
+  function calcB() {
+    const total = +B.total.value, used = +B.used.value, train = +B.train.value, serve = +B.serve.value, head = +B.head.value;
+    $('oTotal').textContent = TQ.fmt(total, 2); $('oUsed').textContent = TQ.fmt(used, 1); $('oTrain').textContent = TQ.fmt(train, 2); $('oServe').textContent = TQ.fmt(serve, 2); $('oHead').textContent = TQ.fmt(head, 1);
+    const tf = frac(train, total), sf = frac(serve, total), need = train + serve + 2 * head, avail = total - used;
+    const pct = (x) => Math.max(0, (x / total) * 100);
+    const free = Math.max(0, total - used - serve - train - 2 * head);
+    $('bBar').innerHTML = `<span style="flex:0 0 ${pct(used)}%;background:var(--muted)">${used >= 1 ? TQ.fmt(used, 1) : ''}</span><span style="flex:0 0 ${pct(serve)}%;background:var(--ex)">serve ${TQ.fmt(serve, 1)}</span><span style="flex:0 0 ${pct(train)}%;background:var(--note)">train ${TQ.fmt(train, 1)}</span><span style="flex:0 0 ${pct(2 * head)}%;background:var(--warn)"></span><span style="flex:1 1 ${pct(free)}%;color:var(--muted)">${need > avail ? '<b style="color:var(--bad)">THIẾU ' + TQ.fmt(need - avail, 2) + ' GiB</b>' : TQ.fmt(free, 2)}</span>`;
+    const v = [];
+    v.push(`<span class="chip">train_frac = ${tf.toFixed(2)}</span><span class="chip">serve_frac = ${sf.toFixed(2)}</span><span class="chip">tổng = ${(tf + sf).toFixed(2)}</span><span class="chip">cần ${TQ.fmt(need, 2)} / còn trống ${TQ.fmt(avail, 2)} GiB</span>`);
+    if (tf + sf > 0.9) v.push('<span class="chip chip--bad">tổng fraction &gt; 0,90 — rất dễ OOM một trong hai job</span>');
+    if (need > avail) v.push('<span class="chip chip--bad">không vừa bộ nhớ đang trống → chạy tuần tự</span>');
+    if (tf + sf <= 0.9 && need <= avail) v.push('<span class="chip chip--tip">OK trên giấy: server trước, train sau, xem nvidia-smi -l 2</span>');
+    $('bVerdict').innerHTML = v.join('');
+    $('bCmd').textContent = `python docker/gpu_budget.py --train-gb ${train} --serve-gb ${serve} --headroom-gb ${head} --env >> docker/.env`;
+    addCopyTo($('bCmd').parentElement);
+    $('bEnv').textContent = `TRAIN_MEM_FRACTION=${tf.toFixed(2)}\nVLLM_GPU_UTIL=${sf.toFixed(2)}\nSGLANG_MEM_FRACTION=${sf.toFixed(2)}`;
+  }
+  Object.values(B).forEach((el) => el.addEventListener('input', calcB));
+  const PRE = {
+    '4090': { total: 23.99, used: 0.5, train: 13, serve: 7, head: 1.5 },
+    default: { total: 23.99, used: 0.5, train: +(0.55 * 23.99).toFixed(2), serve: +(0.30 * 23.99).toFixed(2), head: 1.5 },
+    busy: { total: 23.99, used: 1, train: +(0.55 * 23.99).toFixed(2), serve: +(0.30 * 23.99).toFixed(2), head: 1.5 },
+  };
+  document.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => setB(PRE[b.dataset.preset])));
+  $('bDoc').innerHTML = TQ.docLink('camnang', 'k-gpu-budget-py', 'gpu_budget.py — từng bước') + ' ' + TQ.docLink('camnang', 'k-budget-rules', 'Bốn quy tắc ngân sách');
+  setB(PRE['4090']);
+
+  /* ---------------- EVAL PIPELINE ---------------- */
+  const EV = [
+    { title: 'Sinh câu trả lời cho test set', text: 'Greedy, cùng <code>max_tokens</code> cho mọi model (base, SFT, bản quantize).', cmd: `python ../10_inference/vllm_offline.py --model Qwen/Qwen3-8B      --input data/test.jsonl --output preds/base.jsonl
+python ../10_inference/vllm_offline.py --model outputs/merged     --input data/test.jsonl --output preds/sft.jsonl
+python ../10_inference/vllm_offline.py --model outputs/merged-AWQ --input data/test.jsonl --output preds/sft_awq.jsonl` },
+    { title: 'Tính metric có khoảng tin cậy', text: '<code>--bootstrap 1000</code> cho CI. Ra <code>results/X.json</code> và <code>X.samples.jsonl</code> (điểm từng mẫu, dùng để so cặp).', cmd: `python compute_metrics.py --pred preds/base.jsonl    --task mcq --out results/base.json --bootstrap 1000
+python compute_metrics.py --pred preds/sft.jsonl     --task mcq --out results/sft.json --bootstrap 1000
+python compute_metrics.py --pred preds/sft_awq.jsonl --task mcq --out results/sft_awq.json --bootstrap 1000` },
+    { title: 'Judge cho câu trả lời tự do', text: 'Judge chạy LOCAL ở cổng riêng 8001; <code>--model</code> = tên đã serve. Hiệu chỉnh judge với bác sĩ trước khi tin.', cmd: `NAME=judge PORT=8001 bash ../10_inference/vllm_serve.sh llm Qwen/Qwen3-32B
+python llm_judge.py --mode score    --pred preds/sft.jsonl --model judge --base-url http://localhost:8001/v1 --out results/judge_sft.jsonl
+python llm_judge.py --mode pairwise --pred preds/sft.jsonl --pred-b preds/base.jsonl --model judge \\
+    --base-url http://localhost:8001/v1 --out results/sft_vs_base.jsonl` },
+    { title: 'So cặp A vs B', text: 'Ví dụ: bản AWQ có kém bf16 quá 1 điểm không? Đọc kết quả theo Hình 12.', cmd: `python paired_compare.py results/sft_awq.samples.jsonl results/sft.samples.jsonl --metric correct --margin 0.01` },
+    { title: 'Benchmark chung, tốc độ và bảng tổng hợp', text: '<code>lm_eval.sh</code> kiểm tra model có "quên" kiến thức chung; <code>compare_results.py</code> ra bảng.', cmd: `bash lm_eval.sh vllm outputs/merged
+bash benchmark_speed.sh medical outputs/merged-AWQ      # khi server đang chạy
+python compare_results.py results/base.json results/sft.json results/sft_awq.json` },
+  ];
+  TQ.stepper('#evalRoot', EV, { onStep: (i) => { $('evalCmd').textContent = '# cd recipes/11_evaluation\n' + EV[i - 1].cmd; addCopyTo($('evalCmd').parentElement); } });
+  $('evalDocs').innerHTML = [D('j-r11-flow', 'Recipe 11 — Quy trình chuẩn'), D('j-r11-paired', 'paired_compare.py'), D('j-d15-judge', 'LLM-as-judge — 6 quy tắc'), D('j-d15-splits', 'Ba tập, ba vai trò')].map((d) => TQ.docLink(...d)).join('');
+
+  /* ---------------- CI ---------------- */
+  let ciMode = 'sft';
+  const CI_PRE = {
+    sft: [['SFT hơn base rõ', 1.2, 2.6], ['CI chứa 0', -0.4, 1.5]],
+    quant: [['AWQ: CI [−0,9; +0,1]', -0.9, 0.1], ['Test quá nhỏ: [−1,6; +0,8]', -1.6, 0.8]],
+  };
+  function presets() { $('ciPresets').innerHTML = CI_PRE[ciMode].map((p, i) => `<button class="btn" data-ci="${i}">${esc(p[0])}</button>`).join(''); $('ciPresets').querySelectorAll('[data-ci]').forEach((b) => (b.onclick = () => { const p = CI_PRE[ciMode][+b.dataset.ci]; $('ciLo').value = p[1]; $('ciHi').value = p[2]; drawCI(); })); }
+  function drawCI() {
+    let lo = +$('ciLo').value, hi = +$('ciHi').value; if (lo > hi) { [lo, hi] = [hi, lo]; }
+    const m = +$('ciM').value;
+    $('oLo').textContent = TQ.fmt(lo, 1); $('oHi').textContent = TQ.fmt(hi, 1); $('oM').textContent = TQ.fmt(m, 1);
+    $('ciMarginCtl').hidden = ciMode !== 'quant';
+    const X = (v) => 40 + ((v + 3) / 6) * 560;
+    const thr = ciMode === 'sft' ? 0 : -m;
+    const pass = lo > thr;
+    let s = `<line x1="40" y1="70" x2="600" y2="70" stroke="var(--muted)" stroke-width="1.5"/>`;
+    for (let t = -3; t <= 3; t++) s += `<line x1="${X(t)}" y1="66" x2="${X(t)}" y2="74" stroke="var(--muted)"/><text x="${X(t)}" y="92" font-size="12" text-anchor="middle" class="t-mono t-muted">${t > 0 ? '+' + t : t}</text>`;
+    s += `<rect x="${X(thr)}" y="20" width="${600 - X(thr)}" height="60" fill="var(--tip)" opacity=".12"/>`;
+    s += `<line x1="${X(thr)}" y1="16" x2="${X(thr)}" y2="84" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 4"/><text x="${X(thr)}" y="12" font-size="12" text-anchor="middle" style="fill:var(--accent)">${ciMode === 'sft' ? 'ngưỡng 0' : '−margin = ' + TQ.fmt(-m, 1)}</text>`;
+    const c = pass ? 'var(--tip)' : 'var(--bad)';
+    s += `<line x1="${X(lo)}" y1="48" x2="${X(hi)}" y2="48" stroke="${c}" stroke-width="6" stroke-linecap="round"/><circle cx="${X((lo + hi) / 2)}" cy="48" r="6" fill="var(--surface)" stroke="${c}" stroke-width="3"/>`;
+    s += `<text x="${X(lo)}" y="38" font-size="11.5" text-anchor="middle" class="t-mono">${TQ.fmt(lo, 1)}</text><text x="${X(hi)}" y="38" font-size="11.5" text-anchor="middle" class="t-mono">${TQ.fmt(hi, 1)}</text>`;
+    s += `<text x="600" y="112" font-size="11" text-anchor="end" class="t-muted">chênh lệch (${ciMode === 'sft' ? 'SFT − base' : 'quant − bf16'}), điểm</text>`;
+    $('ciSvg').innerHTML = s;
+    const rule = ciMode === 'sft' ? 'Cận dưới CI paired của (SFT − base) > 0' : `Non-inferiority: cận dưới CI paired của (quant − bf16) > −margin (paired_compare.py --margin ${(m / 100).toFixed(3).replace(/0+$/, '')})`;
+    $('ciVerdict').innerHTML = `<span class="chip ${pass ? 'chip--tip' : 'chip--bad'}">${pass ? 'ĐẠT' : (ciMode === 'sft' ? 'Chưa chứng minh được là tốt hơn' : 'Không chứng minh được là không kém')}</span><span style="font-size:13.5px">${esc(rule)}. Cận dưới = ${TQ.fmt(lo, 1)} ${pass ? '>' : '≤'} ${TQ.fmt(thr, 1)}.</span>` +
+      TQ.docLink('camnang', 'j-d15-accept', 'Quy tắc chấp nhận');
+  }
+  ['ciLo', 'ciHi', 'ciM'].forEach((id) => $(id).addEventListener('input', drawCI));
+  $('ciM').value = 1;
+  TQ.tabs('#ciRoot', (t) => { ciMode = t; presets(); const p = CI_PRE[t][0]; $('ciLo').value = p[1]; $('ciHi').value = p[2]; drawCI(); });
+
+  /* ---------------- OPS ---------------- */
+  const UP = [
+    ['Đọc release notes', 'Đọc mục <b>Breaking changes / Deprecations / Removed</b> của thư viện định nâng. Ghi lại tên tham số bị đổi.'],
+    ['Tạo nhánh', 'Nhánh <code>bump/&lt;thư-viện&gt;-&lt;yyyy-mm&gt;</code>. Một PR = một thư viện lớn; không vừa nâng version vừa sửa logic recipe.'],
+    ['Sửa pin', 'Sửa pin trong <code>requirements/*.in</code> (hoặc .txt) của đúng env. Thử trước: <code>uv pip compile requirements/hf_trl.in -o /tmp/lock.txt</code>. Unsloth thường pin TRL/transformers cũ hơn.'],
+    ['Tìm chỗ dùng API bị đổi', '<code>grep -rn "&lt;tên tham số cũ&gt;" recipes/ configs/ docs/</code>'],
+    ['Sửa theo docs chính thức', 'Thứ không xác minh được: ghi <code>UNVERIFIED</code> trong comment.'],
+    ['Kiểm tra', '<code>make lint</code> + <code>pytest tests -q</code> → smoke tầng 0–1 (CPU) → tầng 2 (1 GPU, max_steps=10) cho recipe bị ảnh hưởng → so với lần trước trong <code>results/smoke/</code>: loss ở step 10, tokens/s, metric eval nhỏ.'],
+    ['Cập nhật ghi chú', 'Dòng <b>Kiểm chứng theo:</b> trong README/doc đã sửa, bảng version ở docs/00 §2, và <code>CHANGELOG.md</code>.'],
+    ['Merge, tag', 'Tag <code>recipes-YYYY.MM</code>.'],
+  ];
+  $('upFlow').innerHTML = UP.map((u, i) => (i ? '<span class="arrow" data-on="' + (i + 1) + '-">→</span>' : '') + `<div class="node" style="cursor:default;flex:1 1 120px" data-on="${i + 1}-" data-hl="${i + 1}"><span class="n-tag">bước ${i + 1}</span><span class="n-t">${esc(u[0])}</span></div>`).join('');
+  TQ.stepper('#upRoot', UP.map((u) => ({ title: u[0], text: u[1] })), { onStep: (i) => document.querySelectorAll('#upFlow [data-hl]').forEach((n) => n.classList.toggle('is-active', +n.dataset.hl === i)) });
+  $('upDocs').innerHTML = [D('a-update-process', 'Quy trình nâng version'), D('a-guide-update-safety', 'Cập nhật thư viện & an toàn'), D('a-update-changelog-template', 'Mẫu ghi CHANGELOG')].map((d) => TQ.docLink(...d)).join('');
+  const SAFE = ['Có căn cứ pháp lý / phê duyệt đạo đức cho mục đích này', 'Ẩn danh xong, kiểm tra ngẫu nhiên 100 mẫu bằng mắt; DICOM tag đã xoá', 'Không có bước nào gửi dữ liệu chưa ẩn danh ra ngoài máy/mạng nội bộ', 'Dataset/model ở chế độ private; quyền truy cập ghi log', 'Test set chia theo bệnh nhân; đánh giá an toàn đạt ngưỡng đã thống nhất với bác sĩ', 'Model card đầy đủ; UI có cảnh báo "không thay thế chẩn đoán của bác sĩ"'];
+  $('safeList').innerHTML = SAFE.map((s, i) => `<label><input type="checkbox" id="safe${i}"><span>${esc(s)}</span></label>`).join('');
+  $('safeDocs').innerHTML = [D('b-safety-checklist', 'Checklist trước khi dùng dữ liệu thật'), D('b-tech-rules', 'Quy tắc kỹ thuật bắt buộc'), D('b-docs18-h', 'Docs 18')].map((d) => TQ.docLink(...d)).join('');
+  TQ.tabs('#opsRoot');
+})();
+</script>
+</body>
+</html>

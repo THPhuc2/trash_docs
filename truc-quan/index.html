@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bản đồ trực quan LLM</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="shared.css">
+<style>
+/* Trang chủ: ma trận "giai đoạn × tài liệu" bấm được + 4 thẻ trang hình + lộ trình đọc */
+.how{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:18px}
+.how div{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;font-size:13.5px;color:var(--muted)}
+.how b{color:var(--text);display:block;font-size:14px}
+.how .ic{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;font-family:var(--mono);font-weight:600;font-size:13px;background:var(--accent-soft);color:var(--accent)}
+
+.matrix{display:grid;grid-template-columns:150px repeat(10,minmax(74px,1fr));min-width:920px;gap:0}
+.matrix .mh{font-size:12px;font-weight:600;line-height:1.3;padding:8px 6px 10px;text-align:center;color:var(--muted);
+  border:0;background:none;cursor:pointer;font-family:var(--font);border-radius:8px 8px 0 0;display:grid;gap:3px;justify-items:center}
+.matrix .mh .num{font-family:var(--mono);font-size:10.5px;color:var(--accent)}
+.matrix .mh:hover,.matrix .mh.is-col{color:var(--text);background:var(--accent-soft)}
+.matrix .rl{font-size:13px;font-weight:600;padding:12px 10px 12px 0;border-top:1px solid var(--border);display:grid;align-content:center;line-height:1.3}
+.matrix .rl small{display:block;font-weight:400;color:var(--muted);font-size:11.5px}
+.matrix .cell{border:0;border-top:1px solid var(--border);background:none;cursor:pointer;display:grid;place-items:center;padding:10px 0;min-height:56px}
+.matrix .cell.is-col{background:color-mix(in srgb,var(--accent-soft) 55%,transparent)}
+.matrix .cell:hover .dot{transform:scale(1.18)}
+.matrix .cell.is-active{background:var(--accent-soft)}
+.matrix .cell.is-active .dot{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)}
+.dot{width:20px;height:20px;border-radius:50%;transition:transform .15s}
+.dot.l2{background:var(--accent)}
+.dot.l1{background:transparent;border:2.5px solid var(--accent)}
+.dot.l0{width:6px;height:6px;background:var(--border)}
+.mlegend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-top:12px}
+.mlegend span{display:inline-flex;align-items:center;gap:6px}
+.mlegend .dot{width:12px;height:12px}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:14px}
+.card{display:grid;gap:10px;align-content:start;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:18px;text-decoration:none;color:inherit;box-shadow:var(--shadow);transition:border-color .15s,transform .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .step{font-family:var(--mono);font-size:11.5px;color:var(--accent);letter-spacing:.06em;text-transform:uppercase}
+.card h3{font-size:19px;font-weight:700}
+.card p{font-size:14px;color:var(--muted)}
+.card ul{margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:2px}
+.card .go{font-size:13.5px;font-weight:600;color:var(--accent)}
+.route{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13.5px}
+.route span.r{padding:5px 12px;border-radius:999px;background:var(--surface);border:1px solid var(--border);font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <span class="crumb">research_docs_knowleadge / truc-quan</span>
+    <h1>Bản đồ trực quan</h1>
+    <p class="lead">Bộ tài liệu gốc giữ nguyên để đọc sâu. Ở đây mỗi tài liệu có một trang hình bấm được: bấm vào khối để xem giải thích ngắn, bấm <b>Tiếp ▶</b> để xem từng bước chạy, kéo thanh trượt để tự tính. Cần chi tiết thì bấm nhãn <b>§</b> để mở đúng mục trong tài liệu gốc.</p>
+    <div class="how">
+      <div><span class="ic">▣</span><p><b>Bấm khối</b>giải thích hiện ở khung bên phải</p></div>
+      <div><span class="ic">▶</span><p><b>Tiếp ▶ / Tự chạy</b>xem cơ chế diễn ra theo từng bước</p></div>
+      <div><span class="ic">⇆</span><p><b>Kéo thanh trượt</b>đổi số để thấy bộ nhớ, token, chi phí thay đổi</p></div>
+      <div><span class="ic">§</span><p><b>Nhãn §</b>mở tài liệu gốc ngay tại mục đó (khi mở từ máy)</p></div>
+    </div>
+  </header>
+
+  <section class="viz" id="ma-tran">
+    <div class="viz-head">
+      <span class="fig">Hình 1</span>
+      <h2>Mỗi giai đoạn của model được viết ở tài liệu nào</h2>
+      <p class="sub">Cột là các giai đoạn theo thứ tự làm một model, từ dữ liệu tới vận hành. Hàng là tài liệu. Chấm đặc là phần viết kỹ, chấm rỗng là có nhắc tới.</p>
+      <span class="hint">Bấm một ô (hoặc tên cột) để xem danh sách mục cần đọc</span>
+    </div>
+    <div class="viz-grid wide" id="mx">
+      <div class="canvas"><div class="matrix" id="matrix"></div>
+        <div class="mlegend"><span><i class="dot l2"></i>viết kỹ</span><span><i class="dot l1"></i>có nhắc tới</span><span><i class="dot l0"></i>không có</span></div>
+      </div>
+      <aside class="panel" data-panel aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <section class="viz" id="trang-hinh">
+    <div class="viz-head">
+      <span class="fig">Hình 2</span>
+      <h2>Bốn trang hình, theo thứ tự nên đọc</h2>
+      <p class="sub">Đi từ nguyên lý tới thực hành: hiểu model được train thế nào, thêm phần ảnh cho VLM, rồi tới chạy model nhanh và rẻ, cuối cùng là làm thật với repo training_recipes.</p>
+    </div>
+    <div class="route" aria-label="Lộ trình đọc">
+      <span class="r">1 · Frontier Training</span><span class="arrow">→</span>
+      <span class="r">2 · VLM Training</span><span class="arrow">→</span>
+      <span class="r">3 · Inference &amp; Deploy</span><span class="arrow">→</span>
+      <span class="r">4 · Training Recipes (thực hành)</span>
+    </div>
+    <div class="cards">
+      <a class="card" href="frontier-training.html">
+        <span class="step">Trang 1 · lý thuyết LLM</span>
+        <h3>Frontier Training</h3>
+        <p>Model học cái gì, tốn bộ nhớ vào đâu, chọn kiến trúc, optimizer, scaling law, giữ training ổn định, post-training và chạy song song nhiều GPU.</p>
+        <ul><li>Vòng đời pre → mid → post-training</li><li>Máy tính bộ nhớ và ZeRO</li><li>MHA / GQA / MLA, lịch learning rate, 5D parallelism</li></ul>
+        <span class="go">Mở trang hình →</span>
+      </a>
+      <a class="card" href="vlm-training.html">
+        <span class="step">Trang 2 · thêm ảnh</span>
+        <h3>VLM Training</h3>
+        <p>Ảnh biến thành token ra sao, các khối encoder / connector / LLM, từng stage train khoá hay mở khối nào, dữ liệu và chống "bịa".</p>
+        <ul><li>Ảnh → patch → token, máy tính số visual token</li><li>Stage 1 → 2 → 3 và freeze / unfreeze</li><li>Loss masking bấm từng token</li></ul>
+        <span class="go">Mở trang hình →</span>
+      </a>
+      <a class="card" href="inference-deploy.html">
+        <span class="step">Trang 3 · chạy model</span>
+        <h3>Inference &amp; Deploy</h3>
+        <p>Một request đi qua prefill và decode thế nào, KV cache lớn bao nhiêu, batching, speculative decoding, quantization và tính tiền deploy.</p>
+        <ul><li>Hành trình một request, từng bước</li><li>Máy tính KV cache và sizing GPU</li><li>Chọn định dạng quantize theo GPU</li></ul>
+        <span class="go">Mở trang hình →</span>
+      </a>
+      <a class="card" href="training-recipes.html">
+        <span class="step">Trang 4 · làm thật</span>
+        <h3>Training Recipes</h3>
+        <p>Đi từng trạm trong repo: cài env, kiểm tra, chuẩn bị dữ liệu, rồi luồng X-quang VLM, chatbot hoặc suy luận. Mỗi trạm có lệnh copy được và việc cần kiểm tra.</p>
+        <ul><li>Bản đồ tuyến A / B / C, đổi env ở đâu</li><li>Hết VRAM thì làm gì trước</li><li>Đọc log: lúc nào là bất thường</li></ul>
+        <span class="go">Mở trang hình →</span>
+      </a>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>Tài liệu gốc ở thư mục cha: <code>research_docs_knowleadge/</code></span>
+    <span>Bản "nguyên lý" của Frontier Training dùng chung mục với bản đầy đủ, nên mỗi giải thích có link tới cả hai.</span>
+  </footer>
+</div>
+
+<script src="shared.js"></script>
+<script>
+(function () {
+  const STAGES = [
+    ['du-lieu', 'Dữ liệu'], ['kien-truc', 'Kiến trúc'], ['pretrain', 'Pre-training'], ['midtrain', 'Mid-training'],
+    ['posttrain', 'Post-training'], ['he-thong', 'Hệ thống train'], ['nen', 'Nén model'], ['serve', 'Serve & deploy'],
+    ['danh-gia', 'Đánh giá'], ['van-hanh', 'Vận hành']
+  ];
+  const ROWS = [
+    { key: 'frontier', label: 'Frontier Training', sub: 'LLM, lý thuyết + thực tế lab', page: 'frontier-training.html' },
+    { key: 'vlm', label: 'VLM Training', sub: 'model đọc ảnh', page: 'vlm-training.html' },
+    { key: 'inference', label: 'Inference & Deploy', sub: 'chạy model', page: 'inference-deploy.html' },
+    { key: 'camnang', label: 'Cẩm nang Recipes', sub: 'repo thực hành', page: 'training-recipes.html' }
+  ];
+  // [mức độ, [[anchor, nhãn], ...], ghi chú]   mức: 2 = viết kỹ, 1 = có nhắc, 0 = không
+  const C = {
+    frontier: {
+      'du-lieu': [2, [['d-data-h', 'Data curation & pre-training'], ['dt-web-pipeline', 'Pipeline web data'], ['dt-dedup-theory', 'Dedup'], ['dt-mixture-opt', 'Tối ưu tỉ lệ trộn']], 'Chọn, lọc, khử trùng và trộn dữ liệu pre-train.'],
+      'kien-truc': [2, [['a-architecture-h', 'Architecture & set-up'], ['t-transformer-math', 'Transformer block'], ['a-attention', 'MHA / MQA / GQA / MLA'], ['b-moe', 'MoE']], 'Dense hay MoE, attention, positional encoding, hybrid.'],
+      'pretrain': [2, [['a-playbook-h', 'Playbook tối thiểu'], ['c-optimizers-h', 'Optimizer & hyperparameter'], ['c-scaling-laws', 'Scaling laws'], ['b-stability-h', 'Stability']], 'Optimizer, learning rate, batch size, scaling law, chống loss spike.'],
+      'midtrain': [2, [['d-midtraining-h', 'Mid-training'], ['d-long-context', 'Long-context stage'], ['dt-context-extension', 'PI / NTK / YaRN / ABF']], 'Mở rộng context, annealing, distilled reasoning.'],
+      'posttrain': [2, [['d-posttraining-h', 'Post-training'], ['e-sft', 'SFT'], ['e-po', 'Preference optimization'], ['pt-grpo-variants', 'GRPO và các bản sửa']], 'SFT → preference → RL, chat template, packing.'],
+      'he-thong': [2, [['s-systems-h', 'Training systems optimization'], ['t-memory-anatomy', 'Memory anatomy'], ['s-zero-fsdp', 'ZeRO / FSDP'], ['s-5d-parallelism', '5D parallelism']], 'Bộ nhớ, mixed precision, DP / TP / PP / CP / EP.'],
+      'nen': [1, [['pt-opt-peft', 'LoRA & QLoRA'], ['ar-kv-inference', 'KV cache và kiến trúc vì inference']], 'Chỉ nhắc khía cạnh liên quan tới training.'],
+      'serve': [1, [['ar-kv-inference', 'KV cache và lựa chọn kiến trúc'], ['f-multi-client', 'Scale inference cho RL']], 'Nhắc inference ở góc nhìn kiến trúc và RL.'],
+      'danh-gia': [2, [['a-eval-criteria', 'Chọn eval'], ['d-evals', 'Evals post-training'], ['op-downstream', 'Từ loss tới năng lực']], 'Chọn eval cho ablation và post-training.'],
+      'van-hanh': [2, [['f-marathon-h', 'Training marathon'], ['f-usual-suspects', 'Thủ phạm quen thuộc'], ['ar-monitoring', 'Monitoring']], 'Chạy đợt train dài: throughput tụt, loss nhiễu, lỗi seed.']
+    },
+    vlm: {
+      'du-lieu': [2, [['v-data-h', 'Data cho VLM'], ['v2-mixture', 'Data mixture'], ['v2-filtering', 'Lọc dữ liệu ảnh']], 'Caption, interleaved, OCR, grounding, video, instruction.'],
+      'kien-truc': [2, [['v-three-blocks', 'Kiến trúc 3 khối'], ['v-encoders-h', 'Vision encoder'], ['v-connectors-h', 'Connector & độ phân giải']], 'Encoder, connector, xử lý ảnh độ phân giải cao.'],
+      'pretrain': [2, [['v2-stage1', 'Stage 1 alignment'], ['v2-stage2', 'Stage 2 multimodal pre-training']], 'Dạy projector "dịch" ảnh, rồi nạp kiến thức thị giác.'],
+      'midtrain': [1, [['v2-longctx-video', 'Long-context, multi-image, video']], 'Stage kéo dài context cho nhiều ảnh và video.'],
+      'posttrain': [2, [['v2-stage3', 'Stage 3 instruction tuning'], ['v-post-h', 'Post-training VLM'], ['v2-hallucination', 'Object hallucination']], 'SFT, giảm "bịa", RL có reward kiểm chứng.'],
+      'he-thong': [2, [['v-systems-h', 'Training systems cho VLM'], ['v3-freezing', 'Freeze từng phần'], ['v3-imbalance', 'Load imbalance']], 'FLOPs, memory, packing, song song encoder và LLM.'],
+      'nen': [1, [['v-token-reduction', 'Giảm số visual token']], 'Nén ở phía token ảnh.'],
+      'serve': [1, [['v3-inference-cost', 'Visual token làm prefill phình to'], ['v3-infer-opt', 'Tăng tốc inference VLM']], 'Chi phí inference riêng của VLM.'],
+      'danh-gia': [2, [['v-eval-h', 'Evaluation VLM'], ['v3-bench-families', 'Nhóm benchmark'], ['v3-eval-pitfalls', 'Bẫy khi đánh giá']], 'Benchmark nào đo gì và bẫy hay gặp.'],
+      'van-hanh': [1, [['v3-mistakes', 'Lỗi hay gặp'], ['v3-dataloader-debug', 'Chẩn đoán nghẽn dataloader']], 'Lỗi thực tế khi train VLM.']
+    },
+    inference: {
+      'du-lieu': [0, [], ''],
+      'kien-truc': [1, [['i-foundations-h', 'Nền tảng inference'], ['i-kv-size', 'Công thức KV cache']], 'Kiến trúc nhìn từ phía chạy model.'],
+      'pretrain': [0, [], ''],
+      'midtrain': [0, [], ''],
+      'posttrain': [1, [['i2-kd-theory', 'Knowledge distillation'], ['i2-qat', 'PTQ vs QAT']], 'Distillation và QAT là bước train thêm.'],
+      'he-thong': [0, [], ''],
+      'nen': [2, [['i-quant-h', 'Quantization'], ['i-compress-h', 'Pruning & distillation'], ['i2-opt-decision', 'Nên quantize, prune hay distill?']], 'INT / FP8 / NVFP4, GPTQ, AWQ, pruning, distillation.'],
+      'serve': [2, [['i-serving-h', 'Serving systems'], ['i-spec-h', 'Speculative decoding'], ['i-deploy-h', 'Deploy thực tế']], 'Batching, PagedAttention, prefix cache, sizing, chi phí.'],
+      'danh-gia': [2, [['i-eval-h', 'Evaluation chuyên sâu'], ['i3-eval-stats', 'Thống kê cho eval'], ['i3-regression-eval', 'Regression eval khi deploy']], 'pass@k, LLM-judge, khoảng tin cậy, contamination.'],
+      'van-hanh': [2, [['i3-observability', 'Observability'], ['i3-checklist', 'Production checklist'], ['i3-autoscaling', 'Autoscaling & routing']], 'Theo dõi gì khi chạy production.']
+    },
+    camnang: {
+      'du-lieu': [2, [['b-data-overview-h', 'Dữ liệu là bước số 0'], ['b-r00-h', 'Recipe 00'], ['b-docs01-h', 'Định dạng & chat template'], ['b-docs18-h', 'An toàn y khoa']], 'CSV / Excel / DICOM / PDF → dữ liệu sạch, chia theo bệnh nhân.'],
+      'kien-truc': [1, [['c-choose-h', 'Chọn phương pháp'], ['d-vlm-h', 'Recipe 03 SFT VLM']], 'Chọn model nền và phương pháp, không đi sâu kiến trúc.'],
+      'pretrain': [1, [['d-cpt-h', 'Recipe 01 CPT'], ['c-hparams-h', 'Hyperparameter cheat sheet']], 'Continued pretraining từ văn bản thô.'],
+      'midtrain': [0, [], ''],
+      'posttrain': [2, [['d-sft-h', 'Recipe 02 SFT'], ['e-map-h', 'Bản đồ nhóm sau SFT'], ['e-r04-h', 'Recipe 04 DPO…'], ['e-r05-h', 'Recipe 05 GRPO']], 'SFT, DPO, GRPO, distillation, reward model, verl.'],
+      'he-thong': [2, [['f-memory-h', 'Memory math'], ['g-docs09-h', 'Parallelism decision guide'], ['g-docs04-h', 'DDP / ZeRO / FSDP2'], ['h-multinode-h', 'Multi-node']], 'Ước lượng VRAM, chọn kiểu song song, SLURM.'],
+      'nen': [2, [['i-merge-h', 'Recipe 07 merge & export'], ['i-quant-h', 'Recipe 08 quantization'], ['i-quant-theory-h', 'Lý thuyết quantization']], 'Merge LoRA, xuất GGUF / FP8 / NVFP4, quantize.'],
+      'serve': [2, [['j-r10-h', 'Recipe 10 inference'], ['j-r19-h', 'Recipe 19 tối ưu inference'], ['k-overview-h', 'Docker, chia GPU & K8s']], 'vLLM, SGLang, profile, deploy bằng Docker / K8s.'],
+      'danh-gia': [2, [['j-d15-h', 'Giao thức đánh giá'], ['j-r11-h', 'Recipe 11 evaluation']], 'Metric có khoảng tin cậy, so cặp, LLM-judge local.'],
+      'van-hanh': [2, [['f-trouble-h', 'Troubleshooting'], ['k-sharing-h', 'Các cách chia GPU'], ['a-update-h', 'Giữ repo cập nhật']], 'OOM, NaN, NCCL, chia GPU, nâng version.']
+    }
+  };
+
+  const mx = document.getElementById('matrix');
+  let html = '<div></div>' + STAGES.map(([k, t], i) => `<button class="mh" data-col="${k}"><span class="num">${String(i + 1).padStart(2, '0')}</span>${t}</button>`).join('');
+  ROWS.forEach((r) => {
+    html += `<div class="rl">${r.label}<small>${r.sub}</small></div>`;
+    STAGES.forEach(([s, t]) => {
+      const lv = C[r.key][s][0];
+      html += `<button class="cell" data-k="${r.key}|${s}" data-col="${s}" aria-label="${r.label} – ${t}"><span class="dot l${lv}"></span></button>`;
+    });
+  });
+  mx.innerHTML = html;
+
+  const stageName = Object.fromEntries(STAGES);
+  const docKeyFor = (r) => r;
+  const items = {};
+  ROWS.forEach((r) => STAGES.forEach(([s, t]) => {
+    const [lv, links, note] = C[r.key][s];
+    const docs = [];
+    links.forEach(([a, l]) => {
+      docs.push([docKeyFor(r.key), a, l + (r.key === 'frontier' ? ' (đầy đủ)' : '')]);
+      if (r.key === 'frontier') docs.push(['nguyenly', a, l + ' (nguyên lý)']);
+    });
+    items[r.key + '|' + s] = {
+      eyebrow: r.label + ' · ' + t,
+      title: lv === 0 ? 'Tài liệu này không bàn giai đoạn ' + t.toLowerCase() : t,
+      chips: [[lv === 2 ? 'viết kỹ' : lv === 1 ? 'có nhắc tới' : 'không có', lv === 2 ? 'accent' : lv === 1 ? 'warn' : '']],
+      html: (note ? `<p>${note}</p>` : '<p>Xem các tài liệu khác ở cùng cột.</p>') +
+        (lv ? `<p><a href="${r.page}">Xem trang hình ${r.label} →</a></p>` : ''),
+      doc: docs
+    };
+  }));
+
+  const ex = TQ.explorer(document.getElementById('mx'), items, {
+    initial: 'frontier|pretrain',
+    onShow: (k) => {
+      const col = k.split('|')[1];
+      mx.querySelectorAll('[data-col]').forEach((el) => el.classList.toggle('is-col', el.dataset.col === col));
+    }
+  });
+
+  // bấm tên cột → gộp mọi tài liệu của giai đoạn đó
+  const panel = document.querySelector('#mx [data-panel]');
+  mx.querySelectorAll('.mh').forEach((b) => b.addEventListener('click', () => {
+    const s = b.dataset.col;
+    mx.querySelectorAll('.cell').forEach((c) => { c.classList.remove('is-active'); c.setAttribute('aria-pressed', 'false'); });
+    mx.querySelectorAll('[data-col]').forEach((el) => el.classList.toggle('is-col', el.dataset.col === s));
+    let out = `<div class="p-eyebrow">Cả cột · ${stageName[s]}</div><h3>Đọc gì cho giai đoạn ${stageName[s].toLowerCase()}</h3>`;
+    ROWS.forEach((r) => {
+      const [lv, links, note] = C[r.key][s];
+      if (!lv) return;
+      out += `<div style="display:grid;gap:6px;padding-top:8px;border-top:1px solid var(--border)"><b>${r.label}</b>` +
+        (note ? `<p>${note}</p>` : '') +
+        `<div class="doc-links" style="border:0;padding:0;margin:0">${links.map(([a, l]) => TQ.docLink(r.key, a, l)).join('')}</div>` +
+        `<a href="${r.page}" style="font-size:13px">Trang hình ${r.label} →</a></div>`;
+    });
+    panel.innerHTML = out;
+  }));
+})();
+</script>
+</body>
+</html>

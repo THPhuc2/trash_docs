@@ -1,0 +1,1096 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Frontier Training trực quan</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="shared.css">
+<style>
+/* ---- Hình 1: vòng đời ---- */
+.phases{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+.phase{flex:1 1 150px;display:grid;gap:6px;align-content:start;padding:10px;border-radius:10px;border:1px dashed var(--border);min-width:0}
+.phase>.ph-t{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:500}
+.phase.p-prep{background:var(--khaki-bg)} .phase.p-prep>.ph-t{color:var(--khaki)}
+.phase.p-pre{background:var(--note-bg)} .phase.p-pre>.ph-t{color:var(--note)}
+.phase.p-mid{background:var(--teal-bg)} .phase.p-mid>.ph-t{color:var(--teal)}
+.phase.p-post{background:var(--ex-bg)} .phase.p-post>.ph-t{color:var(--ex)}
+.phase.p-rel{background:var(--tip-bg)} .phase.p-rel>.ph-t{color:var(--tip)}
+.phase .node{padding:8px 10px}
+.ops-rail{margin-top:10px;background:var(--warn-bg);border-radius:10px;padding:10px;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.ops-rail .ph-t{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--warn)}
+.ops-rail .node{flex:1 1 220px}
+.post-chain{display:grid;gap:4px}
+.post-chain .arrow{justify-self:center;font-size:12px;line-height:1}
+
+/* phần chưa tới bước vẫn thấy mờ để hình dung cả khung */
+#tfroot [data-on].off,#gr-root [data-on].off{opacity:.3}
+/* ---- Hình 2: transformer ---- */
+.tf{display:grid;gap:6px;max-width:520px;margin:0 auto}
+.tf .blk{border:1.5px solid var(--border);border-radius:8px;padding:7px 12px;background:var(--surface);display:flex;justify-content:space-between;gap:10px;align-items:center;transition:background .25s,border-color .25s,opacity .35s}
+.tf .blk .shape{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap}
+.tf .blk b{font-size:14px}
+.tf .blk.hl{border-color:var(--accent);background:var(--accent-soft)}
+.tf .layer{border:1.5px dashed var(--ex);border-radius:10px;padding:10px 10px 10px 26px;display:grid;gap:6px;position:relative}
+.tf .layer::before{content:"";position:absolute;left:11px;top:14px;bottom:14px;width:2px;background:var(--ex);opacity:.5;border-radius:2px}
+.tf .layer-t{font-family:var(--mono);font-size:11px;color:var(--ex);letter-spacing:.06em;text-transform:uppercase}
+.tf .add{font-family:var(--mono);color:var(--ex);font-weight:700}
+.tf .down{text-align:center;color:var(--muted);font-size:12px;line-height:1}
+
+/* ---- Hình 3: bộ nhớ ---- */
+.membar{position:relative;margin-top:22px}
+.membar .bar{height:40px}
+.membar .bar>span,.kvbars .bar>span{color:var(--bg)}
+.cap-mark{position:absolute;top:-20px;bottom:-4px;border-left:2px dashed var(--bad);pointer-events:none}
+.cap-mark span{position:absolute;top:0;left:4px;font-size:11.5px;font-weight:600;color:var(--bad);white-space:nowrap}
+.verdict{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:baseline;margin-top:14px}
+.verdict .lbl{font-size:12px;color:var(--muted);display:block}
+.seg-p{background:var(--note)} .seg-g{background:var(--teal)} .seg-o{background:var(--ex)} .seg-a{background:var(--warn)}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+
+/* ---- Hình 4: heads ---- */
+.heads{display:grid;grid-template-columns:repeat(32,minmax(7px,1fr));gap:2px;margin:6px 0}
+.heads .q{height:16px;border-radius:3px;background:var(--note)}
+.heads .kv{height:16px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;color:var(--bg);overflow:hidden}
+.heads .kv.c0{background:var(--accent)} .heads .kv.c1{background:var(--tip)}
+.heads .lat{height:16px;border-radius:3px;background:var(--warn);grid-column:1/-1;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:var(--bg)}
+.heads .ghost{height:16px;border-radius:3px;border:1px dashed var(--muted);opacity:.6}
+.row-lbl{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.kvbars{display:grid;gap:8px;margin-top:10px}
+.kvrow{display:grid;grid-template-columns:110px minmax(0,1fr) 90px;gap:10px;align-items:center;font-size:13px}
+.kvrow .bar{height:22px;position:relative}
+.kvrow.is-sel b{color:var(--accent)}
+.kvrow .num{font-family:var(--mono);font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+.kvrow .bud{position:absolute;top:-3px;bottom:-3px;border-left:2px dashed var(--bad)}
+@media (max-width:520px){.kvrow{grid-template-columns:70px minmax(0,1fr) 72px}}
+
+/* ---- SVG chart chung ---- */
+.chart .axis{stroke:var(--muted);stroke-width:1}
+.chart .grid{stroke:var(--border);stroke-width:1}
+.chart .roof{stroke:var(--accent);stroke-width:3;fill:none}
+.chart .tick{font-size:11px;fill:var(--muted);font-family:var(--mono)}
+.chart .zone-mem{fill:var(--note-bg)} .chart .zone-cmp{fill:var(--tip-bg)}
+.chart .pt{fill:var(--accent);stroke:var(--surface);stroke-width:2}
+.chart .c-cos{stroke:var(--note);stroke-width:2.5;fill:none}
+.chart .c-wsd{stroke:var(--accent);stroke-width:2.5;fill:none}
+.chart .c-ms{stroke:var(--ex);stroke-width:2.5;fill:none}
+.chart .c-br{stroke:var(--accent);stroke-width:1.8;fill:none;stroke-dasharray:5 4}
+.chart .ann{font-size:11.5px}
+.lr-toggles{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.sw{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle}
+
+/* ---- Hình 7: scaling ---- */
+.out-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:6px 0 14px}
+.out-grid .lbl{font-size:12px;color:var(--muted)}
+.out-grid .big{font-size:22px}
+.ratio{position:relative;height:64px;margin:26px 8px 10px}
+.ratio .track{position:absolute;left:0;right:0;top:28px;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--note-bg),var(--ex-bg))}
+.ratio .mk{position:absolute;top:22px;transform:translateX(-50%);display:grid;justify-items:center;gap:2px}
+.ratio .mk i{width:3px;height:18px;border-radius:2px;background:var(--muted)}
+.ratio .mk span{font-size:11px;color:var(--muted);white-space:nowrap}
+.ratio .mk.you i{background:var(--accent);height:26px;width:4px;margin-top:-8px}
+.ratio .mk.you span{color:var(--accent);font-weight:700;position:absolute;top:-22px}
+.ratio .tk{position:absolute;top:40px;transform:translateX(-50%);font-size:10.5px;font-family:var(--mono);color:var(--muted)}
+
+/* ---- Hình 8: GPU grid + pipeline ---- */
+.dims{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:16px}
+.nodes{display:grid;gap:10px}
+.gnode{border:1px solid var(--border);border-radius:9px;padding:8px;display:grid;gap:6px}
+.gnode .nl{font-family:var(--mono);font-size:10.5px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.gpus{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:5px}
+@media (max-width:560px){.gpus{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.gpu{appearance:none;font:inherit;cursor:pointer;border-radius:7px;border:1.5px solid transparent;padding:5px 2px;display:grid;justify-items:center;gap:0;min-width:0}
+.gpu b{font-size:12px}
+.gpu small{font-family:var(--mono);font-size:9.5px;opacity:.85;white-space:nowrap}
+.gpu.st0{background:var(--note-bg);color:var(--note)} .gpu.st1{background:var(--tip-bg);color:var(--tip)}
+.gpu.st2{background:var(--ex-bg);color:var(--ex)} .gpu.st3{background:var(--warn-bg);color:var(--warn)}
+.gpu.me{outline:3px solid var(--accent);outline-offset:1px}
+.gpu.r-tp{border-color:var(--accent)}
+.gpu.r-pp{border-style:dashed;border-color:var(--text)}
+.gpu.r-dp{box-shadow:inset 0 -4px 0 var(--teal)}
+.gpu:focus-visible{outline:2.5px solid var(--accent);outline-offset:2px}
+.ginfo{margin-top:12px;font-size:13.5px;display:grid;gap:4px}
+.keyrow{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted);margin-top:8px}
+.keyrow i{display:inline-block;width:16px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:2px solid var(--accent)}
+.keyrow i.pp{border:2px dashed var(--text)} .keyrow i.dp{border:0;box-shadow:inset 0 -4px 0 var(--teal);background:var(--surface-2)}
+.pipe .f{fill:var(--note)} .pipe .b{fill:var(--ex)} .pipe .lbl{font-size:10px;fill:var(--bg);font-family:var(--mono);font-weight:600}
+.pipe .bub{fill:var(--surface-2)} .pipe .st{font-size:11.5px;fill:var(--muted);font-family:var(--mono)}
+
+/* ---- Hình 9: stability ---- */
+.stab{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:560px){.stab{grid-template-columns:minmax(0,1fr)}}
+.stab .col{display:grid;gap:6px;align-content:start}
+.stab .col-t{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.stab .node.rel{border-color:var(--tip);background:var(--tip-bg)}
+.stab .node.sym .n-t::before{content:"!";display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--bad-bg);color:var(--bad);font-size:11px;margin-right:6px;vertical-align:1px}
+.sc-out{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:10px}
+.sc-out .lbl{font-size:12px;color:var(--muted)}
+.c-tanh{stroke:var(--accent);stroke-width:2.5;fill:none}
+.c-id{stroke:var(--muted);stroke-width:1.5;fill:none;stroke-dasharray:4 4}
+.spk{display:grid;gap:8px;max-width:640px}
+.spk .stepc{border:1.5px solid var(--border);border-radius:9px;padding:10px 12px;background:var(--surface);display:grid;gap:8px}
+.spk .stepc.q{border-color:var(--note);background:var(--note-bg)}
+.spk .stepc.end{border-color:var(--tip);background:var(--tip-bg)}
+.spk .stepc.risk{border-color:var(--warn);background:var(--warn-bg)}
+.spk .ch{display:flex;flex-wrap:wrap;gap:6px}
+.spk .picked{font-size:12.5px;color:var(--muted)}
+
+/* ---- Hình 10: GRPO ---- */
+.gr{display:grid;gap:10px}
+.gr-row{display:grid;gap:6px}
+.gr-row .rl{font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.gr-cells{display:grid;gap:6px;grid-template-columns:repeat(var(--g,4),minmax(0,1fr))}
+.roll{appearance:none;font:inherit;color:inherit;cursor:pointer;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);padding:6px;text-align:center;font-size:12.5px;min-width:0}
+.roll:hover{border-color:var(--accent)}
+.roll .ans{font-family:var(--mono);font-weight:600;display:block}
+.rw{border-radius:7px;padding:4px;text-align:center;font-weight:700;font-family:var(--mono);font-size:13px}
+.rw.ok{background:var(--tip-bg);color:var(--tip)} .rw.no{background:var(--bad-bg);color:var(--bad)}
+.advcell{height:96px;position:relative;border-radius:6px;background:var(--surface-2)}
+.advcell .zero{position:absolute;left:0;right:0;top:50%;border-top:1px solid var(--muted);opacity:.5}
+.advcell .ab{position:absolute;left:22%;right:22%;border-radius:3px;transition:all .3s}
+.advcell .ab.pos{background:var(--tip)} .advcell .ab.neg{background:var(--bad)}
+.advcell .av{position:absolute;left:0;right:0;bottom:2px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:600}
+.gr-stats{font-family:var(--mono);font-size:13px;background:var(--code-bg);border-radius:8px;padding:8px 12px}
+.gr-box{border:1.5px solid var(--border);border-radius:9px;padding:8px 12px;background:var(--surface);font-size:13.5px}
+.gr-ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="crumb" href="index.html">← Bản đồ trực quan</a>
+    <h1>Frontier Training trực quan</h1>
+    <p class="lead">Mười hình bấm được cho tài liệu "Frontier model training": từ vòng đời một model, bên trong một block Transformer, bộ nhớ GPU, attention, learning rate, scaling law, cách chia việc cho nhiều GPU, cách giữ training không "nổ", tới vòng lặp GRPO. Mỗi giải thích đều có link về đúng mục trong bản đầy đủ và bản nguyên lý.</p>
+    <div class="doc-row" data-doclinks="frontier,nguyenly"></div>
+  </header>
+
+  <nav class="jump" aria-label="Các hình">
+    <a href="#h-lifecycle">1 · Vòng đời</a>
+    <a href="#h-block">2 · Block Transformer</a>
+    <a href="#h-memory">3 · Bộ nhớ & ZeRO</a>
+    <a href="#h-attn">4 · Attention & KV</a>
+    <a href="#h-roof">5 · Roofline</a>
+    <a href="#h-lr">6 · Learning rate</a>
+    <a href="#h-scale">7 · Scaling law</a>
+    <a href="#h-par">8 · Song song</a>
+    <a href="#h-stab">9 · Stability</a>
+    <a href="#h-grpo">10 · GRPO</a>
+  </nav>
+
+  <!-- 1 -->
+  <section class="viz" id="h-lifecycle">
+    <div class="viz-head">
+      <span class="fig">Hình 1</span>
+      <h2>Vòng đời một model: từ chốt mục tiêu tới release</h2>
+      <p class="sub">Quy trình train tối thiểu (playbook) xếp theo thời gian. Màu nền là giai đoạn, dải vàng dưới cùng chạy song song suốt main run.</p>
+      <span class="hint">Bấm vào từng ô để xem làm gì, vì sao, và đọc ở mục nào</span>
+    </div>
+    <div class="viz-grid" id="lc">
+      <div class="canvas">
+        <div class="phases">
+          <div class="phase p-prep">
+            <span class="ph-t">Chuẩn bị</span>
+            <button class="node" data-k="goal"><span class="n-t">Chốt mục tiêu & eval</span></button>
+            <button class="node" data-k="arch"><span class="n-t">Kiến trúc baseline</span></button>
+            <button class="node" data-k="tok"><span class="n-t">Tokenizer</span></button>
+            <button class="node" data-k="data"><span class="n-t">Data pipeline</span></button>
+            <button class="node" data-k="abl"><span class="n-t">Ablation nhỏ</span></button>
+            <button class="node" data-k="guard"><span class="n-t">Rào chắn stability</span></button>
+          </div>
+          <div class="phase p-pre">
+            <span class="ph-t">Pre-training</span>
+            <button class="node" data-k="pre"><span class="n-t">Main run nhiều stage</span><span class="n-s">hàng nghìn tỷ token</span></button>
+            <button class="node" data-k="sched"><span class="n-t">Lịch LR & data</span><span class="n-s">data tốt nhất để cuối</span></button>
+          </div>
+          <div class="phase p-mid">
+            <span class="ph-t">Mid-training</span>
+            <button class="node" data-k="mid"><span class="n-t">Domain & reasoning</span></button>
+            <button class="node" data-k="long"><span class="n-t">Long context</span><span class="n-s">4k → 32k → 64k → 128k</span></button>
+          </div>
+          <div class="phase p-post">
+            <span class="ph-t">Post-training</span>
+            <div class="post-chain">
+              <button class="node" data-k="sft"><span class="n-t">SFT</span><span class="n-s">học từ ví dụ mẫu</span></button>
+              <span class="arrow">↓</span>
+              <button class="node" data-k="po"><span class="n-t">Preference (DPO…)</span><span class="n-s">"A tốt hơn B"</span></button>
+              <span class="arrow">↓</span>
+              <button class="node" data-k="rl"><span class="n-t">RL (RLVR, GRPO)</span><span class="n-s">học từ reward</span></button>
+            </div>
+          </div>
+          <div class="phase p-rel">
+            <span class="ph-t">Release</span>
+            <button class="node" data-k="rel"><span class="n-t">Đánh giá lại & safety</span><span class="n-s">chốt checkpoint + log + config</span></button>
+          </div>
+        </div>
+        <div class="ops-rail">
+          <span class="ph-t">Suốt main run</span>
+          <button class="node" data-k="ops"><span class="n-t">Training marathon</span><span class="n-s">checkpoint, auto-resume, theo dõi throughput, grad norm, seed TP</span></button>
+        </div>
+      </div>
+      <aside class="panel" data-panel aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section class="viz" id="h-block">
+    <div class="viz-head">
+      <span class="fig">Hình 2</span>
+      <h2>Một token đi qua decoder block như thế nào</h2>
+      <p class="sub">Khung chung của Llama, Qwen, Mistral, SmolLM3: pre-norm, RMSNorm, RoPE, attention (GQA/MLA), FFN SwiGLU. Shape bên phải mỗi ô là tensor đầu ra.</p>
+      <span class="hint">Bấm "Tiếp ▶" để đi từng phép tính, hoặc "Tự chạy"</span>
+    </div>
+    <div class="viz-grid wide">
+      <div class="canvas" id="tfroot">
+        <div data-stepbar></div>
+        <div class="tf">
+          <div class="blk" data-on="1-" data-hl="1"><b>Token id</b><span class="shape">x_t ∈ {0…V−1}</span></div>
+          <div class="down" data-on="1-">↓</div>
+          <div class="blk" data-on="1-" data-hl="1"><b>Embedding E[x]</b><span class="shape">[B, T, d]</span></div>
+          <div class="down" data-on="2-">↓</div>
+          <div class="layer" data-on="2-">
+            <span class="layer-t">Decoder block · lặp lại L lần · đường tím = residual stream</span>
+            <div class="blk" data-on="2-" data-hl="2"><b>RMSNorm₁</b><span class="shape">[B, T, d]</span></div>
+            <div class="blk" data-on="3-" data-hl="3"><b>Q, K, V + RoPE</b><span class="shape">Q [T, n_h·d_h] · K,V [T, n_kv·d_h]</span></div>
+            <div class="blk" data-on="4-" data-hl="4"><b>Attention (causal mask)</b><span class="shape">scores [B, n_h, T, T]</span></div>
+            <div class="blk" data-on="5-" data-hl="5"><b>W_O, rồi <span class="add">⊕</span> cộng vào residual</b><span class="shape">h = x + Attn(·)</span></div>
+            <div class="blk" data-on="6-" data-hl="6"><b>RMSNorm₂ → FFN SwiGLU</b><span class="shape">[B, T, d_ff] → [B, T, d]</span></div>
+            <div class="blk" data-on="7-" data-hl="7"><b><span class="add">⊕</span> cộng vào residual</b><span class="shape">x' = h + FFN(·)</span></div>
+          </div>
+          <div class="down" data-on="8-">↓</div>
+          <div class="blk" data-on="8-" data-hl="8"><b>RMSNorm cuối → LM head</b><span class="shape">logits [B, T, V]</span></div>
+          <div class="down" data-on="9-">↓</div>
+          <div class="blk" data-on="9-" data-hl="9"><b>Softmax → cross-entropy</b><span class="shape">loss = −log p(token đúng)</span></div>
+        </div>
+        <div class="caption" data-caption></div>
+        <div class="doc-links" id="tf-links"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="viz" id="h-memory">
+    <div class="viz-head">
+      <span class="fig">Hình 3</span>
+      <h2>Bộ nhớ GPU đi đâu, và ZeRO cắt bớt phần nào</h2>
+      <p class="sub">Mixed precision BF16 + Adam: 2 byte params + 2 byte gradient + 12 byte optimizer (4 master FP32 + 4 m + 4 v) = 16 byte mỗi tham số. Activation tùy batch và độ dài sequence nên ở đây bạn tự đặt.</p>
+      <span class="hint">Kéo số tham số, số GPU, đổi chế độ ZeRO và xem thanh có vượt vạch đỏ (dung lượng GPU) không</span>
+    </div>
+    <div class="viz-grid">
+      <div class="canvas">
+        <div class="presets">
+          <button class="btn" id="pr-8b">8B trên GPU 80 GB, không shard</button>
+          <button class="btn" id="pr-zero">Ví dụ paper ZeRO: 7,5B × 64 GPU</button>
+          <button class="btn" id="pr-70b">70B × 8 GPU, ZeRO-3</button>
+        </div>
+        <div class="tabs" id="zmode">
+          <button data-tab="dp">DP thường</button>
+          <button data-tab="z1">ZeRO-1</button>
+          <button data-tab="z2">ZeRO-2</button>
+          <button data-tab="z3">ZeRO-3 / FSDP</button>
+        </div>
+        <div class="controls">
+          <div class="ctl"><label for="m-n">Số tham số Ψ <output id="m-n-o"></output></label><input type="range" id="m-n" min="0" max="9" step="1" value="4"></div>
+          <div class="ctl"><label for="m-g">Số GPU data-parallel N_d <output id="m-g-o"></output></label><input type="range" id="m-g" min="0" max="10" step="1" value="3"></div>
+          <div class="ctl"><label for="m-a">Activations (bạn ước lượng) <output id="m-a-o"></output></label><input type="range" id="m-a" min="0" max="60" step="1" value="10"></div>
+          <div class="ctl"><label for="m-cap">GPU</label>
+            <select id="m-cap"><option value="24">24 GB (RTX 4090)</option><option value="40">40 GB (A100 40G)</option><option value="80" selected>80 GB (A100/H100)</option><option value="141">141 GB (H200)</option></select></div>
+        </div>
+        <div class="membar">
+          <div class="bar" id="m-bar"><span class="seg-p"></span><span class="seg-g"></span><span class="seg-o"></span><span class="seg-a"></span></div>
+          <div class="cap-mark" id="m-cap-mark"><span></span></div>
+        </div>
+        <div class="legend"><span><i class="seg-p"></i>Params BF16</span><span><i class="seg-g"></i>Gradients BF16</span><span><i class="seg-o"></i>Optimizer (master + m + v)</span><span><i class="seg-a"></i>Activations</span></div>
+        <div class="verdict">
+          <div><span class="lbl">Mỗi GPU cần</span><span class="big" id="m-total"></span></div>
+          <div><span class="lbl">Kết luận</span><span id="m-fit" class="chip"></span></div>
+          <div><span class="lbl">Communication mỗi step</span><span class="mono" id="m-comm"></span></div>
+        </div>
+        <div class="formula" id="m-formula" style="margin-top:12px"></div>
+      </div>
+      <aside class="panel" id="m-panel"></aside>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="viz" id="h-attn">
+    <div class="viz-head">
+      <span class="fig">Hình 4</span>
+      <h2>MHA, GQA, MQA, MLA: bao nhiêu query head dùng chung một cặp K, V</h2>
+      <p class="sub">Ví dụ model cỡ Llama-3-8B: 32 layer, 32 query head, d_head = 128, BF16. Hàng xanh là 32 query head; hàng dưới là các K/V head mà chúng dùng chung.</p>
+      <span class="hint">Bấm từng kiểu attention, rồi kéo độ dài context và số request để xem KV cache có vừa GPU không</span>
+    </div>
+    <div class="viz-grid" id="attn">
+      <div class="canvas">
+        <div class="dims" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
+          <button class="node" data-k="mha"><span class="n-t">MHA</span><span class="n-s">32 KV head</span></button>
+          <button class="node" data-k="gqa"><span class="n-t">GQA</span><span class="n-s">8 KV head, mỗi cái cho 4 query</span></button>
+          <button class="node" data-k="mqa"><span class="n-t">MQA</span><span class="n-s">1 KV head cho tất cả</span></button>
+          <button class="node" data-k="mla"><span class="n-t">MLA</span><span class="n-s">lưu latent nén</span></button>
+        </div>
+        <div class="row-lbl"><span>Query heads (32)</span></div>
+        <div class="heads" id="h-q"></div>
+        <div class="row-lbl"><span id="kv-lbl">K/V heads</span><span id="kv-tok" class="mono"></span></div>
+        <div class="heads" id="h-kv"></div>
+        <div class="controls" style="margin-top:16px">
+          <div class="ctl"><label for="kv-t">Độ dài context <output id="kv-t-o"></output></label><input type="range" id="kv-t" min="0" max="7" step="1" value="3"></div>
+          <div class="ctl"><label for="kv-b">Số request đồng thời <output id="kv-b-o"></output></label><input type="range" id="kv-b" min="1" max="64" step="1" value="1"></div>
+        </div>
+        <div class="kvbars" id="kv-bars"></div>
+        <p class="legend">Vạch đỏ: ~60 GiB còn lại cho KV cache trên GPU 80 GB sau khi trừ 16 GB weights (ví dụ trong tài liệu). MLA dùng số của DeepSeek-V3 (61 layer), là model khác nên chỉ để so cỡ.</p>
+      </div>
+      <aside class="panel" data-panel aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="viz" id="h-roof">
+    <div class="viz-head">
+      <span class="fig">Hình 5</span>
+      <h2>Roofline: phép tính này bị chặn bởi băng thông hay bởi compute?</h2>
+      <p class="sub">Arithmetic intensity (AI) = FLOPs / byte đọc-ghi HBM. Hiệu năng = min(peak FLOP/s, AI × băng thông). H100 BF16: peak ≈ 989 TFLOP/s, HBM ≈ 3,35 TB/s, điểm gãy ≈ 295 FLOP/byte.</p>
+      <span class="hint">Bấm một phép tính mẫu hoặc kéo thanh AI để di chuyển chấm cam trên đồ thị</span>
+    </div>
+    <div class="viz-grid" id="roof">
+      <div class="canvas">
+        <div class="dims">
+          <button class="node" data-k="elem"><span class="n-t">Element-wise</span><span class="n-s">SiLU, RMSNorm, cộng</span></button>
+          <button class="node" data-k="dec1"><span class="n-t">Decode batch 1</span><span class="n-s">sinh 1 token</span></button>
+          <button class="node" data-k="dec64"><span class="n-t">Decode batch 64</span><span class="n-s">64 request cùng lúc</span></button>
+          <button class="node" data-k="mm"><span class="n-t">Matmul 4096³</span><span class="n-s">training</span></button>
+        </div>
+        <div class="controls"><div class="ctl"><label for="r-ai">Arithmetic intensity <output id="r-ai-o"></output></label><input type="range" id="r-ai" min="-1" max="4" step="0.01" value="0"></div></div>
+        <svg class="chart" id="r-svg" viewBox="0 0 640 330" role="img" aria-label="Đồ thị roofline log-log"></svg>
+        <div class="verdict">
+          <div><span class="lbl">Hiệu năng tối đa đạt được</span><span class="big" id="r-perf"></span></div>
+          <div><span class="lbl">So với peak</span><span class="big" id="r-pct"></span></div>
+          <div><span class="lbl">Bị chặn bởi</span><span class="chip" id="r-bound"></span></div>
+        </div>
+      </div>
+      <aside class="panel" data-panel aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="viz" id="h-lr">
+    <div class="viz-head">
+      <span class="fig">Hình 6</span>
+      <h2>Learning rate schedule: cosine, WSD, multi-step</h2>
+      <p class="sub">Trục ngang là % số step, trục dọc là LR so với đỉnh. Hình dạng là minh hoạ, không phải số đo; độ cao các bậc multi-step tự chọn để dễ nhìn.</p>
+      <span class="hint">Bật/tắt từng đường, kéo % warmup và % decay; bật "Rẽ nhánh decay" để thấy vì sao WSD rẻ cho ablation</span>
+    </div>
+    <div class="viz-grid">
+      <div class="canvas">
+        <div class="lr-toggles">
+          <button class="btn is-on" data-lr="cos"><span class="sw" style="background:var(--note)"></span>Cosine</button>
+          <button class="btn is-on" data-lr="wsd"><span class="sw" style="background:var(--accent)"></span>WSD</button>
+          <button class="btn" data-lr="ms"><span class="sw" style="background:var(--ex)"></span>Multi-step 70/15/15</button>
+          <button class="btn" data-lr="br">Rẽ nhánh decay từ checkpoint</button>
+        </div>
+        <div class="controls">
+          <div class="ctl"><label for="lr-w">Warmup <output id="lr-w-o"></output></label><input type="range" id="lr-w" min="1" max="10" step="1" value="3"></div>
+          <div class="ctl"><label for="lr-d">WSD: phần decay cuối <output id="lr-d-o"></output></label><input type="range" id="lr-d" min="5" max="30" step="1" value="15"></div>
+        </div>
+        <svg class="chart" id="lr-svg" viewBox="0 0 640 280" role="img" aria-label="Đồ thị learning rate theo step"></svg>
+      </div>
+      <aside class="panel" id="lr-panel"></aside>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="viz" id="h-scale">
+    <div class="viz-head">
+      <span class="fig">Hình 7</span>
+      <h2>Scaling law: bao nhiêu tham số, bao nhiêu token, tốn bao nhiêu GPU-ngày</h2>
+      <p class="sub">C ≈ 6·N·D FLOPs (2N forward + 4N backward mỗi token). Thời gian = C / (số GPU × peak × MFU).</p>
+      <span class="hint">Bấm một model mẫu hoặc tự nhập N, D, số GPU, MFU</span>
+    </div>
+    <div class="viz-grid">
+      <div class="canvas">
+        <div class="presets">
+          <button class="btn" data-sc="3,11,384,40">SmolLM3 3B · 11T</button>
+          <button class="btn" data-sc="8,15,1024,40">8B · 15T (ví dụ tài liệu)</button>
+          <button class="btn" data-sc="405,15.6,16384,40">Llama 3 405B · 15,6T</button>
+          <button class="btn" data-sc="175,0.3,1024,40">GPT-3 175B · 300B</button>
+        </div>
+        <div class="controls">
+          <div class="ctl"><label for="sc-n">N: tỉ tham số (MoE: active)</label><input type="number" id="sc-n" min="0.01" step="any" value="8"></div>
+          <div class="ctl"><label for="sc-d">D: nghìn tỉ token (T)</label><input type="number" id="sc-d" min="0.001" step="any" value="15"></div>
+          <div class="ctl"><label for="sc-g">Số GPU H100 (989 TFLOP/s)</label><input type="number" id="sc-g" min="1" step="1" value="1024"></div>
+          <div class="ctl"><label for="sc-m">MFU <output id="sc-m-o"></output></label><input type="range" id="sc-m" min="15" max="60" step="1" value="40"></div>
+        </div>
+        <div class="out-grid">
+          <div><div class="lbl">Compute C</div><div class="big" id="sc-c"></div></div>
+          <div><div class="lbl">Token / tham số</div><div class="big" id="sc-r"></div></div>
+          <div><div class="lbl">GPU-giờ</div><div class="big" id="sc-gh"></div></div>
+          <div><div class="lbl">Thời gian thực</div><div class="big" id="sc-days"></div></div>
+        </div>
+        <div class="lbl" style="font-size:12px;color:var(--muted)">Token / tham số trên thang log</div>
+        <div class="ratio" id="sc-ratio"><div class="track"></div></div>
+      </div>
+      <aside class="panel" id="sc-panel"></aside>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="viz" id="h-par">
+    <div class="viz-head">
+      <span class="fig">Hình 8</span>
+      <h2>Chia việc cho nhiều GPU: DP, TP, PP, CP, EP</h2>
+      <p class="sub">Mỗi kiểu song song cắt một "chiều" khác của bài toán. Tổng GPU = dp × tp × pp × cp. Chiều nào nói chuyện nhiều nhất thì đặt gần nhau nhất: TP trong cùng node, rồi CP, PP, DP ngoài cùng.</p>
+      <span class="hint">Tab 1: bấm từng chiều, chỉnh TP/PP rồi bấm một GPU để thấy nó thuộc nhóm nào. Tab 2: kéo p và m để thấy "bubble"</span>
+    </div>
+    <div class="tabs" id="par-tabs">
+      <button data-tab="grid">Lưới 32 GPU</button>
+      <button data-tab="pipe">Pipeline bubble</button>
+    </div>
+    <div data-pane="grid">
+      <div class="viz-grid" id="dims">
+        <div class="canvas">
+          <div class="dims">
+            <button class="node" data-k="dp"><span class="n-t">DP</span><span class="n-s">chia batch</span></button>
+            <button class="node" data-k="tp"><span class="n-t">TP</span><span class="n-s">chia từng matmul</span></button>
+            <button class="node" data-k="pp"><span class="n-t">PP</span><span class="n-s">chia theo layer</span></button>
+            <button class="node" data-k="cp"><span class="n-t">CP</span><span class="n-s">chia sequence</span></button>
+            <button class="node" data-k="ep"><span class="n-t">EP</span><span class="n-s">chia expert MoE</span></button>
+          </div>
+          <div class="controls">
+            <div class="ctl"><label for="g-tp">TP (trong node)</label><select id="g-tp"><option>1</option><option>2</option><option selected>4</option><option>8</option></select></div>
+            <div class="ctl"><label for="g-pp">PP (số stage)</label><select id="g-pp"><option>1</option><option selected>2</option><option>4</option></select></div>
+            <div class="ctl"><label>DP (tự tính)</label><span class="val" id="g-dp"></span></div>
+          </div>
+          <div class="nodes" id="g-nodes"></div>
+          <div class="keyrow"><span><i></i>cùng nhóm TP</span><span><i class="pp"></i>cùng pipeline (các stage)</span><span><i class="dp"></i>cùng nhóm DP (bản sao)</span><span>Màu nền = stage PP</span></div>
+          <div class="ginfo" id="g-info"></div>
+        </div>
+        <aside class="panel" data-panel aria-live="polite"></aside>
+      </div>
+    </div>
+    <div data-pane="pipe" hidden>
+      <div class="viz-grid">
+        <div class="canvas scroll">
+          <div class="tabs" id="pp-sched">
+            <button data-tab="gpipe">GPipe</button>
+            <button data-tab="1f1b">1F1B</button>
+          </div>
+          <div class="controls">
+            <div class="ctl"><label for="pp-p">p: số stage <output id="pp-p-o"></output></label><input type="range" id="pp-p" min="2" max="8" step="1" value="4"></div>
+            <div class="ctl"><label for="pp-m">m: số micro-batch <output id="pp-m-o"></output></label><input type="range" id="pp-m" min="1" max="16" step="1" value="4"></div>
+          </div>
+          <svg class="pipe" id="pp-svg" role="img" aria-label="Lịch pipeline theo thời gian"></svg>
+          <div class="legend"><span><i style="background:var(--note)"></i>F = forward (1 đơn vị)</span><span><i style="background:var(--ex)"></i>B = backward (2 đơn vị)</span><span><i style="background:var(--surface-2);border:1px solid var(--border)"></i>ô trống = bubble, GPU rảnh</span></div>
+          <div class="verdict">
+            <div><span class="lbl">Bubble mỗi GPU</span><span class="big" id="pp-bub"></span></div>
+            <div><span class="lbl">Overhead (p−1)/m</span><span class="big" id="pp-ov"></span></div>
+            <div><span class="lbl">Thời gian lãng phí</span><span class="big" id="pp-waste"></span></div>
+            <div><span class="lbl">Activation giữ tối đa / stage</span><span class="big" id="pp-mem"></span></div>
+          </div>
+        </div>
+        <aside class="panel" id="pp-panel"></aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section class="viz" id="h-stab">
+    <div class="viz-head">
+      <span class="fig">Hình 9</span>
+      <h2>Stability: triệu chứng nào, rào chắn nào</h2>
+      <p class="sub">Một loss spike trong run hàng tuần có thể mất nhiều ngày compute. Bên trái là cơ chế gây "nổ", bên phải là công cụ chặn.</p>
+      <span class="hint">Bấm một triệu chứng: các rào chắn liên quan sáng xanh. Bấm một rào chắn: thấy nó chữa triệu chứng nào</span>
+    </div>
+    <div class="tabs" id="st-tabs">
+      <button data-tab="map">Triệu chứng ↔ rào chắn</button>
+      <button data-tab="cap">Thử softcap</button>
+      <button data-tab="spike">Khi spike đã xảy ra</button>
+    </div>
+    <div data-pane="map">
+      <div class="viz-grid" id="stab">
+        <div class="canvas">
+          <div class="stab">
+            <div class="col">
+              <span class="col-t">Triệu chứng / cơ chế</span>
+              <button class="node sym" data-k="s-attn"><span class="n-t">Attention logits phình to</span><span class="n-s">softmax gần one-hot</span></button>
+              <button class="node sym" data-k="s-ent"><span class="n-t">Attention entropy sụp</span><span class="n-s">mỗi query chỉ nhìn 1 key</span></button>
+              <button class="node sym" data-k="s-head"><span class="n-t">Logits LM head trôi xa 0</span><span class="n-s">log Z lớn</span></button>
+              <button class="node sym" data-k="s-res"><span class="n-t">Residual phình, massive activations</span></button>
+              <button class="node sym" data-k="s-adam"><span class="n-t">Adam: gradient hiếm, ε</span></button>
+              <button class="node sym" data-k="s-lr"><span class="n-t">LR quá cao / không transfer</span></button>
+              <button class="node sym" data-k="s-data"><span class="n-t">Batch dữ liệu xấu</span></button>
+              <button class="node sym" data-k="s-fp"><span class="n-t">Tràn số, update bị "nuốt"</span></button>
+            </div>
+            <div class="col">
+              <span class="col-t">Rào chắn</span>
+              <button class="node" data-k="f-qk"><span class="n-t">QK-norm</span></button>
+              <button class="node" data-k="f-cap"><span class="n-t">Logit softcapping</span></button>
+              <button class="node" data-k="f-z"><span class="n-t">z-loss</span></button>
+              <button class="node" data-k="f-clip"><span class="n-t">Gradient clipping</span></button>
+              <button class="node" data-k="f-norm"><span class="n-t">RMSNorm, sandwich norm, init</span></button>
+              <button class="node" data-k="f-wd"><span class="n-t">Không weight decay embedding</span></button>
+              <button class="node" data-k="f-mup"><span class="n-t">μP (tune nhỏ, dùng lớn)</span></button>
+              <button class="node" data-k="f-prec"><span class="n-t">BF16 + master FP32</span></button>
+              <button class="node" data-k="f-filter"><span class="n-t">Lọc data + rewind/skip</span></button>
+              <button class="node" data-k="f-mon"><span class="n-t">Monitoring hằng ngày</span></button>
+            </div>
+          </div>
+        </div>
+        <aside class="panel" data-panel aria-live="polite"></aside>
+      </div>
+    </div>
+    <div data-pane="cap" hidden>
+      <div class="viz-grid">
+        <div class="canvas">
+          <div class="controls">
+            <div class="ctl"><label for="cap-x">Logit đầu vào <output id="cap-x-o"></output></label><input type="range" id="cap-x" min="0" max="3" step="0.01" value="1.477"></div>
+            <div class="ctl"><label for="cap-c">soft_cap</label><select id="cap-c"><option value="30" selected>30 (LM head, Gemma 2)</option><option value="50">50 (attention, Gemma 2)</option></select></div>
+          </div>
+          <svg class="chart" id="cap-svg" viewBox="0 0 640 260" role="img" aria-label="Đường soft_cap · tanh(x / soft_cap)"></svg>
+          <div class="sc-out">
+            <div><div class="lbl">Đầu vào</div><div class="big" id="cap-in"></div></div>
+            <div><div class="lbl">Sau softcap</div><div class="big" id="cap-out"></div></div>
+            <div><div class="lbl">Bị nén</div><div class="big" id="cap-pct"></div></div>
+          </div>
+        </div>
+        <aside class="panel" id="cap-panel"></aside>
+      </div>
+    </div>
+    <div data-pane="spike" hidden>
+      <div class="viz-grid">
+        <div class="canvas"><div class="spk" id="spk"></div></div>
+        <aside class="panel" id="spk-panel"></aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 -->
+  <section class="viz" id="h-grpo">
+    <div class="viz-head">
+      <span class="fig">Hình 10</span>
+      <h2>Một vòng GRPO: sample nhóm → chấm reward → advantage → cập nhật</h2>
+      <p class="sub">GRPO bỏ value model của PPO: với mỗi prompt, sample G câu trả lời, chấm bằng verifier, rồi so từng câu với trung bình của nhóm.</p>
+      <span class="hint">Bấm "Tiếp ▶" để đi từng bước. Bấm vào một câu trả lời để đổi nó đúng ↔ sai và xem advantage đổi theo</span>
+    </div>
+    <div class="viz-grid">
+      <div class="canvas" id="gr-root">
+        <div data-stepbar></div>
+        <div class="gr-ctl">
+          <span>Nhóm G =</span>
+          <button class="btn is-on" data-g="4">4</button><button class="btn" data-g="8">8</button>
+          <span style="margin-left:10px">Advantage:</span>
+          <button class="btn is-on" data-mode="grpo">GRPO (chia std)</button><button class="btn" data-mode="dr">Dr. GRPO (chỉ trừ mean)</button>
+          <button class="btn" id="gr-all">Cho tất cả đúng</button>
+        </div>
+        <div class="gr">
+          <div class="gr-row" data-on="1-"><span class="rl">1 · Prompt</span><div class="gr-box">Tính 17 × 24 = ? <span class="chip chip--tip">đáp án kiểm chứng được: 408</span></div></div>
+          <div class="gr-row" data-on="2-"><span class="rl">2 · Policy sample G câu trả lời</span><div class="gr-cells" id="gr-rolls"></div></div>
+          <div class="gr-row" data-on="3-"><span class="rl">3 · Verifier chấm reward (1 đúng, 0 sai)</span><div class="gr-cells" id="gr-rw"></div></div>
+          <div class="gr-row" data-on="4-"><span class="rl">4 · Thống kê của nhóm</span><div class="gr-stats" id="gr-stats"></div></div>
+          <div class="gr-row" data-on="5-"><span class="rl">5 · Advantage Â của từng câu</span><div class="gr-cells" id="gr-adv"></div></div>
+          <div class="gr-row" data-on="6-"><span class="rl">6 · Cập nhật policy</span><div class="gr-box" id="gr-upd"></div></div>
+        </div>
+        <div class="caption" data-caption></div>
+      </div>
+      <aside class="panel" id="gr-panel"></aside>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>Trang trực quan đi kèm, không thay thế tài liệu gốc.</span>
+    <span>Số liệu và công thức lấy từ tài liệu; đồ thị đánh dấu "minh hoạ" chỉ thể hiện hình dạng.</span>
+  </footer>
+</div>
+
+<script src="shared.js"></script>
+<script>
+(function () {
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  // link về cả bản đầy đủ và bản nguyên lý (cùng anchor id)
+  const D = (id, label) => [['frontier', id, label + ' · đầy đủ'], ['nguyenly', id, label + ' · nguyên lý']];
+  const links = (...pairs) => pairs.flatMap(([id, l]) => D(id, l));
+  const linksHtml = (...pairs) => links(...pairs).map((d) => TQ.docLink(d[0], d[1], d[2])).join('');
+  const sup = (n) => String(n).replace(/[-0-9]/g, (c) => '⁻⁰¹²³⁴⁵⁶⁷⁸⁹'['-0123456789'.indexOf(c)]);
+  const sci = (x, d = 2) => { const [m, e] = x.toExponential(d).split('e'); return TQ.fmt(+m, d) + ' × 10' + sup(+e); };
+
+  /* ================= Hình 1: vòng đời ================= */
+  TQ.explorer('#lc', {
+    goal: { eyebrow: 'Chuẩn bị · bước 1', title: 'Chốt mục tiêu sản phẩm và bộ eval', chips: [['làm trước khi train', 'khaki']],
+      html: '<p>Biết model để làm gì (chatbot đa ngôn ngữ, coding agent, model nhỏ on-device) rồi chọn eval bao phủ: knowledge, math, code, long-context, instruction following.</p><p>Eval tốt cần 4 tính chất: <span class="k">tăng đều</span> theo training, <span class="k">ít nhiễu</span> giữa các seed, <span class="k">vượt mức đoán ngẫu nhiên</span> sớm, <span class="k">thứ hạng ổn định</span>.</p>',
+      doc: links(['a-playbook-h', 'Playbook'], ['a-eval-criteria', 'Chọn eval']) },
+    arch: { eyebrow: 'Chuẩn bị', title: 'Kiến trúc baseline có "failure mode" đã biết', chips: [['dense + GQA + RoPE/RNoPE', 'khaki']],
+      html: '<p>Mặc định dense + GQA + RoPE/RNoPE, trừ khi thật sự cần MoE. "Failure mode đã biết" nghĩa là cộng đồng đã train kiến trúc đó ở quy mô lớn, biết nó hay hỏng ở đâu và cách sửa.</p><ul><li>Giới hạn bộ nhớ, hạ tầng → dense + GQA.</li><li>Cần inference rẻ ở quy mô lớn → MoE có load balancing mạnh.</li><li>Long context là yêu cầu cốt lõi → document masking + ABF/YaRN ngay từ đầu.</li></ul>',
+      doc: links(['a-arch-heuristics', 'Quy tắc chọn kiến trúc'], ['a-dense-vs-moe', 'Dense hay MoE']) },
+    tok: { eyebrow: 'Chuẩn bị', title: 'Tokenizer: chốt sớm, đóng băng vocab', chips: [['đổi giữa chừng ≈ train lại', 'bad']],
+      html: '<p>Chọn tokenizer khớp ngôn ngữ và domain; đóng băng vocab và special token (<code>&lt;think&gt;</code>, <code>&lt;tool_call&gt;</code>) sớm. Embedding gắn chặt với từng token ID nên đổi tokenizer giữa chừng gần như phải train lại.</p><p>Vocab lớn nén text tốt hơn (ít token, KV cache nhỏ hơn) nhưng embedding to hơn. Tiếng Việt thường chịu "thuế token".</p>',
+      doc: links(['b-tokenizer-h', 'Tokenizer'], ['t-tok-multilingual', 'Thuế token tiếng Việt']) },
+    data: { eyebrow: 'Chuẩn bị', title: 'Data pipeline: dedup, filter, contamination', chips: [['đo chất lượng tường minh', 'khaki']],
+      html: '<ul><li><span class="k">Dedup</span>: để model không học thuộc đoạn lặp.</li><li><span class="k">Filter</span>: bỏ rác, lọc chất lượng bằng classifier/LLM.</li><li><span class="k">Contamination check</span>: câu hỏi benchmark không được lọt vào training data, nếu không điểm eval là ảo.</li></ul>',
+      doc: links(['d-data-h', 'Data curation'], ['dt-web-pipeline', 'Pipeline web data']) },
+    abl: { eyebrow: 'Chuẩn bị', title: 'Ablation nhỏ: mỗi lần đổi một biến', chips: [['derisk', 'khaki']],
+      html: '<p>Ablation là thí nghiệm đổi đúng một thành phần để đo ảnh hưởng của nó. Làm trên model nhỏ hơn (ví dụ 1B để quyết cho 3B) với ít token hơn cho nhanh và rẻ.</p><p>Nguyên tắc derisk: chỉ đổi khi đã chứng minh có lợi, và không đổi nhiều biến cùng lúc vì sẽ không biết biến nào gây ra kết quả.</p>',
+      doc: links(['a-ablation-qualities', 'Ablation nhanh, đáng tin'], ['a-baseline-derisk', 'Baseline & derisk']) },
+    guard: { eyebrow: 'Chuẩn bị', title: 'Lắp rào chắn stability trước khi chạy', chips: [['xem Hình 9', 'accent']],
+      html: '<p>Logit softcapping (ưu tiên, theo Gemma) hoặc z-loss/QK-norm, gradient clipping, chính sách precision (phần nào BF16, phần nào FP32), cảnh báo khi có loss spike. Thêm rào chắn giữa chừng rủi ro hơn nhiều so với có sẵn từ đầu.</p>',
+      doc: links(['b-stability-h', 'Stability']) },
+    pre: { eyebrow: 'Pre-training', title: 'Main run nhiều stage', chips: [['hàng nghìn tỷ token', 'note'], ['C ≈ 6ND', 'note']],
+      html: '<p>Data mixture không cố định: stage 1 chủ yếu web, stage 2 bơm data chất lượng cao, stage 3 thêm reasoning/Q&A. Đổi mixture khi eval của một domain bắt đầu đi ngang.</p><p>Ví dụ trong tài liệu: GSM8K tăng đều tới 3T token rồi đứng yên tới 5T → thêm dataset math chất lượng cao vào stage sau.</p>',
+      doc: links(['d-multistage', 'Multi-stage training'], ['d-pretrain-data', 'Pre-training data các lab']) },
+    sched: { eyebrow: 'Pre-training', title: 'Để data tốt nhất về cuối', chips: [['xem Hình 6', 'accent']],
+      html: '<p>Hành vi cuối của model bị quyết định mạnh bởi data thấy ở cuối training: lúc đó LR đang decay, model "lắng" lại và các cập nhật cuối không bị ghi đè nữa. Data xịn có hạn nên dùng đúng lúc này.</p>',
+      doc: links(['c-learning-rates', 'Learning rates'], ['op-wsd-theory', 'Vì sao decay làm loss tụt']) },
+    mid: { eyebrow: 'Mid-training', title: 'Train thêm cho năng lực "sâu"', chips: [['chục–trăm tỷ token', 'teal']],
+      html: '<p>Train tiếp base model trên data chuyên biệt, chất lượng cao, reasoning. Thường chỉ quyết định mid-train sau khi SFT thử cho thấy lỗ hổng (ví dụ SFT xong mà math vẫn kém bất thường).</p><p>Style, format, hội thoại là năng lực "nông", học nhanh với ít data → để cho post-training. Kiến thức domain, reasoning là năng lực "sâu" → cần mid-training.</p>',
+      doc: links(['d-midtraining-h', 'Mid-training']) },
+    long: { eyebrow: 'Mid-training', title: 'Kéo dài context từng nấc', chips: [['4k → 32k → 64k → 128k', 'teal']],
+      html: '<p>Attention tốn compute bậc hai theo độ dài nên phần lớn pre-training chạy ở 4k, cuối cùng mới kéo dài. SmolLM3 tăng tuần tự 4k → 32k → 64k → 128k để model thích nghi ở mỗi nấc. Kèm theo là kéo giãn RoPE (ABF, YaRN).</p>',
+      doc: links(['d-long-context', 'Long-context stage'], ['d-abf-yarn', 'RoPE ABF & YaRN']) },
+    sft: { eyebrow: 'Post-training · bước 1', title: 'SFT: học trả lời như assistant', chips: [['rẻ', 'ex'], ['ổn định', 'ex']],
+      html: '<p>Vẫn là next-token prediction, nhưng trên hội thoại theo chat template và thường chỉ tính loss ở phần trả lời. Gần như luôn đi trước vì RL chỉ khuếch đại hành vi model đã thỉnh thoảng làm được: nếu chưa bao giờ trả lời đúng format thì reward luôn bằng 0.</p>',
+      doc: links(['e-sft', 'SFT']) },
+    po: { eyebrow: 'Post-training · bước 2', title: 'Preference optimization (DPO…)', chips: [['cặp chosen / rejected', 'ex']],
+      html: '<p>SFT chỉ dạy bắt chước. PO dạy thêm "cái gì tệ hơn và nên tránh". DPO tối ưu thẳng trên cặp (x, y_w, y_l), không cần reward model riêng. LR thường nhỏ hơn LR của SFT khoảng 10–20 lần.</p>',
+      doc: links(['e-po', 'Preference optimization'], ['pt-po-theory', 'Bradley–Terry → DPO']) },
+    rl: { eyebrow: 'Post-training · bước 3', title: 'RL với reward kiểm chứng được', chips: [['xem Hình 10', 'accent']],
+      html: '<p>Model tương tác với environment, verifier chấm (đáp án toán khớp, code qua unit test, JSON đúng schema). RLVR là thứ giúp tăng reasoning rõ nhất. Phần lớn thời gian RL là thời gian sinh rollout.</p>',
+      doc: links(['e-rl', 'RL'], ['f-rlvr-rubrics', 'RLVR & rubrics']) },
+    rel: { eyebrow: 'Release', title: 'Đánh giá lại, safety, chốt checkpoint', chips: [['tái tạo được', 'tip']],
+      html: '<p>Chạy lại bộ eval cốt lõi (giữ nguyên từ pre-training để so xuyên suốt), safety check, rồi chốt checkpoint release kèm đầy đủ log và config để tái tạo và debug sau này.</p>',
+      doc: links(['d-evals', 'Evals'], ['f-safety-testing', 'Safety testing']) },
+    ops: { eyebrow: 'Song song suốt main run', title: 'Training marathon: chỗ hay hỏng nhất', chips: [['hạ tầng & data > kiến trúc', 'warn']],
+      html: '<ul><li>Đặt trước node (Slurm reservation), stress-test GPU trước khi chạy.</li><li>Checkpoint + auto-resume: node chết là chắc chắn.</li><li>Throughput tụt dần thường do pipeline dữ liệu hoặc storage.</li><li>Seed sai giữa các rank tensor parallel đã làm SmolLM3 mất khoảng 1T token.</li><li>AI2 dành khoảng 20% compute cho eval: tự động hoá eval và log throughput, loss, grad norm, sức khoẻ node.</li></ul>',
+      doc: links(['f-marathon-h', 'Training marathon'], ['f-prep-infra', 'Chuẩn bị trước khi chạy'], ['f-tp-seed', 'Lỗi seed TP']) },
+  });
+
+  /* ================= Hình 2: block transformer ================= */
+  $('#tf-links').innerHTML = linksHtml(['t-transformer-math', 'Decoder block từng bước'], ['ar-ffn-swiglu', 'FFN SwiGLU']);
+  TQ.stepper('#tfroot', [
+    { title: 'Embedding', text: 'Mỗi token id tra bảng <code>E ∈ ℝ^{V×d}</code> lấy ra một vector d chiều. Cả batch thành tensor <code>[B, T, d]</code>. Không cộng positional embedding ở đây; vị trí được đưa vào bên trong attention qua RoPE.' },
+    { title: 'RMSNorm₁ (pre-norm)', text: '<code>x / rms(x) ⊙ g</code>. Chỉ chuẩn hoá <i>đầu vào</i> của sub-layer; đường residual giữ nguyên nên ổn định hơn post-norm và gần như mọi LLM đều dùng.' },
+    { title: 'Chiếu Q, K, V và áp RoPE', text: 'Q có n_h head; K, V chỉ có n_kv head (GQA: nhiều query dùng chung một K/V, xem Hình 4). RoPE xoay Q và K theo vị trí.' },
+    { title: 'Attention với causal mask', text: '<code>softmax(QKᵀ/√d_h + M)·V</code>. Mask M = −∞ cho token tương lai nên token t chỉ nhìn s ≤ t. Ma trận điểm <code>[T × T]</code> mỗi head là nguồn chi phí O(T²). Chia √d_h để logits không quá lớn làm softmax "đóng băng".' },
+    { title: 'W_O và cộng vào residual stream', text: '<code>h = x + Attn(RMSNorm₁(x))</code>. Residual stream như một "bus" chung: mỗi sub-layer đọc từ bus và <i>cộng thêm</i>, không ghi đè. Nhờ phép cộng, gradient có đường tắt về các layer đầu.' },
+    { title: 'RMSNorm₂ và FFN SwiGLU', text: '<code>(SiLU(v·W_gate) ⊙ v·W_up)·W_down</code>. Nhánh gate quyết định cho bao nhiêu thông tin nhánh up đi qua. Chọn <code>d_ff ≈ 8/3·d</code> để tổng tham số FFN ≈ 8d². FFN chiếm khoảng 2/3 tham số mỗi layer.' },
+    { title: 'Cộng vào residual, lặp L lần', text: '<code>x\' = h + FFN(RMSNorm₂(h))</code>, cùng shape <code>[B, T, d]</code>. Đầu ra block này là đầu vào block sau, lặp L lần.' },
+    { title: 'RMSNorm cuối và LM head', text: 'Nhân với <code>W_out ∈ ℝ^{d×V}</code> ra logits <code>[B, T, V]</code> (tied embeddings: W_out = Eᵀ). Với T = 8192, V = 128k ở FP32, logits của một sequence đã là 4,2 GB, nên cần fused/chunked cross-entropy.' },
+    { title: 'Softmax và cross-entropy', text: 'Logits thành xác suất; loss = −log p(token đúng). Từ đây backward chạy ngược toàn bộ đường vừa đi để tính gradient.' },
+  ]);
+
+  /* ================= Hình 3: bộ nhớ ================= */
+  const NS = [0.5, 1, 3, 7.5, 8, 13, 34, 70, 175, 405];
+  const GS = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
+  let zmode = 'dp';
+  const memPanel = {
+    dp: { title: 'DP thường: mỗi GPU giữ bản sao đầy đủ', chips: [['16Ψ mỗi GPU', 'bad']], html: '<p>Mỗi GPU có đủ params, gradients và optimizer states. Thêm GPU không giảm bộ nhớ mỗi GPU, chỉ chia batch. Ví dụ: 8B × 16 byte = 128 GB chỉ cho model states, chưa có activation, nên không vừa một GPU 80 GB.</p>' },
+    z1: { title: 'ZeRO-1: shard optimizer states', chips: [['gần như miễn phí', 'tip']], html: '<p>Mỗi GPU chỉ giữ 1/N_d optimizer states. Sau backward làm reduce-scatter thay vì all-reduce, cập nhật phần mình phụ trách rồi all-gather params. Lượng communication bằng đúng một all-reduce nên gần như luôn bật (DeepSeek-V3 dùng ZeRO-1).</p>' },
+    z2: { title: 'ZeRO-2: thêm shard gradients', chips: [['cùng communication', 'tip']], html: '<p>Gradient của phần không phụ trách được giải phóng ngay sau reduce-scatter. Communication vẫn 2Ψ.</p>' },
+    z3: { title: 'ZeRO-3 / FSDP: shard cả params', chips: [['communication 1,5×', 'warn']], html: '<p>Trước khi forward một layer, all-gather params của layer đó, tính xong thì giải phóng; backward all-gather lần nữa rồi reduce-scatter gradient: tổng 3Ψ. Vẫn nhanh nhờ prefetch layer kế tiếp trong lúc tính layer hiện tại, miễn mỗi GPU xử lý đủ nhiều token.</p>' },
+  };
+  function mem() {
+    const N = NS[+$('#m-n').value], G = GS[+$('#m-g').value], A = +$('#m-a').value, cap = +$('#m-cap').value;
+    $('#m-n-o').textContent = TQ.fmt(N) + 'B'; $('#m-g-o').textContent = G; $('#m-a-o').textContent = A + ' GB';
+    const z = zmode;
+    const p = 2 * N / (z === 'z3' ? G : 1), g = 2 * N / (z === 'z2' || z === 'z3' ? G : 1), o = 12 * N / (z === 'dp' ? 1 : G);
+    const tot = p + g + o + A, scale = Math.max(tot, cap) * 1.04;
+    const segs = $$('#m-bar span'); [p, g, o, A].forEach((v, i) => { segs[i].style.flex = '0 0 ' + (v / scale * 100) + '%'; segs[i].textContent = v / scale > 0.07 ? TQ.fmt(v, 1) + ' GB' : ''; });
+    const mk = $('#m-cap-mark'); mk.style.left = (cap / scale * 100) + '%'; mk.firstElementChild.textContent = 'GPU ' + cap + ' GB';
+    $('#m-total').textContent = TQ.fmt(tot, 1) + ' GB';
+    const fit = $('#m-fit'); fit.className = 'chip chip--' + (tot <= cap ? 'tip' : 'bad'); fit.textContent = tot <= cap ? 'Vừa GPU (còn ' + TQ.fmt(cap - tot, 1) + ' GB)' : 'Không vừa, thiếu ' + TQ.fmt(tot - cap, 1) + ' GB';
+    $('#m-comm').textContent = (z === 'z3' ? '3Ψ' : '2Ψ') + ' phần tử / GPU';
+    const f = { dp: '(2 + 2 + 12)·Ψ', z1: '4·Ψ + 12·Ψ / N_d', z2: '2·Ψ + (2 + 12)·Ψ / N_d', z3: '(2 + 2 + 12)·Ψ / N_d' }[z];
+    $('#m-formula').textContent = 'Model states / GPU = ' + f + '\nΨ = ' + TQ.fmt(N) + 'B, N_d = ' + G + '  →  ' + TQ.fmt(p + g + o, 1) + ' GB  (+ ' + A + ' GB activations, ZeRO không shard activations)';
+    $('#m-panel').innerHTML = TQ.renderItem(Object.assign({ eyebrow: 'Chế độ đang chọn' }, memPanel[z], { doc: links(['t-memory-anatomy', 'Memory anatomy'], ['s-zero-fsdp', 'ZeRO & FSDP']) }));
+  }
+  const ztabs = TQ.tabs('#zmode', (t) => { zmode = t; mem(); });
+  ['#m-n', '#m-g', '#m-a', '#m-cap'].forEach((s) => $(s).addEventListener('input', mem));
+  const preset = (n, g, a, cap, z) => { $('#m-n').value = n; $('#m-g').value = g; $('#m-a').value = a; $('#m-cap').value = cap; ztabs.show(z); };
+  $('#pr-8b').onclick = () => preset(4, 0, 10, 80, 'dp');
+  $('#pr-zero').onclick = () => preset(3, 6, 0, 80, 'z1');
+  $('#pr-70b').onclick = () => preset(7, 3, 10, 80, 'z3');
+  preset(4, 0, 10, 80, 'dp');
+
+  /* ================= Hình 4: attention ================= */
+  const KIB = 1024, GIB = 1024 ** 3;
+  const AT = {
+    mha: { kv: 32, tok: 2 * 32 * 32 * 128 * 2, name: 'MHA' },
+    gqa: { kv: 8, tok: 2 * 32 * 8 * 128 * 2, name: 'GQA (8 KV)' },
+    mqa: { kv: 1, tok: 2 * 32 * 1 * 128 * 2, name: 'MQA' },
+    mla: { kv: 0, tok: 576 * 2 * 61, name: 'MLA (DS-V3)' },
+  };
+  const TS = [1, 2, 4, 8, 16, 32, 64, 128];
+  let atSel = 'mha';
+  $('#h-q').innerHTML = Array.from({ length: 32 }, () => '<div class="q"></div>').join('');
+  function drawHeads() {
+    const a = AT[atSel], kv = $('#h-kv');
+    if (atSel === 'mla') {
+      kv.innerHTML = '<div class="lat">latent c_t (512 chiều + 64 chiều RoPE) → giải nén thành K, V khi cần</div>' + Array.from({ length: 32 }, () => '<div class="ghost"></div>').join('');
+      $('#kv-lbl').textContent = 'Lưu 1 latent nén mỗi token (ô nét đứt: K, V được "giải nén" ra, không lưu)';
+    } else {
+      const span = 32 / a.kv;
+      kv.innerHTML = Array.from({ length: a.kv }, (_, i) => `<div class="kv c${i % 2}" style="grid-column:span ${span}">${span >= 4 ? 'KV' + (i + 1) : ''}</div>`).join('');
+      $('#kv-lbl').textContent = a.kv + ' K/V head' + (a.kv < 32 ? ', mỗi cái phục vụ ' + span + ' query head' : ', mỗi query một cặp riêng');
+    }
+    $('#kv-tok').textContent = TQ.fmt(a.tok / KIB, 1) + ' KiB / token';
+  }
+  function kvCalc() {
+    const T = TS[+$('#kv-t').value] * 1024, B = +$('#kv-b').value, budget = 60 * GIB;
+    $('#kv-t-o').textContent = TS[+$('#kv-t').value] + 'k token'; $('#kv-b-o').textContent = B;
+    const totals = Object.fromEntries(Object.entries(AT).map(([k, a]) => [k, a.tok * T * B]));
+    const scale = Math.max(budget, ...Object.values(totals)) * 1.04;
+    $('#kv-bars').innerHTML = Object.entries(AT).map(([k, a]) => {
+      const v = totals[k], over = v > budget, maxReq = Math.floor(budget / (a.tok * T));
+      return `<div class="kvrow${k === atSel ? ' is-sel' : ''}"><b>${a.name}</b><div class="bar"><span style="flex:0 0 ${v / scale * 100}%;background:var(${over ? '--bad' : k === atSel ? '--accent' : '--muted'})"></span><i class="bud" style="left:${budget / scale * 100}%"></i></div><span class="num" title="Tối đa ${maxReq} request ở độ dài này">${TQ.bytes(v)}</span></div>`;
+    }).join('') + `<p class="legend">Ở ${TS[+$('#kv-t').value]}k token/request, 60 GiB chứa tối đa: ${Object.entries(AT).map(([k, a]) => '<b>' + a.name + '</b> ' + Math.floor(budget / (a.tok * T)) + ' request').join(' · ')}</p>`;
+  }
+  ['#kv-t', '#kv-b'].forEach((s) => $(s).addEventListener('input', kvCalc));
+  TQ.explorer('#attn', {
+    mha: { eyebrow: 'Multi-head attention', title: 'Mỗi head có K, V riêng', chips: [['KV cache to nhất', 'bad']], html: '<p>Giàu biểu diễn nhất nhưng KV cache lớn nhất: 2·32·32·128·2 byte = 512 KiB mỗi token. Một request 128k token đã ≈ 64 GiB, gần hết một GPU 80 GB.</p>', doc: links(['a-attention', 'Attention MHA→MLA'], ['ar-kv-inference', 'KV cache & inference']) },
+    gqa: { eyebrow: 'Grouped query attention', title: 'Nhóm query dùng chung một cặp K, V', chips: [['mặc định hiện nay', 'tip']], html: '<p>32 query head, 8 KV head → mỗi KV head phục vụ 4 query. KV còn 128 KiB/token. Ablation của Hugging Face: GQA 2/4/8 group tốt hơn MHA; SmolLM3 chọn GQA 4 group.</p><p>Hệ quả serving (GPU 80 GB, context 8k): MHA tối đa ~15 request, GQA ~60 request → throughput chênh khoảng 4 lần.</p>', doc: links(['a-attention', 'Attention MHA→MLA'], ['ar-kv-inference', 'GQA quyết định batch size']) },
+    mqa: { eyebrow: 'Multi-query attention', title: 'Tất cả query dùng chung 1 cặp K, V', chips: [['16 KiB / token', 'tip'], ['mất chất lượng', 'warn']], html: '<p>KV cache giảm 32 lần so với MHA, nhưng các head không còn lưu được thông tin chuyên biệt nên chất lượng giảm. MHA và MQA là hai đầu mút của GQA (số group = số head, hoặc = 1).</p>', doc: links(['a-attention', 'Attention MHA→MLA']) },
+    mla: { eyebrow: 'Multi-latent attention', title: 'Lưu vector nén, giải nén khi chạy', chips: [['DeepSeek-V3, Kimi K2', 'ex']], html: '<p>Thay vì lưu K, V đầy đủ, mỗi token lưu một latent nhỏ c_t; K = W^UK·c, V = W^UV·c. DeepSeek-V3 (61 layer) lưu 512 + 64 = 576 số mỗi layer ≈ 69 KiB/token, trong khi nếu dùng MHA 128 head sẽ là ~3,8 MiB/token.</p><p>Phức tạp hơn: RoPE không đi cùng mẹo "absorb" ma trận nên phải tách riêng vài chiều mang RoPE (decoupled RoPE).</p>', doc: links(['a-attention', 'Attention MHA→MLA'], ['ar-attn-theory', 'Attention tính bằng con số']) },
+  }, { onShow: (k) => { atSel = k; drawHeads(); kvCalc(); } });
+
+  /* ================= Hình 5: roofline ================= */
+  const PEAK = 989, BW = 3.35, RIDGE = PEAK / BW;
+  const RW = 640, RH = 330, rl = 62, rr = 18, rt = 18, rb = 46;
+  const rx = (ai) => rl + (Math.log10(ai) + 1) / 5 * (RW - rl - rr);
+  const ry = (tf) => rt + (1 - (Math.log10(tf) + 1) / 4.3) * (RH - rt - rb);
+  const perf = (ai) => Math.min(PEAK, ai * BW);
+  (function drawRoof() {
+    let s = `<rect class="zone-mem" x="${rl}" y="${rt}" width="${rx(RIDGE) - rl}" height="${RH - rt - rb}" opacity=".6"></rect><rect class="zone-cmp" x="${rx(RIDGE)}" y="${rt}" width="${RW - rr - rx(RIDGE)}" height="${RH - rt - rb}" opacity=".6"></rect>`;
+    [0.1, 1, 10, 100, 1000, 10000].forEach((v) => { s += `<line class="grid" x1="${rx(v)}" x2="${rx(v)}" y1="${rt}" y2="${RH - rb}"></line><text class="tick" x="${rx(v)}" y="${RH - rb + 16}" text-anchor="middle">${v >= 1 ? TQ.fmt(v, 0) : v}</text>`; });
+    [0.1, 1, 10, 100, 1000].forEach((v) => { s += `<line class="grid" x1="${rl}" x2="${RW - rr}" y1="${ry(v)}" y2="${ry(v)}"></line><text class="tick" x="${rl - 6}" y="${ry(v) + 4}" text-anchor="end">${v >= 1 ? TQ.fmt(v, 0) : v}</text>`; });
+    s += `<polyline class="roof" points="${rx(0.1)},${ry(perf(0.1))} ${rx(RIDGE)},${ry(PEAK)} ${rx(10000)},${ry(PEAK)}"></polyline>`;
+    s += `<line class="axis" x1="${rx(RIDGE)}" x2="${rx(RIDGE)}" y1="${rt}" y2="${RH - rb}" stroke-dasharray="4 4"></line><text class="ann t-muted" x="${rx(RIDGE) + 6}" y="${rt + 14}">điểm gãy ≈ 295</text>`;
+    s += `<text class="ann" x="${rl + 8}" y="${rt + 14}" style="fill:var(--note)">memory-bound</text><text class="ann" x="${RW - rr - 8}" y="${RH - rb - 10}" text-anchor="end" style="fill:var(--tip)">compute-bound</text>`;
+    s += `<text class="tick" x="${(rl + RW - rr) / 2}" y="${RH - 6}" text-anchor="middle">arithmetic intensity (FLOP/byte, log)</text><text class="tick" transform="translate(14 ${(rt + RH - rb) / 2}) rotate(-90)" text-anchor="middle">TFLOP/s (log)</text>`;
+    s += '<g id="r-pt"><line class="axis" id="r-vl" stroke-dasharray="2 3"></line><circle class="pt" r="8"></circle></g>';
+    $('#r-svg').innerHTML = s;
+  })();
+  function roof() {
+    const ai = Math.pow(10, +$('#r-ai').value), p = perf(ai);
+    $('#r-ai-o').textContent = TQ.fmt(ai, ai < 10 ? 2 : 0) + ' FLOP/byte';
+    const c = $('#r-pt circle'); c.setAttribute('cx', rx(ai)); c.setAttribute('cy', ry(p));
+    const vl = $('#r-vl'); vl.setAttribute('x1', rx(ai)); vl.setAttribute('x2', rx(ai)); vl.setAttribute('y1', ry(p)); vl.setAttribute('y2', RH - rb);
+    $('#r-perf').textContent = TQ.fmt(p, p < 10 ? 2 : 0) + ' TFLOP/s';
+    $('#r-pct').textContent = TQ.fmt(p / PEAK * 100, p / PEAK < 0.01 ? 2 : 1) + ' %';
+    const b = $('#r-bound'); const mb = ai < RIDGE; b.className = 'chip chip--' + (mb ? 'note' : 'tip'); b.textContent = mb ? 'băng thông HBM (memory-bound)' : 'compute (tensor cores)';
+  }
+  $('#r-ai').addEventListener('input', roof);
+  const AIS = { elem: 1, dec1: 1, dec64: 64, mm: 4096 / 3 };
+  TQ.explorer('#roof', {
+    elem: { eyebrow: 'AI ≈ 1', title: 'Phép element-wise (SiLU, cộng residual, RMSNorm)', chips: [['< 0,5% peak', 'bad']], html: '<p>Đọc 2n byte, ghi 2n byte, vài FLOP mỗi phần tử → AI ~ 1. Trần ≈ 1 × 3,35 TB/s ≈ 3,35 TFLOP/s. Thời gian hoàn toàn do byte di chuyển quyết định.</p><p>Cách tối ưu duy nhất: <span class="k">kernel fusion</span>, gộp nhiều phép vào một kernel để đọc HBM một lần (torch.compile, Liger kernels).</p>', doc: links(['t-roofline', 'Roofline']) },
+    dec1: { eyebrow: 'AI ≈ 1', title: 'Decode batch 1: sinh từng token', chips: [['~210 token/s trần cho 8B', 'bad']], html: '<p>Mỗi ma trận weight [d×d] nhân với một vector: 2d² FLOP, đọc 2d² byte → AI ≈ 1. Model 8B BF16 = 16 GB weight; mỗi bước decode phải đọc hết → tối thiểu 16 / 3350 ≈ 4,8 ms, trần ~210 token/s bất kể GPU mạnh cỡ nào.</p>', doc: links(['t-roofline', 'Roofline'], ['ar-kv-inference', 'KV cache & inference']) },
+    dec64: { eyebrow: 'AI ≈ B', title: 'Decode batch B: weight đọc một lần dùng cho cả batch', chips: [['cần B ≳ 295', 'note']], html: '<p>B sequence decode cùng lúc: FLOPs 2B·d², byte vẫn ≈ 2d² → AI ≈ B. Cần B ≳ 295 mới compute-bound trên H100. Đây là lý do vLLM/SGLang dùng continuous batching, và RL rollout thường là phần đắt nhất của post-training.</p>', doc: links(['t-roofline', 'Roofline']) },
+    mm: { eyebrow: 'AI ≈ 1365', title: 'Matmul lớn trong training', chips: [['compute-bound', 'tip']], html: '<p>X[M×K]·W[K×N] với M = K = N = 4096: AI = 2·4096³ / (2·3·4096²) = 4096/3 ≈ 1365 ≫ 295. Training có batch B·T hàng nghìn token nên matmul chiếm phần lớn FLOPs và đều compute-bound.</p><p>FlashAttention cũng đẩy attention từ memory-bound sang gần compute-bound bằng cách không ghi ma trận T×T ra HBM.</p>', doc: links(['t-roofline', 'Roofline'], ['ar-flashattention', 'FlashAttention']) },
+  }, { onShow: (k) => { $('#r-ai').value = Math.log10(AIS[k]); roof(); } });
+
+  /* ================= Hình 6: learning rate ================= */
+  const LW = 640, LH = 280, ll = 48, lr2 = 16, lt = 16, lb = 40;
+  const lx = (x) => ll + x * (LW - ll - lr2), ly = (y) => lt + (1 - y / 1.08) * (LH - lt - lb);
+  const lrOn = { cos: true, wsd: true, ms: false, br: false };
+  const path = (f, a = 0, b = 1) => { let d = ''; for (let i = 0; i <= 240; i++) { const x = a + (b - a) * i / 240; d += (i ? 'L' : 'M') + lx(x).toFixed(1) + ' ' + ly(f(x)).toFixed(1); } return d; };
+  function lrDraw() {
+    const w = +$('#lr-w').value / 100, dcy = +$('#lr-d').value / 100;
+    $('#lr-w-o').textContent = Math.round(w * 100) + '%'; $('#lr-d-o').textContent = Math.round(dcy * 100) + '%';
+    const warm = (x) => x / w;
+    const cos = (x) => x < w ? warm(x) : 0.1 + 0.9 * 0.5 * (1 + Math.cos(Math.PI * (x - w) / (1 - w)));
+    const wsd = (x) => x < w ? warm(x) : x < 1 - dcy ? 1 : Math.max(0, 1 - (x - (1 - dcy)) / dcy);
+    const ms = (x) => x < w ? warm(x) : x < 0.70 ? 1 : x < 0.85 ? 0.32 : 0.1;
+    let s = '';
+    [0, 0.25, 0.5, 0.75, 1].forEach((v) => { s += `<line class="grid" x1="${lx(v)}" x2="${lx(v)}" y1="${lt}" y2="${LH - lb}"></line><text class="tick" x="${lx(v)}" y="${LH - lb + 16}" text-anchor="middle">${v * 100}%</text>`; });
+    [0, 0.5, 1].forEach((v) => { s += `<line class="grid" x1="${ll}" x2="${LW - lr2}" y1="${ly(v)}" y2="${ly(v)}"></line><text class="tick" x="${ll - 6}" y="${ly(v) + 4}" text-anchor="end">${v === 1 ? 'đỉnh' : v}</text>`; });
+    s += `<rect x="${lx(0)}" y="${lt}" width="${lx(w) - lx(0)}" height="${LH - lt - lb}" fill="var(--warn-bg)" opacity=".8"></rect><text class="ann" x="${lx(w) + 4}" y="${LH - lb - 8}" style="fill:var(--warn)">warmup</text>`;
+    if (lrOn.wsd) s += `<rect x="${lx(1 - dcy)}" y="${lt}" width="${lx(1) - lx(1 - dcy)}" height="${LH - lt - lb}" fill="var(--accent-soft)" opacity=".8"></rect><text class="ann" x="${lx(1 - dcy) + 4}" y="${lt + 14}" style="fill:var(--accent)">decay</text>`;
+    if (lrOn.cos) s += `<path class="c-cos" d="${path(cos)}"></path>`;
+    if (lrOn.ms) s += `<path class="c-ms" d="${path(ms)}"></path>`;
+    if (lrOn.wsd) s += `<path class="c-wsd" d="${path(wsd)}"></path>`;
+    if (lrOn.br) {
+      [0.3, 0.5, 0.7].filter((c) => c < 1 - dcy && c > w).forEach((c) => {
+        const L = c * dcy;
+        s += `<path class="c-br" d="M${lx(c)} ${ly(1)} L${lx(c + L)} ${ly(0)}"></path><circle cx="${lx(c)}" cy="${ly(1)}" r="4.5" fill="var(--accent)"></circle><text class="ann" x="${lx(c + L) + 3}" y="${ly(0) - 6}" style="fill:var(--accent)">model ${c * 100}%</text>`;
+      });
+    }
+    s += `<text class="tick" x="${(ll + LW - lr2) / 2}" y="${LH - 6}" text-anchor="middle">% số step (hình minh hoạ, không phải số đo)</text>`;
+    $('#lr-svg').innerHTML = s;
+    const parts = [];
+    parts.push('<p><span class="k">Warmup</span> tăng dần từ 0 lên đỉnh: lúc đầu gradient hỗn loạn và thống kê v của Adam chưa ổn định. Run ngắn thường 1–5% số step; lab lớn cố định số step (ví dụ 2000).</p>');
+    if (lrOn.cos) parts.push('<p><span class="k" style="color:var(--note)">Cosine</span> giảm mượt suốt run. Nhược điểm: hình dạng phụ thuộc tổng số step đặt từ đầu, muốn train thêm thì LR đã gần đáy.</p>');
+    if (lrOn.wsd) parts.push('<p><span class="k" style="color:var(--accent)">WSD</span> giữ LR hằng số rồi decay ở 10–20% cuối, kết quả ngang cosine. Loss tụt mạnh khi decay vì phần loss "thừa" do dao động tỉ lệ với LR (thường 0,05–0,1 nats). Kimi K2: 10T token LR 2e-4 hằng số, rồi 5,5T token cosine về 2e-5.</p>');
+    if (lrOn.ms) parts.push('<p><span class="k" style="color:var(--ex)">Multi-step</span> giảm theo bậc. 80/10/10 ngang cosine; 70/15/15 và 60/20/20 có thể tốt hơn cosine.</p>');
+    if (lrOn.br) parts.push('<p><span class="k">Rẽ nhánh</span>: với WSD chỉ cần chạy một run ở phase stable, lưu checkpoint ở 30%, 50%, 70%, rồi từ mỗi checkpoint chạy một đoạn decay ngắn là có model hoàn chỉnh để so. Với cosine phải chạy lại 3 run riêng.</p>');
+    $('#lr-panel').innerHTML = TQ.renderItem({ eyebrow: 'Đang hiển thị', title: 'Vòng đời của learning rate', html: parts.join(''), doc: links(['c-learning-rates', 'Learning rates'], ['op-wsd-theory', 'Lý thuyết WSD'], ['op-warmup-theory', 'Warmup']) });
+  }
+  $$('[data-lr]').forEach((b) => b.addEventListener('click', () => { const k = b.dataset.lr; lrOn[k] = !lrOn[k]; b.classList.toggle('is-on', lrOn[k]); lrDraw(); }));
+  ['#lr-w', '#lr-d'].forEach((s) => $(s).addEventListener('input', lrDraw));
+  lrDraw();
+
+  /* ================= Hình 7: scaling ================= */
+  const MARKS = [[1.7, 'GPT-3'], [20, 'Chinchilla ~20'], [38.5, 'Llama 3 405B'], [3700, 'SmolLM3']];
+  const rpos = (r) => Math.min(100, Math.max(0, Math.log10(Math.max(r, 1)) / 4 * 100));
+  function scale() {
+    const N = +$('#sc-n').value * 1e9, Dt = +$('#sc-d').value * 1e12, G = Math.max(1, +$('#sc-g').value), mfu = +$('#sc-m').value / 100;
+    $('#sc-m-o').textContent = Math.round(mfu * 100) + '%';
+    if (!(N > 0 && Dt > 0)) return;
+    const C = 6 * N * Dt, gpuSec = C / (PEAK * 1e12 * mfu), ratio = Dt / N;
+    $('#sc-c').textContent = sci(C) + ' FLOPs';
+    $('#sc-r').textContent = TQ.fmt(ratio, ratio < 10 ? 1 : 0) + ' (' + TQ.fmt(ratio / 20, ratio / 20 < 10 ? 1 : 0) + '× Chinchilla)';
+    $('#sc-gh').textContent = TQ.fmt(gpuSec / 3600, 0);
+    const days = gpuSec / G / 86400;
+    $('#sc-days').textContent = days < 1 ? TQ.fmt(days * 24, 1) + ' giờ' : TQ.fmt(days, 1) + ' ngày';
+    let s = '<div class="track"></div>';
+    [1, 10, 100, 1000, 10000].forEach((v) => { s += `<span class="tk" style="left:${rpos(v)}%">${TQ.fmt(v, 0)}</span>`; });
+    MARKS.forEach(([v, l]) => { s += `<span class="mk" style="left:${rpos(v)}%" title="${l}"><i></i></span>`; });
+    s += `<span class="mk you" style="left:${rpos(ratio)}%"><i></i><span>bạn: ${TQ.fmt(ratio, ratio < 10 ? 1 : 0)}</span></span>`;
+    $('#sc-ratio').innerHTML = s;
+    const verdict = ratio < 15 ? ['Ít token hơn mức compute-optimal (~20 token/tham số): model "đói data".', 'warn'] : ratio <= 45 ? ['Quanh mức compute-optimal kiểu Chinchilla (tỉ lệ tối ưu thực tế 15–40 tuỳ data và tokenizer).', 'tip'] : ['"Overtrain": nhiều token hơn mức compute-optimal. Tốn train hơn nhưng model nhỏ hơn nên rẻ khi inference mãi về sau. Các lab hiện nay đều làm vậy.', 'note'];
+    $('#sc-panel').innerHTML = TQ.renderItem({ eyebrow: 'Đọc kết quả', title: TQ.fmt(N / 1e9) + 'B tham số × ' + TQ.fmt(Dt / 1e12, 2) + 'T token', chips: [[verdict[1] === 'tip' ? 'compute-optimal' : verdict[1] === 'warn' ? 'thiếu token' : 'overtrain', verdict[1]]],
+      html: `<p>${verdict[0]}</p><ul><li>Mốc trên thang: GPT-3 ≈ 1,7 token/tham số; Chinchilla ≈ 20; Llama 3 405B ≈ 38; SmolLM3 ≈ 3.700 (gấp ~180 lần Chinchilla).</li><li>Kiểm tra chéo trong tài liệu: Llama 3 405B × 15,6T → 6·N·D ≈ 3,8 × 10²⁵ FLOPs, đúng số Meta công bố.</li><li>Với context dài, chi phí attention (thêm 12·L·T·d mỗi token) không nằm trong 6ND: ở 128k nó gấp ~4,3 lần phần matmul weight của 8B.</li></ul>`,
+      doc: links(['c-scaling-laws', 'Scaling laws'], ['t-flops', 'C ≈ 6ND từ đâu'], ['op-chinchilla-derivation', 'Suy dẫn Chinchilla'], ['op-inference-aware', 'Vì sao overtrain']) });
+  }
+  ['#sc-n', '#sc-d', '#sc-g', '#sc-m'].forEach((s) => $(s).addEventListener('input', scale));
+  $$('[data-sc]').forEach((b) => b.addEventListener('click', () => { const [n, d, g, m] = b.dataset.sc.split(','); $('#sc-n').value = n; $('#sc-d').value = d; $('#sc-g').value = g; $('#sc-m').value = m; scale(); }));
+  scale();
+
+  /* ================= Hình 8: song song ================= */
+  // tab cấp section: panes là con trực tiếp của section (không dùng TQ.tabs vì trong pane còn tab GPipe/1F1B)
+  const secTabs = (tabsSel, secSel) => {
+    const btns = $$(tabsSel + ' [data-tab]'), panes = $$(secSel + ' > [data-pane]');
+    const show = (t) => { btns.forEach((b) => { b.classList.toggle('is-active', b.dataset.tab === t); b.setAttribute('aria-selected', b.dataset.tab === t); }); panes.forEach((p) => (p.hidden = p.dataset.pane !== t)); };
+    btns.forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));
+    show(btns[0].dataset.tab);
+  };
+  secTabs('#par-tabs', '#h-par');
+  TQ.explorer('#dims', {
+    dp: { eyebrow: 'Data parallel (+ZeRO)', title: 'Chia batch, mỗi GPU một bản sao', chips: [['ngoài cùng', 'note'], ['băng thông: trung bình', 'note']], html: '<p>Mỗi GPU nhận một phần batch, tự tính gradient, rồi all-reduce để mọi bản sao cập nhật giống nhau. Ring all-reduce: mỗi GPU gửi ≈ 2M byte, gần như không phụ thuộc số GPU; overlap được với backward nhờ bucketing.</p><p>Ảnh hưởng: tăng global batch size tối thiểu.</p>', doc: links(['s-data-parallel', 'Data parallelism'], ['s-zero-fsdp', 'ZeRO & FSDP']) },
+    tp: { eyebrow: 'Tensor parallel (+SP)', title: 'Chia từng phép nhân ma trận', chips: [['trong node, NVLink', 'bad'], ['nằm trên critical path', 'bad']], html: '<p>MLP: chia ma trận đầu theo cột, ma trận sau theo hàng → một all-reduce. Attention: chia theo head, số head (và KV head) nên chia hết cho TP. Communication mỗi layer, nằm trên đường găng nên đặt trong cùng node.</p>', doc: links(['s-tensor-parallel', 'Tensor parallelism']) },
+    pp: { eyebrow: 'Pipeline parallel', title: 'Chia model theo chiều sâu', chips: [['băng thông: thấp', 'tip'], ['cần nhiều micro-batch', 'warn']], html: '<p>GPU 0 giữ các layer đầu, GPU 1 giữ các layer tiếp… Chỉ gửi activation giữa các stage nên chịu được mạng chậm giữa các node. Cái giá là bubble (xem tab "Pipeline bubble").</p>', doc: links(['s-pipeline-parallel', 'Pipeline parallelism']) },
+    cp: { eyebrow: 'Context parallel', title: 'Chia sequence dài ra nhiều GPU', chips: [['long context', 'teal']], html: '<p>Mỗi GPU giữ một đoạn sequence; K/V được trao đổi (ring hoặc all-gather) trong attention. Llama 3 405B khi lên context 128k giữ nguyên 16.384 GPU nhưng đổi DP 128 → 8 lấy CP 1 → 16; MFU giảm nhẹ từ 41% còn 38%.</p>', doc: links(['s-cp-ep', 'Context & expert parallelism'], ['s-5d-parallelism', '5D parallelism']) },
+    ep: { eyebrow: 'Expert parallel', title: 'Chia các expert của MoE', chips: [['all-to-all', 'ex']], html: '<p>Mỗi GPU giữ một số expert; token được gửi tới GPU có expert của nó (dispatch) rồi gửi kết quả về (combine). EP thường "mượn" chiều DP/CP nên không nhân thêm vào tổng số GPU. DeepSeek-V3: PP 16 + EP 64 + ZeRO-1 DP, không dùng TP.</p>', doc: links(['s-cp-ep', 'Context & expert parallelism'], ['b-moe', 'MoE']) },
+  });
+  let gSel = 13;
+  function gridDraw() {
+    const TPv = +$('#g-tp').value, PPv = +$('#g-pp').value, DPv = 32 / (TPv * PPv);
+    $('#g-dp').textContent = DPv + '  (32 ÷ ' + TPv + ' ÷ ' + PPv + ')';
+    const info = (r) => ({ tp: r % TPv, pp: Math.floor(r / TPv) % PPv, dp: Math.floor(r / (TPv * PPv)), node: Math.floor(r / 8) });
+    const me = info(gSel);
+    let h = '';
+    for (let n = 0; n < 4; n++) {
+      h += `<div class="gnode"><span class="nl">Node ${n} · 8 GPU nối NVLink</span><div class="gpus">`;
+      for (let g = 0; g < 8; g++) {
+        const r = n * 8 + g, f = info(r), cls = ['gpu', 'st' + f.pp];
+        if (r === gSel) cls.push('me');
+        if (f.pp === me.pp && f.dp === me.dp) cls.push('r-tp');
+        if (f.tp === me.tp && f.dp === me.dp) cls.push('r-pp');
+        if (f.tp === me.tp && f.pp === me.pp) cls.push('r-dp');
+        h += `<button class="${cls.join(' ')}" data-r="${r}" aria-label="GPU ${r}"><b>G${r}</b><small>S${f.pp}·R${f.dp}·t${f.tp}</small></button>`;
+      }
+      h += '</div></div>';
+    }
+    $('#g-nodes').innerHTML = h;
+    $$('#g-nodes .gpu').forEach((b) => b.addEventListener('click', () => { gSel = +b.dataset.r; gridDraw(); }));
+    const peers = (fn) => Array.from({ length: 32 }, (_, r) => r).filter((r) => fn(info(r))).map((r) => 'G' + r).join(', ');
+    $('#g-info').innerHTML = `<div><b>GPU ${gSel}</b>: node ${me.node}, stage S${me.pp}/${PPv}, bản sao R${me.dp}/${DPv}, mảnh TP t${me.tp}/${TPv}.</div>` +
+      `<div><span class="chip chip--accent">TP</span> cùng chia từng matmul (all-reduce mỗi layer): ${peers((f) => f.pp === me.pp && f.dp === me.dp)}</div>` +
+      `<div><span class="chip">PP</span> cùng một pipeline, gửi activation cho nhau: ${PPv > 1 ? peers((f) => f.tp === me.tp && f.dp === me.dp) : 'không có (PP = 1)'}</div>` +
+      `<div><span class="chip chip--teal">DP</span> cùng giữ đúng phần model này, all-reduce gradient: ${DPv > 1 ? peers((f) => f.tp === me.tp && f.pp === me.pp) : 'không có (DP = 1)'}</div>`;
+  }
+  ['#g-tp', '#g-pp'].forEach((s) => $(s).addEventListener('change', gridDraw));
+  gridDraw();
+
+  // pipeline: mô phỏng lịch GPipe / 1F1B, F = 1 đơn vị, B = 2 đơn vị
+  let sched = 'gpipe';
+  function simulate(p, m, kind) {
+    const order = [];
+    for (let s = 0; s < p; s++) {
+      const ops = [];
+      if (kind === 'gpipe') { for (let j = 0; j < m; j++) ops.push(['F', j]); for (let j = 0; j < m; j++) ops.push(['B', j]); }
+      else {
+        const w = Math.min(p - 1 - s, m);
+        for (let j = 0; j < w; j++) ops.push(['F', j]);
+        for (let k = 0; k < m - w; k++) { ops.push(['F', w + k]); ops.push(['B', k]); }
+        for (let j = m - w; j < m; j++) ops.push(['B', j]);
+      }
+      order.push(ops);
+    }
+    const end = {}, free = Array(p).fill(0), idx = Array(p).fill(0), out = Array.from({ length: p }, () => []);
+    let left = p * m * 2, guard = 0;
+    while (left > 0 && guard++ < 100000) {
+      let progressed = false;
+      for (let s = 0; s < p; s++) {
+        if (idx[s] >= order[s].length) continue;
+        const [t, j] = order[s][idx[s]];
+        const dep = t === 'F' ? (s === 0 ? 0 : end['F' + (s - 1) + '_' + j]) : (s === p - 1 ? end['F' + s + '_' + j] : end['B' + (s + 1) + '_' + j]);
+        if (dep === undefined) continue;
+        const st = Math.max(free[s], dep), du = t === 'F' ? 1 : 2;
+        end[t + s + '_' + j] = st + du; free[s] = st + du; out[s].push([t, j, st, du]); idx[s]++; left--; progressed = true;
+      }
+      if (!progressed) break;
+    }
+    let maxAct = 0;
+    out.forEach((ops) => { let cur = 0; ops.forEach(([t]) => { cur += t === 'F' ? 1 : -1; maxAct = Math.max(maxAct, cur); }); });
+    return { out, total: Math.max(...free), maxAct };
+  }
+  function pipeDraw() {
+    const p = +$('#pp-p').value, m = +$('#pp-m').value;
+    $('#pp-p-o').textContent = p; $('#pp-m-o').textContent = m;
+    const { out, total, maxAct } = simulate(p, m, sched);
+    const u = 16, lw = 56, rowH = 26, W = lw + total * u + 10, H = p * rowH + 30;
+    const svg = $('#pp-svg');
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('width', Math.max(W, 320));
+    let s = '';
+    out.forEach((ops, st) => {
+      const y = 6 + st * rowH;
+      s += `<text class="st" x="4" y="${y + 16}">GPU${st}</text><rect class="bub" x="${lw}" y="${y}" width="${total * u}" height="${rowH - 6}" rx="3"></rect>`;
+      ops.forEach(([t, j, t0, du]) => { s += `<rect class="${t === 'F' ? 'f' : 'b'}" x="${lw + t0 * u + 1}" y="${y}" width="${du * u - 2}" height="${rowH - 6}" rx="3"></rect>`; if (u * du >= 16) s += `<text class="lbl" x="${lw + (t0 + du / 2) * u}" y="${y + 14}" text-anchor="middle">${t}${j + 1}</text>`; });
+    });
+    s += `<text class="st" x="${lw}" y="${H - 6}">thời gian → (tổng ${total} đơn vị)</text>`;
+    svg.innerHTML = s;
+    const bub = (p - 1) * 3;
+    $('#pp-bub').textContent = bub + ' / ' + total + ' đv';
+    $('#pp-ov').textContent = TQ.fmt((p - 1) / m * 100, 1) + ' %';
+    $('#pp-waste').textContent = TQ.fmt((p - 1) / (m + p - 1) * 100, 1) + ' %';
+    $('#pp-mem').textContent = maxAct + ' micro-batch';
+    $('#pp-panel').innerHTML = TQ.renderItem({ eyebrow: sched === 'gpipe' ? 'GPipe' : '1F1B', title: 'p = ' + p + ' stage, m = ' + m + ' micro-batch',
+      chips: [[(p - 1) / m > 0.5 ? 'bubble lớn' : (p - 1) / m > 0.15 ? 'bubble vừa' : 'bubble nhỏ', (p - 1) / m > 0.5 ? 'bad' : (p - 1) / m > 0.15 ? 'warn' : 'tip']],
+      html: (sched === 'gpipe'
+        ? '<p>GPipe chạy hết m forward rồi mới backward. Ô trống đầu ("đổ đầy" pipeline) và cuối ("xả") là bubble: (p−1)(F+B) mỗi GPU. Mỗi stage phải giữ activation của cả m micro-batch.</p>'
+        : '<p>1F1B: sau vài forward khởi động, mỗi stage xen kẽ 1 forward và 1 backward nên micro-batch được backward và giải phóng activation sớm. Bubble <b>không đổi</b> so với GPipe, nhưng activation giữ tối đa giảm từ m xuống ≤ p.</p>') +
+        '<p>Muốn bubble nhỏ cần m ≫ p, nhưng m = GBS / (mbs × dp) bị giới hạn bởi batch size. Ví dụ tài liệu: p = 8, m = 8 → overhead 87,5%; m = 32 → 22%; m = 128 → 5,5%.</p><p>Interleaved 1F1B chia bubble thêm cho v; Zero Bubble dời phần gradient-theo-weight vào khoảng trống; DualPipe (DeepSeek-V3) đưa micro-batch vào từ hai đầu.</p>',
+      doc: links(['s-pipeline-parallel', 'Pipeline parallelism'], ['s-5d-parallelism', 'Chọn cấu hình 5D']) });
+  }
+  TQ.tabs('#pp-sched', (t) => { sched = t; pipeDraw(); });
+  ['#pp-p', '#pp-m'].forEach((s) => $(s).addEventListener('input', pipeDraw));
+
+  /* ================= Hình 9: stability ================= */
+  secTabs('#st-tabs', '#h-stab');
+  const REL = {
+    's-attn': ['f-qk', 'f-cap', 'f-mon'], 's-ent': ['f-qk', 'f-mon'], 's-head': ['f-z', 'f-cap', 'f-norm'],
+    's-res': ['f-norm', 'f-mon'], 's-adam': ['f-clip', 'f-wd'], 's-lr': ['f-mup', 'f-clip'], 's-data': ['f-filter', 'f-clip'], 's-fp': ['f-prec'],
+  };
+  const relOf = (k) => k.startsWith('s-') ? REL[k] : Object.keys(REL).filter((s) => REL[s].includes(k));
+  TQ.explorer('#stab', {
+    's-attn': { eyebrow: 'Cơ chế 1', title: 'Attention logits phình to', chips: [['ViT-22B từng nổ vì đây', 'bad']], html: '<p>Logit q·k/√d_h tăng theo bậc hai khi norm của W_Q, W_K tăng. Logits lớn làm softmax gần one-hot: gradient qua attention gần bằng 0, và một thay đổi nhỏ có thể "đổi người thắng", tạo bước nhảy lớn ở output.</p>', doc: links(['ar-instability-theory', 'Vì sao loss spike']) },
+    's-ent': { eyebrow: 'Cơ chế 2', title: 'Attention entropy sụp về 0', chips: [['tín hiệu cảnh báo sớm', 'warn']], html: '<p>Các lần train hỏng thường có entropy của nhiều head sụp về gần 0 (mỗi query chỉ nhìn một key) ngay trước khi loss nổ. Nên log entropy theo từng layer.</p>', doc: links(['ar-instability-theory', 'Vì sao loss spike'], ['ar-monitoring', 'Monitoring']) },
+    's-head': { eyebrow: 'Cơ chế 3', title: 'Logits ở LM head trôi xa 0', chips: [['softmax không "thấy"', 'warn']], html: '<p>Softmax không đổi khi cộng cùng hằng số vào mọi logit, nên logits có thể trôi rất xa mà loss không phát hiện, cho tới khi tràn số hoặc gradient bất thường. log Z lớn làm loss nhạy với sai số số học.</p>', doc: links(['b-stability-h', 'Logits, softmax'], ['ar-instability-theory', 'Vì sao loss spike']) },
+    's-res': { eyebrow: 'Cơ chế 4', title: 'Residual stream phình, massive activations', chips: [['hỏng cả FP8', 'warn']], html: '<p>Với pre-norm, không có gì kéo norm residual xuống, nó tăng theo độ sâu; layer sâu "ít tác dụng". Nhiều LLM có vài chiều activation lớn gấp hàng nghìn lần trung bình, làm hỏng lượng tử hoá và dễ tràn số.</p>', doc: links(['ar-instability-theory', 'Vì sao loss spike'], ['b-rmsnorm', 'Sandwich norm']) },
+    's-adam': { eyebrow: 'Cơ chế 5', title: 'Adam với gradient hiếm và ε', html: '<p>Embedding của token hiếm lâu không có gradient → v tiến về 0; khi token xuất hiện lại, update m/√v rất lớn. Ngược lại, khi √v nhỏ hơn ε thì Adam suy biến thành SGD, update bị co lại vô tình.</p>', doc: links(['ar-instability-theory', 'Vì sao loss spike']) },
+    's-lr': { eyebrow: 'Thủ phạm quen thuộc', title: 'Learning rate quá cao', chips: [['nguyên nhân số 1', 'bad']], html: '<p>Đứng đầu danh sách "usual suspects". Với parametrization chuẩn, LR tối ưu dịch chuyển khi tăng width nên LR tìm được ở model nhỏ có thể quá cao cho model lớn.</p>', doc: links(['f-usual-suspects', 'Usual suspects'], ['ar-mup', 'μP']) },
+    's-data': { eyebrow: 'Thủ phạm quen thuộc', title: 'Batch dữ liệu xấu', html: '<p>Rác lặp, encoding lỗi, tài liệu cực dài toàn một token. Spike thường do <i>tổ hợp</i> một batch cụ thể với một trạng thái weights cụ thể: cùng batch đó ở thời điểm khác có thể không sao.</p>', doc: links(['f-usual-suspects', 'Usual suspects'], ['ar-spike-playbook', 'Spike playbook']) },
+    's-fp': { eyebrow: 'Precision', title: 'Tràn số, update bị "nuốt"', html: '<p>FP16 dải hẹp (tối đa 65504) dễ tràn. BF16 dải rộng như FP32 nhưng chỉ ~2–3 chữ số có nghĩa: 1,0 + 0,001 làm tròn về 1,0, update biến mất.</p>', doc: links(['ar-precision', 'Precision & stability']) },
+    'f-qk': { eyebrow: 'Rào chắn', title: 'QK-norm', chips: [['Gemma 3 thay softcap bằng cái này', 'tip']], html: '<p>Áp LayerNorm/RMSNorm lên q và k trước khi nhân, nên attention logits không nổ được.</p><div class="callout callout--warn">Lưu ý: paper RNoPE thấy QK-norm làm hại long context vì xoá thông tin độ lớn của q·k, khiến attention khó "sắc" giữa hàng chục nghìn token.</div>', doc: links(['b-qknorm', 'QK-norm']) },
+    'f-cap': { eyebrow: 'Rào chắn', title: 'Logit softcapping', chips: [['thử ở tab "Thử softcap"', 'accent']], html: '<p><code>logits ← cap · tanh(logits / cap)</code>. Logit nhỏ gần như giữ nguyên, logit lớn bị nén mềm, không bao giờ vượt cap và gradient không bằng 0 tuyệt đối. Gemma 2: attention cap 50, LM head cap 30.</p><p>Softcap trên attention không chạy với FlashAttention/SDPA chuẩn khi train (phải dùng eager), trừ khi kernel có tham số softcap.</p>', doc: links(['b-softcap', 'Logit softcapping']) },
+    'f-z': { eyebrow: 'Rào chắn', title: 'z-loss', html: '<p>Cộng <code>λ·log²(Z)</code> vào loss để kéo log Z về gần 0; λ rất nhỏ (PaLM dùng 10⁻⁴). Ablation 1B của Hugging Face: không ảnh hưởng loss hay eval nên họ bỏ vì tốn thêm compute.</p>', doc: links(['b-zloss', 'z-loss']) },
+    'f-clip': { eyebrow: 'Rào chắn', title: 'Gradient clipping theo global norm', chips: [['c = 1,0 phổ biến', 'tip']], html: '<p>Coi toàn bộ gradient là một vector, co lại nếu norm vượt c, giữ nguyên hướng. Với Adam, tác dụng chính là bảo vệ m và v khỏi một batch bất thường. Nếu clip kích hoạt ở phần lớn step là bạn đang giảm LR một cách khó kiểm soát. Distributed: norm phải là norm toàn cục.</p>', doc: links(['ar-grad-clip', 'Gradient clipping']) },
+    'f-norm': { eyebrow: 'Rào chắn', title: 'RMSNorm, sandwich norm, khởi tạo', html: '<p>Depth-scaled sandwich norm (Trinity) chuẩn hoá cả trước và sau sub-layer, gain post-norm khởi tạo 1/√L để residual không phình theo độ sâu. OLMo2 cho thấy khởi tạo đơn giản N(0; 0,02) có thể ổn định hơn scaled init.</p>', doc: links(['b-rmsnorm', 'RMSNorm & sandwich norm'], ['ar-init-theory', 'Initialization']) },
+    'f-wd': { eyebrow: 'Rào chắn', title: 'Không weight decay cho embedding', html: '<p>Weight decay làm embedding nhỏ dần; norm ngay sau đó chia cho σ nhỏ → gradient về các layer đầu bị khuếch đại (σ = 0,05 thì phóng đại 20 lần). Hugging Face không thấy mất chất lượng khi bỏ decay ở embedding.</p>', doc: links(['b-wd-emb', 'Weight decay & embeddings']) },
+    'f-mup': { eyebrow: 'Rào chắn', title: 'μP: tune ở model hẹp, dùng cho model rộng', html: '<p>Scale init và LR theo width sao cho LR tối ưu gần như không đổi. Ví dụ tài liệu: tune ở d₀ = 256 được η₀ = 10⁻²; model d = 4096 (m = 16) dùng LR hidden 10⁻²/16 = 6,25 × 10⁻⁴. Chi phí tuning chỉ ~7% chi phí pre-train.</p>', doc: links(['ar-mup', 'μP']) },
+    'f-prec': { eyebrow: 'Rào chắn', title: 'BF16 để tính, FP32 để giữ', html: '<p>Tránh FP16. Giữ master weights và optimizer state ở FP32; softmax/log-sum-exp, thống kê norm và phép tích luỹ nên ở FP32.</p>', doc: links(['ar-precision', 'Precision & stability']) },
+    'f-filter': { eyebrow: 'Rào chắn', title: 'Lọc data, rewind và bỏ qua batch', html: '<p>OLMo2 loại document có n-gram 1–13 token lặp từ 32 lần trở lên, giảm đáng kể tần suất spike. Khi spike đã xảy ra: xem tab "Khi spike đã xảy ra".</p>', doc: links(['f-usual-suspects', 'Usual suspects'], ['ar-spike-playbook', 'Spike playbook']) },
+    'f-mon': { eyebrow: 'Rào chắn', title: 'Monitoring hằng ngày', html: '<ul><li>Global grad norm: tăng dần đều thường báo trước divergence.</li><li>Update/param ratio theo layer: ≫ 10⁻³ là LR quá cao ở layer đó.</li><li>Max attention logit, attention entropy, log Z.</li><li>Activation RMS/max, MoE load, tỉ lệ step bị clip, số NaN/Inf.</li></ul>', doc: links(['ar-monitoring', 'Monitoring']) },
+  }, { onShow: (k) => { const rel = relOf(k); $$('#stab .node').forEach((n) => n.classList.toggle('rel', rel.includes(n.dataset.k))); } });
+
+  // softcap
+  const CW = 640, CH = 260, cl = 48, cr = 16, ct = 14, cb = 36;
+  function capDraw() {
+    const x = Math.round(Math.pow(10, +$('#cap-x').value)), cap = +$('#cap-c').value, y = cap * Math.tanh(x / cap);
+    $('#cap-x-o').textContent = x;
+    const X = 150, Y = 60, px = (v) => cl + v / X * (CW - cl - cr), py = (v) => ct + (1 - v / Y) * (CH - ct - cb);
+    let d = '', di = '';
+    for (let i = 0; i <= 150; i++) { d += (i ? 'L' : 'M') + px(i) + ' ' + py(cap * Math.tanh(i / cap)); }
+    di = `M${px(0)} ${py(0)} L${px(Y)} ${py(Y)}`;
+    let s = '';
+    [0, 50, 100, 150].forEach((v) => { s += `<line class="grid" x1="${px(v)}" x2="${px(v)}" y1="${ct}" y2="${CH - cb}"></line><text class="tick" x="${px(v)}" y="${CH - cb + 15}" text-anchor="middle">${v}</text>`; });
+    [0, cap].forEach((v) => { s += `<line class="grid" x1="${cl}" x2="${CW - cr}" y1="${py(v)}" y2="${py(v)}"></line><text class="tick" x="${cl - 6}" y="${py(v) + 4}" text-anchor="end">${v}</text>`; });
+    s += `<path class="c-id" d="${di}"></path><path class="c-tanh" d="${d}"></path>`;
+    const shownX = Math.min(x, X);
+    s += `<circle class="pt" r="7" cx="${px(shownX)}" cy="${py(cap * Math.tanh(shownX / cap))}"></circle>`;
+    s += `<text class="tick" x="${(cl + CW - cr) / 2}" y="${CH - 4}" text-anchor="middle">logit đầu vào${x > X ? ' (điểm vượt khung, ghim ở 150)' : ''}</text><text class="ann t-muted" x="${px(40) + 8}" y="${py(46)}">không cap (y = x)</text>`;
+    $('#cap-svg').innerHTML = s;
+    $('#cap-in').textContent = TQ.fmt(x, 0); $('#cap-out').textContent = TQ.fmt(y, 2); $('#cap-pct').textContent = TQ.fmt((1 - y / Math.max(x, 1e-9)) * 100, 1) + ' %';
+  }
+  ['#cap-x', '#cap-c'].forEach((s) => $(s).addEventListener('input', capDraw));
+  capDraw();
+  $('#cap-panel').innerHTML = TQ.renderItem({ eyebrow: 'Thử tay', title: 'cap · tanh(logit / cap)', chips: [['nén mềm, không cắt cứng', 'tip']],
+    html: '<p>Ví dụ trong tài liệu với cap = 30: logit 5 → 4,95; 30 → 22,8; 100 → 29,92; 1000 → ≈ 30.</p><p>Khác hard clipping: ở vùng bị cắt cứng gradient bằng 0 nên model "không biết sửa"; tanh vẫn còn gradient. Khác z-loss: softcap tác động thẳng lên activation trong forward, không thêm term vào loss.</p>',
+    doc: links(['b-softcap', 'Logit softcapping']) });
+
+  // spike playbook (cây quyết định)
+  const SPK = {
+    start: { cls: 'q', text: '<b>Loss vừa nhảy vọt.</b> Nó có tự quay về đường cũ trong vài chục đến vài trăm step không?', ch: [['Có, tự về', 'ok'], ['Không, ở lại cao / tăng tiếp', 'find']] },
+    ok: { cls: 'end', text: '<b>Spike tự hồi phục.</b> Thường bỏ qua được. Vẫn ghi lại step và batch để đối chiếu nếu lặp lại.', end: true },
+    find: { text: '<b>1. Xác định batch gây spike.</b> Dataloader phải deterministic (biết step t dùng sample nào). Mở batch xem: rác lặp, encoding lỗi, tài liệu cực dài toàn một token…', next: 'rewind' },
+    rewind: { text: '<b>2. Rewind và bỏ qua data (cách của PaLM).</b> Quay lại checkpoint ~100 step trước spike, bỏ qua ~200–500 batch. PaLM gặp ~20 spike và cách này chặn được.', next: 'again' },
+    again: { cls: 'q', text: 'Train tiếp. Spike có tái diễn không?', ch: [['Không', 'done'], ['Có', 'lr']] },
+    done: { cls: 'end', text: '<b>Tiếp tục train.</b> Theo dõi grad norm, max attention logit, tỉ lệ step bị clip.', end: true },
+    lr: { text: '<b>3. Giảm learning rate</b>, tạm thời hoặc vĩnh viễn. Logbook OPT-175B ghi nhiều lần restart kèm giảm LR. Hiệu quả nhưng làm chậm tiến độ.', next: 'hw' },
+    hw: { text: '<b>4. Kiểm tra phần cứng.</b> Một GPU lỗi âm thầm (silent data corruption) có thể gây spike ngẫu nhiên.', next: 'arch' },
+    arch: { cls: 'risk', text: '<b>5. Cuối cùng mới thêm rào chắn giữa chừng</b> (QK-norm, z-loss). Rủi ro vì đổi phân phối activation; tốt hơn là đã có từ đầu sau khi ablate.', end: true },
+  };
+  let spkPath = ['start'];
+  function spkDraw() {
+    let h = '';
+    spkPath.forEach((k, i) => {
+      const n = SPK[k], last = i === spkPath.length - 1;
+      h += `<div class="stepc ${n.cls || ''}"><div>${n.text}</div>`;
+      if (last && n.ch) h += '<div class="ch">' + n.ch.map(([l, to]) => `<button class="btn" data-to="${to}">${l}</button>`).join('') + '</div>';
+      else if (!last && n.ch) { const pick = n.ch.find((c) => c[1] === spkPath[i + 1]); h += `<div class="picked">Bạn chọn: ${pick ? pick[0] : ''}</div>`; }
+      if (last && n.next) h += `<div class="ch"><button class="btn btn--primary" data-to="${n.next}">Bước tiếp ▶</button></div>`;
+      if (last && n.end) h += '<div class="ch"><button class="btn" data-to="__reset">Làm lại từ đầu</button></div>';
+      h += '</div>';
+      if (!last) h += '<div class="arrow" style="justify-self:center">↓</div>';
+    });
+    $('#spk').innerHTML = h;
+    $$('#spk [data-to]').forEach((b) => b.addEventListener('click', () => { const to = b.dataset.to; spkPath = to === '__reset' ? ['start'] : spkPath.concat(to); spkDraw(); }));
+  }
+  spkDraw();
+  $('#spk-panel').innerHTML = TQ.renderItem({ eyebrow: 'Loss-spike playbook', title: 'Hai loại spike', chips: [['tự hồi phục', 'tip'], ['không hồi phục / divergence', 'bad']],
+    html: '<p>Bấm các lựa chọn bên trái để đi theo đúng nhánh. Phần lớn sự cố có nguyên nhân quen thuộc: LR quá cao, batch data có vấn đề, load imbalance trong MoE, hoặc lỗi storage/hạ tầng.</p>',
+    doc: links(['ar-spike-playbook', 'Loss-spike playbook'], ['f-usual-suspects', 'Usual suspects']) });
+
+  /* ================= Hình 10: GRPO ================= */
+  const RIGHT = 408, WRONG = [418, 398, 428, 388, 412, 404, 480];
+  let G = 4, grMode = 'grpo', rew = [1, 0, 0, 1];
+  const stats = () => { const mean = rew.reduce((a, b) => a + b, 0) / G; const std = Math.sqrt(rew.reduce((a, r) => a + (r - mean) ** 2, 0) / G); return { mean, std }; };
+  const advs = () => { const { mean, std } = stats(); return rew.map((r) => grMode === 'dr' ? r - mean : std === 0 ? 0 : (r - mean) / std); };
+  function grDraw() {
+    $$('.gr-cells').forEach((c) => c.style.setProperty('--g', G));
+    $('#gr-rolls').innerHTML = rew.map((r, i) => `<button class="roll" data-i="${i}" title="Bấm để đổi đúng ↔ sai">y${i + 1}<span class="ans">${r ? RIGHT : WRONG[i % WRONG.length]}</span></button>`).join('');
+    $('#gr-rw').innerHTML = rew.map((r) => `<div class="rw ${r ? 'ok' : 'no'}">${r}</div>`).join('');
+    const { mean, std } = stats(), A = advs(), mx = Math.max(1, ...A.map(Math.abs));
+    $('#gr-stats').textContent = `mean = ${TQ.fmt(mean, 3)}   std = ${TQ.fmt(std, 3)}   Â = ${grMode === 'dr' ? 'r − mean' : '(r − mean) / std'}`;
+    $('#gr-adv').innerHTML = A.map((a) => { const h = Math.abs(a) / mx * 40; return `<div class="advcell"><div class="zero"></div><div class="ab ${a >= 0 ? 'pos' : 'neg'}" style="${a >= 0 ? 'bottom:50%' : 'top:50%'};height:${h}%"></div><span class="av">${a > 0 ? '+' : ''}${TQ.fmt(a, 2)}</span></div>`; }).join('');
+    const dead = A.every((a) => a === 0);
+    $('#gr-upd').innerHTML = dead
+      ? '<span class="chip chip--bad">không có gradient</span> Mọi câu cùng reward → advantage đều bằng 0 → cả nhóm rollout bị phí. Đây là lý do lọc bài theo độ khó (chỉ giữ bài có solve rate ở giữa, ví dụ 2/8 đến 6/8).'
+      : '<span class="chip chip--tip">đẩy lên</span> xác suất mọi token của câu có Â > 0, <span class="chip chip--bad">đẩy xuống</span> câu có Â < 0. Ratio π_θ/π_old bị clip trong [1−ε, 1+ε], kèm phạt KL với model tham chiếu (DAPO bỏ KL).';
+    $$('#gr-rolls .roll').forEach((b) => b.addEventListener('click', () => { const i = +b.dataset.i; rew[i] = 1 - rew[i]; grDraw(); grPanel(); }));
+  }
+  function grPanel() {
+    const { mean, std } = stats();
+    const extra = grMode === 'dr'
+      ? '<p><span class="k">Dr. GRPO</span> bỏ phép chia std (và chia độ dài câu). Lý do: chia std làm bài quá dễ/quá khó được cân nặng hơn bài vừa sức. Với reward 0/1, std = √(p(1−p)): p = 0,5 → advantage ×2; p = 1/16 → ×4,1.</p>'
+      : '<p><span class="k">GRPO</span> chia cho std của nhóm. Ví dụ tài liệu: reward [1, 0, 0, 1] → mean 0,5, std 0,5 → advantage [+1, −1, −1, +1].</p>';
+    $('#gr-panel').innerHTML = TQ.renderItem({ eyebrow: 'Nhóm hiện tại', title: `${rew.filter(Boolean).length}/${G} câu đúng · solve rate ${TQ.fmt(mean * 100, 0)}%`,
+      chips: [[std === 0 ? 'gradient chết' : 'có tín hiệu học', std === 0 ? 'bad' : 'tip']],
+      html: extra + '<p>Không cần value model (critic) to bằng policy như PPO: baseline chính là trung bình nhóm, mọi token của một câu dùng chung advantage.</p><p>Thử: bấm "Cho tất cả đúng" để thấy vì sao bài quá dễ không dạy được gì.</p>',
+      doc: links(['e-rl', 'RL & GRPO'], ['pt-grpo-variants', 'Dr. GRPO, DAPO, GSPO'], ['f-online-filtering', 'Lọc theo độ khó']) });
+  }
+  $$('[data-g]').forEach((b) => b.addEventListener('click', () => { G = +b.dataset.g; $$('[data-g]').forEach((x) => x.classList.toggle('is-on', x === b)); rew = Array.from({ length: G }, (_, i) => (G === 4 ? [1, 0, 0, 1][i] : [1, 0, 1, 0, 0, 1, 0, 0][i])); grDraw(); grPanel(); }));
+  $$('[data-mode]').forEach((b) => b.addEventListener('click', () => { grMode = b.dataset.mode; $$('[data-mode]').forEach((x) => x.classList.toggle('is-on', x === b)); grDraw(); grPanel(); }));
+  $('#gr-all').addEventListener('click', () => { rew = rew.map(() => 1); grDraw(); grPanel(); });
+  grDraw(); grPanel();
+  TQ.stepper('#gr-root', [
+    { title: 'Prompt', text: 'Một bài có đáp án kiểm chứng được. RLVR dùng verifier thay vì reward model học được, nên reward ổn định và khó bị "hack".' },
+    { title: 'Sample G câu trả lời', text: 'Policy (chính là LLM) sinh G rollout cho cùng prompt. Đây là phần tốn thời gian nhất của RL.' },
+    { title: 'Verifier chấm', text: 'Đáp án khớp → 1, sai → 0. Bấm vào một câu trả lời ở bước 2 để đổi nó.' },
+    { title: 'Thống kê nhóm', text: 'Tính mean (và std nếu là GRPO gốc) của reward trong nhóm. Đây là baseline thay cho critic.' },
+    { title: 'Advantage', text: 'Câu tốt hơn trung bình nhóm có Â dương (xanh), kém hơn có Â âm (đỏ).' },
+    { title: 'Cập nhật', text: 'Gradient đẩy xác suất token của câu Â > 0 lên, Â < 0 xuống, có clip và phạt KL. Rồi lặp lại với prompt mới.' },
+  ]);
+  pipeDraw();
+})();
+</script>
+</body>
+</html>

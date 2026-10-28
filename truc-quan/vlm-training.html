@@ -1,0 +1,1182 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VLM Training trực quan</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="shared.css">
+<style>
+/* Trang VLM: mỗi Hình = một thao tác (bước, bấm, kéo). Màu chữ trên thanh đậm dùng --on-strong cho cả 2 theme. */
+:root{ --on-strong:#ffffff; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --on-strong:#16181c; } }
+:root[data-theme="dark"]{ --on-strong:#16181c; }
+.bar>span{color:var(--on-strong)}
+
+/* Hình 1 — hành trình ảnh */
+.journey{display:flex;flex-wrap:wrap;align-items:center;gap:10px 8px}
+.jcol{display:grid;gap:5px;justify-items:center;text-align:center;font-size:12px;line-height:1.35;min-width:0}
+.jcol b{font-size:13px}
+.jcol span{color:var(--muted);max-width:150px}
+.pic{display:grid;grid-template-columns:repeat(8,1fr);width:120px;aspect-ratio:1;border-radius:4px;overflow:hidden}
+.pic.split{gap:2px;overflow:visible;border-radius:0}
+.pic i{display:block}
+.c-sky{background:var(--note-bg)} .c-sun{background:var(--warn)} .c-hill{background:var(--tip)} .c-ground{background:var(--khaki)}
+.pic.split i{border-radius:2px;outline:1px solid var(--border)}
+.blockbox{border:1.5px solid var(--border);border-radius:9px;padding:10px 12px;background:var(--surface-2);display:grid;gap:2px;justify-items:center;font-weight:700;font-size:13px}
+.blockbox small{font-weight:500;color:var(--muted);font-size:11.5px}
+.blockbox.vit{border-color:var(--note)} .blockbox.con{border-color:var(--accent)} .blockbox.llm{border-color:var(--ex)}
+.vecs{display:grid;grid-template-columns:repeat(8,7px);gap:3px}
+.vecs i{display:block;height:38px;border-radius:2px;background:linear-gradient(var(--note),var(--ex))}
+.seq{display:flex;flex-wrap:wrap;gap:3px;max-width:260px;justify-content:center}
+.tok{display:inline-flex;align-items:center;font-family:var(--mono);font-size:11.5px;padding:2px 6px;border-radius:5px;border:1px solid var(--border);background:var(--surface-2);line-height:1.5;white-space:nowrap}
+.tok.img{background:var(--note-bg);color:var(--note);border-color:transparent}
+.tok.sp{background:var(--ex-bg);color:var(--ex);border-color:transparent}
+.tok.ans{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.cmp{display:grid;gap:10px;margin-top:14px}
+.cmp .row{display:grid;grid-template-columns:80px minmax(0,1fr);gap:10px;align-items:center;font-size:13px}
+
+/* Hình 2 — máy tính token */
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.outgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-block:6px 12px}
+.stat{background:var(--surface-2);border-radius:8px;padding:10px 12px;display:grid;gap:2px}
+.stat .lbl{font-size:12px;color:var(--muted)}
+.stat .v{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.stat .v small{font-size:12px;font-weight:500;color:var(--muted)}
+.hbars{display:grid;gap:6px;font-size:12.5px}
+.hbars .r{display:grid;grid-template-columns:150px minmax(0,1fr) 64px;gap:8px;align-items:center}
+.hbars .track{height:14px;background:var(--surface-2);border-radius:4px;overflow:hidden}
+.hbars .fill{height:100%;background:var(--accent);border-radius:4px;transition:width .35s}
+.hbars .num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+.hbars .r.cur .fill{background:var(--ex)}
+@media (max-width:520px){.hbars .r{grid-template-columns:96px minmax(0,1fr) 54px}}
+.svgwrap{background:var(--surface-2);border-radius:8px;padding:10px;display:flex;justify-content:center}
+.svgwrap svg{max-width:100%;height:auto}
+.ck{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+
+/* Hình 3 — họ kiến trúc */
+.fam{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:560px){.fam{grid-template-columns:minmax(0,1fr)}}
+.mini{display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:11.5px;color:var(--muted);margin-top:6px}
+
+/* Hình 4 — ma trận contrastive */
+table.mx{border-collapse:separate;border-spacing:4px;font-family:var(--mono);font-size:12.5px}
+.mx th{font-family:var(--font);font-size:11.5px;color:var(--muted);font-weight:600;padding:2px 6px}
+.mx td{width:78px;height:54px;text-align:center;border-radius:7px;border:1.5px solid var(--border);font-variant-numeric:tabular-nums;line-height:1.25}
+.mx td.diag{border-color:var(--accent)}
+.mx td small{display:block;color:var(--muted);font-size:10.5px}
+.mx td.rowsel{box-shadow:0 0 0 2px color-mix(in srgb,var(--ex) 40%,transparent)}
+.readout{font-size:13.5px;display:grid;gap:4px}
+
+/* Hình 5 — connector */
+.cx{display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:center;margin-top:14px}
+.pg{display:grid;gap:2px}
+.pg i{display:block;border-radius:2px}
+.pg.in{grid-template-columns:repeat(8,16px)} .pg.in i{height:16px}
+.cell-out{display:flex;border-radius:3px;overflow:hidden;outline:1.5px solid var(--text)}
+.cell-out i{flex:1;border-radius:0}
+.qchip{font-family:var(--mono);font-size:12px;padding:6px 10px;border-radius:7px;background:var(--ex-bg);color:var(--ex);font-weight:600}
+.cxlabel{font-size:12px;color:var(--muted);text-align:center}
+.k-n{background:var(--note)} .k-t{background:var(--tip)} .k-w{background:var(--warn)} .k-e{background:var(--ex)}
+.k-l{background:var(--accent)}
+
+/* Hình 6 — stage */
+.stagepills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.stagepills span{font-size:12.5px;font-weight:600;padding:5px 10px;border-radius:999px;border:1.5px solid var(--border);color:var(--muted)}
+.stagepills span.hl{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.blocks3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:560px){.blocks3{grid-template-columns:minmax(0,1fr)}}
+.blk{border:1.5px solid var(--border);border-radius:10px;padding:12px;display:grid;gap:4px;transition:background .3s,border-color .3s}
+.blk .bn{font-weight:700}
+.blk .bs{font-size:13px;font-weight:600}
+.blk .lr{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.blk.st-frozen{background:var(--note-bg);border-color:var(--note)} .blk.st-frozen .bs{color:var(--note)}
+.blk.st-train{background:var(--accent-soft);border-color:var(--accent)} .blk.st-train .bs{color:var(--accent)}
+.blk.st-part{background:var(--warn-bg);border-color:var(--warn);border-style:dashed} .blk.st-part .bs{color:var(--warn)}
+.stdata{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.legend2{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--muted);margin-top:10px}
+.legend2 b{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1.5px solid}
+
+/* Hình 7 — mask */
+.tokline{display:flex;flex-wrap:wrap;gap:4px}
+.tokline button{appearance:none;font:500 12.5px var(--mono);cursor:pointer;padding:5px 8px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);position:relative}
+.tokline button.loss{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.tokline button.img{border-style:dashed}
+.tokline button.sel{outline:2.5px solid var(--text);outline-offset:1px}
+.tokline button:focus-visible{outline:2.5px solid var(--accent);outline-offset:2px}
+.maskrow{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.tokinfo{margin-top:10px}
+
+/* Hình 9 — IoU */
+.cols3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.cols3{grid-template-columns:minmax(0,1fr)}}
+.colh{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.stack{display:grid;gap:6px}
+.iou{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:center;margin-top:16px;padding-top:16px;border-top:1px dashed var(--border)}
+@media (max-width:640px){.iou{grid-template-columns:minmax(0,1fr)}}
+
+/* Hình 10 — GPU */
+.gpus{display:grid;gap:8px}
+.gpu{display:grid;grid-template-columns:56px minmax(0,1fr);gap:8px;align-items:center;font-size:12.5px;font-family:var(--mono)}
+.gpu .tr{display:flex;height:22px;border-radius:5px;overflow:hidden;background:var(--surface-2)}
+.gpu .work{background:var(--note);transition:flex-basis .4s}
+.gpu .wait{background:repeating-linear-gradient(45deg,var(--border) 0 6px,transparent 6px 12px);transition:flex-basis .4s}
+.order{counter-reset:o;display:grid;gap:8px}
+.order .node{grid-template-columns:28px minmax(0,1fr);align-items:center;column-gap:10px}
+.order .node::before{counter-increment:o;content:counter(o);grid-row:1/3;width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-weight:700;display:grid;place-items:center;font-size:13px}
+
+.grid-nodes{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.grp{display:grid;gap:8px}
+.grp+.grp{margin-top:14px}
+.tabs [data-opt]{appearance:none;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;padding:7px 14px;border-radius:999px;border:1.5px solid var(--border);background:var(--surface);color:var(--muted)}
+.tabs [data-opt]:hover{color:var(--text)}
+.tabs [data-opt].is-active{background:var(--text);border-color:var(--text);color:var(--bg)}
+.tabs [data-opt]:focus-visible{outline:2.5px solid var(--accent);outline-offset:2px}
+.subhead{font-size:13.5px;font-weight:700;margin:16px 0 8px}
+.sm{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="crumb" href="index.html">← Bản đồ trực quan</a>
+    <h1>VLM Training, xem bằng hình</h1>
+    <p class="lead">Mười hai hình đi theo đúng mạch của tài liệu VLM: một bức ảnh đi vào model ra sao, tốn bao nhiêu token, train theo giai đoạn nào, cần dữ liệu gì, sửa "bịa" thế nào, và tối ưu hệ thống ra sao. Hình nào cũng bấm, kéo hoặc chạy từng bước được. Mỗi giải thích có link về đúng mục trong tài liệu gốc.</p>
+    <div class="doc-row" data-doclinks="vlm"></div>
+  </header>
+
+  <nav class="jump" aria-label="Các hình">
+    <a href="#s-journey">1 · Ảnh đi qua VLM</a>
+    <a href="#s-tokens">2 · Đếm token ảnh</a>
+    <a href="#s-families">3 · Bốn họ kiến trúc</a>
+    <a href="#s-contrastive">4 · CLIP vs SigLIP</a>
+    <a href="#s-connector">5 · Connector</a>
+    <a href="#s-stages">6 · Giai đoạn train</a>
+    <a href="#s-mask">7 · Loss masking</a>
+    <a href="#s-data">8 · Dữ liệu</a>
+    <a href="#s-post">9 · Post-training</a>
+    <a href="#s-systems">10 · Hệ thống</a>
+    <a href="#s-eval">11 · Đánh giá & inference</a>
+    <a href="#s-recipe">12 · Recipe & lộ trình</a>
+  </nav>
+
+  <!-- ============ HÌNH 1 ============ -->
+  <section class="viz" id="s-journey">
+    <div class="viz-head">
+      <span class="fig">Hình 1</span>
+      <h2>Một bức ảnh đi qua VLM như thế nào</h2>
+      <p class="sub">Ví dụ LLaVA-1.5: CLIP ViT-L/14 ở 336px → MLP 2 lớp → LLM 7B. Ảnh vẽ 8×8 ô cho dễ nhìn; thật là 24×24 = 576 ô.</p>
+      <span class="hint">Bấm "Tiếp ▶" để đi từng bước, hoặc "Tự chạy"</span>
+    </div>
+    <div class="canvas" id="journey">
+      <div data-stepbar></div>
+      <div class="journey">
+        <div class="jcol" data-on="1-"><div class="pic" id="pic1"></div><b>Ảnh</b><span>336×336×3 pixel</span></div>
+        <span class="arrow" data-on="2-">→</span>
+        <div class="jcol" data-on="2-"><div class="pic split" id="pic2"></div><b>Cắt patch</b><span>P = 14 → 24×24 = 576 patch, mỗi patch 588 số</span></div>
+        <span class="arrow" data-on="3-">→</span>
+        <div class="jcol" data-on="3-"><div class="blockbox vit">ViT<small>không causal mask</small></div><div class="vecs" id="vecs"></div><b>Vision encoder</b><span>576 vector × 1024 chiều</span></div>
+        <span class="arrow" data-on="4-">→</span>
+        <div class="jcol" data-on="4-"><div class="blockbox con">MLP 2 lớp<small>1024 → 4096</small></div><b>Connector</b><span>~21M tham số, giữ đủ 576 token</span></div>
+        <span class="arrow" data-on="5-">→</span>
+        <div class="jcol" data-on="5-"><div class="seq"><span class="tok sp">&lt;image&gt;</span><span class="tok img">img</span><span class="tok img">img</span><span class="tok img">… ×576</span><span class="tok">Ảnh</span><span class="tok">có</span><span class="tok">gì?</span></div><b>Chuỗi vào LLM</b><span>token ảnh + vài chục token chữ</span></div>
+        <span class="arrow" data-on="6">→</span>
+        <div class="jcol" data-on="6"><div class="blockbox llm">LLM 7B<small>decoder</small></div><div class="seq"><span class="tok ans">Một</span><span class="tok ans">ngọn</span><span class="tok ans">đồi</span><span class="tok ans">xanh…</span></div><b>Sinh câu trả lời</b><span>loss chỉ tính trên chữ</span></div>
+      </div>
+      <div data-caption class="caption"></div>
+      <div class="cmp">
+        <div class="row"><b>Tham số</b><div><div class="bar"><span style="flex-basis:95.6%;background:var(--ex)">LLM 7B · &gt;95%</span><span style="flex-basis:4.1%;background:var(--note)" title="Vision encoder ~0,3B"></span><span style="flex-basis:0.3%;background:var(--accent)" title="Connector ~20M"></span></div></div></div>
+        <div class="row"><b>Token</b><div><div class="bar"><span style="flex-basis:95%;background:var(--note)">576 token ảnh</span><span style="flex-basis:5%;background:var(--muted)" title="Câu hỏi: vài chục token"></span></div></div></div>
+        <p class="sm">Tham số dồn vào LLM, nhưng token lại dồn vào ảnh. Đây là lý do cả tài liệu xoay quanh chuyện "bớt token ảnh". (Thanh token: câu hỏi giả định ~30 token, tài liệu ghi "vài chục".) <span id="j-doc"></span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HÌNH 2 ============ -->
+  <section class="viz" id="s-tokens">
+    <div class="viz-head">
+      <span class="fig">Hình 2</span>
+      <h2>Một ảnh tốn bao nhiêu token?</h2>
+      <p class="sub">Cùng một ảnh, số token có thể chênh nhau tới ~28 lần tuỳ cách xử lý. Đây là núm vặn lớn nhất giữa chất lượng (nhất là đọc chữ) và chi phí.</p>
+      <span class="hint">Chọn một cách xử lý có sẵn, rồi kéo kích thước ảnh, số ảnh, context</span>
+    </div>
+    <div class="canvas" id="tokcalc">
+      <div class="presets" id="tk-presets"></div>
+      <div class="controls">
+        <div class="ctl"><label for="tk-w">Rộng ảnh (px)</label><input type="number" id="tk-w" min="56" max="8000" step="8" value="1344"></div>
+        <div class="ctl"><label for="tk-h">Cao ảnh (px)</label><input type="number" id="tk-h" min="56" max="8000" step="8" value="896"></div>
+        <div class="ctl"><label for="tk-mode">Cách xử lý</label>
+          <select id="tk-mode">
+            <option value="square">Ép về hình vuông (LLaVA-1.5)</option>
+            <option value="tile">Chia ô + ảnh toàn cảnh (AnyRes)</option>
+            <option value="native">Độ phân giải gốc (Qwen2-VL)</option>
+            <option value="resampler">Resampler cố định M token</option>
+          </select></div>
+        <div class="ctl"><label for="tk-p">Patch size P</label><select id="tk-p"><option>14</option><option>16</option></select></div>
+        <div class="ctl" id="tk-s-wrap"><label for="tk-s">Cạnh ảnh encoder / ô (px)</label><select id="tk-s"><option>224</option><option>336</option><option>364</option><option>384</option><option>448</option><option>512</option></select></div>
+        <div class="ctl" id="tk-r-wrap"><label for="tk-r">Gộp r×r (pixel shuffle / merge)</label><select id="tk-r"><option value="1">r = 1 (không gộp)</option><option value="2">r = 2 (÷4)</option><option value="4">r = 4 (÷16)</option></select></div>
+        <div class="ctl" id="tk-max-wrap"><label for="tk-max">Tối đa số ô <output id="tk-max-o"></output></label><input type="range" id="tk-max" min="1" max="40" value="12"></div>
+        <div class="ctl" id="tk-thumb-wrap"><span class="ck"><input type="checkbox" id="tk-thumb" checked> <label for="tk-thumb">Thêm ảnh toàn cảnh</label></span></div>
+        <div class="ctl" id="tk-m-wrap"><label for="tk-m">Số query M <output id="tk-m-o"></output></label><input type="range" id="tk-m" min="16" max="256" step="16" value="64"></div>
+        <div class="ctl"><label for="tk-n">Số ảnh trong prompt <output id="tk-n-o"></output></label><input type="range" id="tk-n" min="1" max="10" value="1"></div>
+        <div class="ctl"><label for="tk-ctx">Context window</label><select id="tk-ctx"><option value="4096">4.096</option><option value="8192" selected>8.192</option><option value="32768">32.768</option><option value="131072">131.072</option></select></div>
+      </div>
+      <div class="outgrid">
+        <div class="stat"><span class="lbl">Token ảnh / ảnh (vào LLM)</span><span class="v" id="tk-out-v">–</span></div>
+        <div class="stat"><span class="lbl">Patch qua ViT / ảnh</span><span class="v" id="tk-out-p">–</span></div>
+        <div class="stat"><span class="lbl">KV cache cho phần ảnh</span><span class="v" id="tk-out-kv">–</span></div>
+      </div>
+      <div class="formula" id="tk-formula"></div>
+      <div style="margin-top:12px"><div class="bar" id="tk-ctxbar"></div><div class="legend"><span><i style="background:var(--note)"></i>token ảnh</span><span><i style="background:var(--surface-2);border:1px solid var(--border)"></i>còn lại cho chữ</span><span id="tk-ctxnote"></span></div></div>
+      <div class="viz-grid" style="margin-top:14px">
+        <div><div class="subhead" style="margin-top:0">Ảnh được cắt thế nào</div><div class="svgwrap" id="tk-svg"></div></div>
+        <div><div class="subhead" style="margin-top:0">Cùng ảnh này, 5 cách trong tài liệu</div><div class="hbars" id="tk-cmp"></div></div>
+      </div>
+      <p class="sm" style="margin-top:10px">KV cache tính theo ví dụ trong tài liệu: LLM 7–8B, 32 layer, GQA 8 KV head, head dim 128, bf16 → 128 KB mỗi token. Cách chia ô đã đơn giản hoá như bảng trong tài liệu. <span id="tk-doc"></span></p>
+    </div>
+  </section>
+
+  <!-- ============ HÌNH 3 ============ -->
+  <section class="viz" id="s-families">
+    <div class="viz-head">
+      <span class="fig">Hình 3</span>
+      <h2>Bốn họ kiến trúc: ảnh vào LLM ở chỗ nào?</h2>
+      <span class="hint">Bấm từng họ để so ưu, nhược và khi nào chọn</span>
+    </div>
+    <div class="viz-grid" id="fam">
+      <div class="canvas">
+        <div class="fam">
+          <button class="node" data-k="seq"><span class="n-tag">Phổ biến nhất</span><span class="n-t">Ghép vào chuỗi (LLaVA)</span><span class="mini">ảnh → ViT → MLP → <span class="tok img">img</span><span class="tok img">img</span><span class="tok">chữ</span> → LLM</span></button>
+          <button class="node" data-k="xattn"><span class="n-tag">Giữ LLM nguyên vẹn</span><span class="n-t">Cross-attention (Flamingo, Llama 3-V)</span><span class="mini"><span class="tok">chữ</span> → LLM ⇄ lớp cross-attn ← ảnh</span></button>
+          <button class="node" data-k="early"><span class="n-tag">Hiểu và sinh ảnh</span><span class="n-t">Early fusion (Chameleon)</span><span class="mini">ảnh → VQ tokenizer → <span class="tok sp">tok</span><span class="tok">chữ</span> chung vocab → 1 Transformer</span></button>
+          <button class="node" data-k="free"><span class="n-tag">Nghiên cứu</span><span class="n-t">Encoder-free (Fuyu, EVE)</span><span class="mini">patch pixel → 1 ma trận → decoder</span></button>
+        </div>
+        <div class="callout callout--note" style="margin-top:12px">Idefics2 so trực tiếp: <b>freeze backbone</b> thì cross-attention tốt hơn; <b>cho train backbone</b> (LoRA để ổn định) thì ghép chuỗi tốt hơn. Vì vậy đa số VLM mở chọn ghép chuỗi.</div>
+      </div>
+      <aside class="panel" data-panel></aside>
+    </div>
+  </section>
+
+  <!-- ============ HÌNH 4 ============ -->
+  <section class="viz" id="s-contrastive">
+    <div class="viz-head">
+      <span class="fig">Hình 4</span>
+      <h2>CLIP và SigLIP dạy encoder "nhìn" bằng caption</h2>
+      <p class="sub">Batch 3 cặp (ảnh, caption). Hàng 1 lấy đúng ví dụ số trong tài liệu (cosine 0,30 · 0,10 · 0,05); hàng 2–3 là số giả định để đủ ma trận.</p>
+      <span class="hint">Đổi tab CLIP / SigLIP, kéo temperature, bấm một hàng để xem phép tính</span>
+    </div>
+    <div class="canvas" id="contra">
+      <div class="tabs" role="tablist"><button data-tab="clip">CLIP · softmax theo hàng</button><button data-tab="siglip">SigLIP · sigmoid từng ô</button></div>
+      <div data-pane="clip">
+        <div class="controls"><div class="ctl"><label for="c-tau">Temperature τ <output id="c-tau-o"></output></label><input type="range" id="c-tau" min="0.02" max="1" step="0.01" value="0.1"></div></div>
+      </div>
+      <div data-pane="siglip">
+        <div class="controls">
+          <div class="ctl"><label for="s-t">Temperature t (nhân) <output id="s-t-o"></output></label><input type="range" id="s-t" min="1" max="100" step="1" value="10"></div>
+          <div class="ctl"><label for="s-b">Bias b <output id="s-b-o"></output></label><input type="range" id="s-b" min="-15" max="5" step="0.5" value="-10"></div>
+        </div>
+      </div>
+      <div class="viz-grid">
+        <div class="tbl-wrap"><table class="mx" id="mx"></table></div>
+        <div class="readout" id="mx-read"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HÌNH 5 ============ -->
+  <section class="viz" id="s-connector">
+    <div class="viz-head">
+      <span class="fig">Hình 5</span>
+      <h2>Connector: "phiên dịch" và nén token</h2>
+      <p class="sub">Bên trái là 8×8 = 64 patch ra khỏi ViT (minh hoạ). Bên phải là thứ LLM nhận được. Màu giúp theo dõi patch nào đi vào token nào.</p>
+      <span class="hint">Bấm từng kiểu connector để xem lưới token biến đổi</span>
+    </div>
+    <div class="viz-grid" id="conn">
+      <div class="canvas">
+        <div class="grid-nodes">
+          <button class="node" data-k="mlp"><span class="n-t">MLP 2 lớp</span><span class="n-s">N → N, không nén</span></button>
+          <button class="node" data-k="ps2"><span class="n-t">Pixel shuffle r=2</span><span class="n-s">N → N/4 (InternVL, Idefics3)</span></button>
+          <button class="node" data-k="ps4"><span class="n-t">Pixel shuffle r=4</span><span class="n-s">N → N/16 (SmolVLM)</span></button>
+          <button class="node" data-k="merge"><span class="n-t">Merge 2×2 + MLP</span><span class="n-s">N → N/4 (Qwen2-VL)</span></button>
+          <button class="node" data-k="resampler"><span class="n-t">Perceiver resampler</span><span class="n-s">→ M cố định (64)</span></button>
+          <button class="node" data-k="qformer"><span class="n-t">Q-Former</span><span class="n-s">→ 32 query (BLIP-2)</span></button>
+          <button class="node" data-k="xattn"><span class="n-t">Lớp cross-attention</span><span class="n-s">không thêm token vào chuỗi</span></button>
+        </div>
+        <div class="cx">
+          <div><div class="pg in" id="cx-in"></div><div class="cxlabel">64 patch · d chiều</div></div>
+          <span class="arrow">→</span>
+          <div id="cx-out" style="display:grid;justify-items:center;gap:6px"></div>
+        </div>
+        <div id="cx-extra" style="margin-top:12px"></div>
+      </div>
+      <aside class="panel" data-panel></aside>
+    </div>
+  </section>
+
+  <!-- ============ HÌNH 6 ============ -->
+  <section class="viz" id="s-stages">
+    <div class="viz-head">
+      <span class="fig">Hình 6</span>
+      <h2>Train theo giai đoạn: khối nào đóng băng, khối nào mở</h2>
+      <p class="sub">Câu hỏi quan trọng nhất ở mỗi giai đoạn: mở nhiều thì học nhiều, nhưng dễ "quên" khả năng chữ vốn có.</p>
+      <span class="hint">Bấm "Tiếp ▶" để đi qua 5 giai đoạn; bên dưới bấm tên model để xem công thức thật</span>
+    </div>
+    <div class="canvas" id="stages">
+      <div data-stepbar></div>
+      <div class="stagepills"><span data-hl="1">Stage 1 · Alignment</span><span data-hl="2">Stage 2 · Multimodal PT</span><span data-hl="3">Stage 3 · Instruction SFT</span><span data-hl="4">Stage 3.5 · Long ctx / video</span><span data-hl="5">Post-train · DPO / RL</span></div>
+      <div class="blocks3">
+        <div class="blk" id="b-vit"><span class="bn">Vision encoder (ViT)</span><span class="bs"></span><span class="lr">LR ví dụ: 2e-6</span></div>
+        <div class="blk" id="b-proj"><span class="bn">Projector / connector</span><span class="bs"></span><span class="lr">LR ví dụ: 1e-4</span></div>
+        <div class="blk" id="b-llm"><span class="bn">LLM</span><span class="bs"></span><span class="lr">LR ví dụ: 1e-5</span></div>
+      </div>
+      <div class="stdata" id="st-data"></div>
+      <div class="legend2"><span><b style="background:var(--note-bg);border-color:var(--note)"></b>đóng băng</span><span><b style="background:var(--accent-soft);border-color:var(--accent)"></b>train</span><span><b style="background:var(--warn-bg);border-color:var(--warn);border-style:dashed"></b>tuỳ model / một phần</span><span>LR theo code mẫu trong tài liệu: η<sub>ViT</sub> ≪ η<sub>LLM</sub> ≤ η<sub>projector</sub></span></div>
+      <div data-caption class="caption"></div>
+    </div>
+    <div class="viz-grid" id="cases">
+      <div class="canvas">
+        <div class="subhead" style="margin-top:0">Công thức của các VLM tiêu biểu</div>
+        <div class="grid-nodes" id="case-nodes"></div>
+      </div>
+      <aside class="panel" data-panel></aside>
+    </div>
+  </section>
+
+  <!-- ============ HÌNH 7 ============ -->
+  <section class="viz" id="s-mask">
+    <div class="viz-head">
+      <span class="fig">Hình 7</span>
+      <h2>Loss masking: model chỉ học trên chữ nó phải sinh</h2>
+      <span class="hint">Đổi giữa SFT và caption, bấm vào từng token để xem nhãn của nó</span>
+    </div>
+    <div class="canvas" id="mask">
+      <div class="tabs" id="masktabs"><button data-opt="sft">Mẫu SFT (hội thoại)</button><button data-opt="cap">Mẫu caption (stage 1/2)</button></div>
+      <div class="tokline" id="tokline"></div>
+      <div class="maskrow" id="maskrow"></div>
+      <div class="callout callout--note tokinfo" id="tokinfo"></div>
+      <div class="formula" style="margin-top:12px">L = −(1 / Σ m_t) · Σ m_t · log p(x_t | x_&lt;t)      m_t = 1 nếu token thuộc lượt assistant, 0 nếu là token ảnh, prompt, system</div>
+      <div class="subhead">Cạm bẫy: chia trung bình kiểu nào?</div>
+      <p class="sm">Batch có 2 mẫu: mẫu A "Answer: yes" (2 token có loss) và mẫu B mô tả dài (500 token có loss). Bấm để đổi cách lấy trung bình.</p>
+      <div class="tabs" id="normtabs" style="margin-top:8px"><button data-opt="sample">Trung bình theo mẫu, rồi theo batch</button><button data-opt="token">Trung bình theo tổng token có loss</button></div>
+      <div class="bar" id="normbar"></div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>phần của mẫu A (ngắn)</span><span><i style="background:var(--note)"></i>phần của mẫu B (dài)</span></div>
+      <p class="sm" id="normtext" style="margin-top:8px"></p>
+    </div>
+  </section>
+
+  <!-- ============ HÌNH 8 ============ -->
+  <section class="viz" id="s-data">
+    <div class="viz-head">
+      <span class="fig">Hình 8</span>
+      <h2>Dữ liệu cho VLM: loại nào dạy điều gì, lọc ra sao</h2>
+      <p class="sub">Kiến trúc VLM đã hội tụ; phần lớn khác biệt giữa model mạnh và yếu nằm ở dữ liệu.</p>
+      <span class="hint">Bấm từng loại dữ liệu và từng bước lọc</span>
+    </div>
+    <div class="viz-grid" id="data">
+      <div class="canvas">
+        <div class="colh">Các loại dữ liệu</div>
+        <div class="grid-nodes">
+          <button class="node" data-k="cap"><span class="n-t">Caption</span><span class="n-s">alt-text → recaption</span></button>
+          <button class="node" data-k="inter"><span class="n-t">Interleaved</span><span class="n-s">ảnh xen giữa văn bản</span></button>
+          <button class="node" data-k="ocr"><span class="n-t">OCR · tài liệu · biểu đồ</span><span class="n-s">đọc chữ trong ảnh</span></button>
+          <button class="node" data-k="ground"><span class="n-t">Grounding · pointing</span><span class="n-s">chỉ vào vị trí</span></button>
+          <button class="node" data-k="video"><span class="n-t">Video</span><span class="n-s">tốn token nhất</span></button>
+          <button class="node" data-k="instr"><span class="n-t">Instruction</span><span class="n-s">hỏi–đáp về ảnh</span></button>
+          <button class="node" data-k="text"><span class="n-t">Text-only</span><span class="n-s">giữ năng lực chữ</span></button>
+        </div>
+        <div class="colh" style="margin-top:16px">Pipeline lọc</div>
+        <div class="flow">
+          <button class="node" data-k="f-clip"><span class="n-t">CLIP score</span><span class="n-s">ảnh khớp chữ?</span></button><span class="arrow">→</span>
+          <button class="node" data-k="f-dedup"><span class="n-t">Khử trùng ảnh</span><span class="n-s">pHash · embedding</span></button><span class="arrow">→</span>
+          <button class="node" data-k="f-safe"><span class="n-t">An toàn</span><span class="n-s">NSFW · PII · CSAM</span></button><span class="arrow">→</span>
+          <button class="node" data-k="f-decon"><span class="n-t">Chống lộ đề</span><span class="n-s">dedup với benchmark</span></button>
+        </div>
+        <div class="subhead">Trộn theo mẫu hay theo token? (MM1: caption 45 : interleaved 45 : text 10)</div>
+        <div class="tabs" id="mixtabs"><button data-opt="sample">Theo số mẫu</button><button data-opt="token">Theo tổng token</button></div>
+        <div class="bar" id="mixbar"></div>
+        <div class="controls" style="margin-top:10px"><div class="ctl"><label for="mix-t">Độ dài 1 mẫu text-only (giả định) <output id="mix-t-o"></output></label><input type="range" id="mix-t" min="200" max="4000" step="100" value="1000"></div></div>
+        <p class="sm" id="mixtext"></p>
+      </div>
+      <aside class="panel" data-panel></aside>
+    </div>
+  </section>
+
+  <!-- ============ HÌNH 9 ============ -->
+  <section class="viz" id="s-post">
+    <div class="viz-head">
+      <span class="fig">Hình 9</span>
+      <h2>Post-training: vì sao VLM "bịa", đo thế nào, sửa ra sao</h2>
+      <span class="hint">Đọc từ trái sang phải: nguyên nhân → cách đo → cách sửa. Bấm từng ô. Kéo hộp ở dưới để thấy reward IoU</span>
+    </div>
+    <div class="viz-grid" id="post">
+      <div class="canvas">
+        <div class="cols3">
+          <div><div class="colh">Nguyên nhân</div><div class="stack">
+            <button class="node" data-k="c-prior"><span class="n-t">Language prior quá mạnh</span></button>
+            <button class="node" data-k="c-cooc"><span class="n-t">Hay đi cùng nhau trong data</span></button>
+            <button class="node" data-k="c-cap"><span class="n-t">Caption train có chi tiết bịa</span></button>
+            <button class="node" data-k="c-long"><span class="n-t">Câu trả lời dài</span></button>
+            <button class="node" data-k="c-res"><span class="n-t">Độ phân giải thấp / nén mạnh</span></button>
+          </div></div>
+          <div><div class="colh">Đo</div><div class="stack">
+            <button class="node" data-k="m-chair"><span class="n-t">CHAIR</span><span class="n-s">caption tự do</span></button>
+            <button class="node" data-k="m-pope"><span class="n-t">POPE</span><span class="n-s">hỏi có/không</span></button>
+            <button class="node" data-k="m-more"><span class="n-t">AMBER, HallusionBench, MMHal-Bench</span></button>
+          </div></div>
+          <div><div class="colh">Sửa</div><div class="stack">
+            <button class="node" data-k="f-dpo"><span class="n-t">DPO với cặp tốt / bịa</span><span class="n-s">LLaVA-RLHF · RLHF-V · RLAIF-V</span></button>
+            <button class="node" data-k="f-mpo"><span class="n-t">MPO (InternVL)</span><span class="n-s">DPO + chất lượng + SFT</span></button>
+            <button class="node" data-k="f-rlvr"><span class="n-t">RL reward kiểm chứng</span><span class="n-s">toán · đếm · IoU · OCR</span></button>
+            <button class="node" data-k="f-think"><span class="n-t">Thinking with images</span><span class="n-s">tự crop / zoom</span></button>
+            <button class="node" data-k="f-gui"><span class="n-t">GUI agent</span><span class="n-s">nhìn màn hình rồi bấm</span></button>
+          </div></div>
+        </div>
+        <div class="iou">
+          <div class="svgwrap"><svg id="iou-svg" viewBox="0 0 320 210" width="320" height="210" role="img" aria-label="Hộp dự đoán và hộp thật"></svg></div>
+          <div>
+            <div class="controls">
+              <div class="ctl"><label for="iou-x">Dời hộp dự đoán <output id="iou-x-o"></output></label><input type="range" id="iou-x" min="-120" max="120" value="30"></div>
+              <div class="ctl"><label for="iou-s">Phóng to / thu nhỏ <output id="iou-s-o"></output></label><input type="range" id="iou-s" min="0.5" max="1.6" step="0.05" value="1"></div>
+            </div>
+            <div class="outgrid">
+              <div class="stat"><span class="lbl">IoU = giao / hợp</span><span class="v" id="iou-v">–</span></div>
+              <div class="stat"><span class="lbl">Reward liên tục</span><span class="v" id="iou-r1">–</span></div>
+              <div class="stat"><span class="lbl">Reward ngưỡng (IoU &gt; 0,5)</span><span class="v" id="iou-r2">–</span></div>
+            </div>
+            <p class="sm">Reward liên tục cho tín hiệu mịn hơn 1/0: lệch một chút vẫn được thưởng một phần.</p>
+          </div>
+        </div>
+      </div>
+      <aside class="panel" data-panel></aside>
+    </div>
+  </section>
+
+  <!-- ============ HÌNH 10 ============ -->
+  <section class="viz" id="s-systems">
+    <div class="viz-head">
+      <span class="fig">Hình 10</span>
+      <h2>Hệ thống: compute đi đâu, freeze tiết kiệm gì, GPU chờ nhau vì sao</h2>
+      <span class="hint">Chọn tab, bấm ví dụ A/B/C hoặc bật tắt từng khối</span>
+    </div>
+    <div class="canvas" id="sys">
+      <div class="tabs"><button data-tab="flops">Compute 1 mẫu</button><button data-tab="mem">Bộ nhớ khi freeze</button><button data-tab="imb">GPU chờ nhau</button><button data-tab="order">Thứ tự tối ưu</button></div>
+
+      <div data-pane="flops">
+        <div class="presets" id="fl-presets"></div>
+        <div class="controls">
+          <div class="ctl"><label for="fl-np">Patch / ảnh n_p <output id="fl-np-o"></output></label><input type="range" id="fl-np" min="256" max="4096" step="64" value="1024"></div>
+          <div class="ctl"><label for="fl-r">Pixel shuffle r</label><select id="fl-r"><option value="1">1 (không nén)</option><option value="2">2</option><option value="4">4</option></select></div>
+          <div class="ctl"><label for="fl-llm">LLM (tỉ tham số) <output id="fl-llm-o"></output></label><input type="range" id="fl-llm" min="0.5" max="70" step="0.1" value="7"></div>
+          <div class="ctl"><label for="fl-nt">Token chữ n_t <output id="fl-nt-o"></output></label><input type="range" id="fl-nt" min="32" max="4096" step="32" value="512"></div>
+          <div class="ctl"><span class="ck"><input type="checkbox" id="fl-train" checked> <label for="fl-train">Encoder được train (×3)</label></span></div>
+        </div>
+        <div class="bar" id="fl-bar"></div>
+        <div class="legend"><span><i style="background:var(--note)"></i>encoder ~400M (27 layer, hidden 1152)</span><span><i style="background:var(--accent)"></i>LLM xử lý token ảnh</span><span><i style="background:var(--ex)"></i>LLM xử lý token chữ</span></div>
+        <div class="formula" id="fl-formula" style="margin-top:10px"></div>
+        <p class="sm" style="margin-top:8px">Công thức: C_enc ≈ k·(2·N_enc·n_p + 4·n_p²·d·L), k = 3 nếu train, 1 nếu freeze · C_LLM ≈ 6·N_LLM·(n_v + n_t), n_v = n_p / r². <span data-doc="v3-accounting"></span></p>
+      </div>
+
+      <div data-pane="mem">
+        <p class="sm">Bấm vào từng khối để đổi train ↔ đóng băng. Trainable tốn 16 byte/tham số (bf16 weight 2 + grad 2 + master fp32 4 + Adam m 4 + v 4), frozen chỉ 2 byte.</p>
+        <div class="blocks3" style="margin-top:10px" id="mem-blocks"></div>
+        <div style="margin-top:12px"><div class="big" id="mem-total">–</div><div class="sm">weights + grad + optimizer state (chưa tính activation)</div></div>
+        <div class="bar" id="mem-bar" style="margin-top:8px"></div>
+        <div class="callout callout--warn" style="margin-top:12px"><b>Cái bẫy:</b> đóng băng LLM không bớt activation. Gradient đi từ loss (đầu ra LLM) ngược về connector, nên phải xuyên qua cả LLM: activation của LLM vẫn phải lưu đủ. Encoder nằm ở đầu vào nên freeze nó thì dừng backward ngay ở đầu ra encoder, không cần lưu activation của encoder. <span data-doc="v3-freezing"></span></div>
+      </div>
+
+      <div data-pane="imb">
+        <p class="sm">4 GPU, mỗi GPU một micro-batch. Ai xong trước phải đứng chờ ở bước all-reduce. Hình minh hoạ, không phải số đo.</p>
+        <div class="tabs" id="imbtabs" style="margin-top:8px"><button data-opt="sample">Chia theo số mẫu</button><button data-opt="budget">Cân bằng theo ngân sách token + patch</button></div>
+        <div class="gpus" id="gpus"></div>
+        <div class="legend"><span><i style="background:var(--note)"></i>đang tính</span><span><i style="background:repeating-linear-gradient(45deg,var(--border) 0 3px,transparent 3px 6px)"></i>đứng chờ</span></div>
+        <p class="sm" id="imbtext" style="margin-top:8px"></p>
+      </div>
+
+      <div data-pane="order">
+        <div class="viz-grid" id="order">
+          <div class="order">
+            <button class="node" data-k="o1"><span class="n-t">Giảm số visual token vào LLM</span><span class="n-s">pixel shuffle, merge, giới hạn tile</span></button>
+            <button class="node" data-k="o2"><span class="n-t">Dataloader không nghẽn</span><span class="n-s">shard, decode GPU, đủ worker</span></button>
+            <button class="node" data-k="o3"><span class="n-t">Cân bằng compute giữa các rank</span><span class="n-s">ngân sách token + patch</span></button>
+            <button class="node" data-k="o4"><span class="n-t">Packing bằng varlen attention</span><span class="n-s">cu_seqlens, reset position id</span></button>
+            <button class="node" data-k="o5"><span class="n-t">Freeze hoặc cache encoder</span><span class="n-s">khi recipe cho phép</span></button>
+            <button class="node" data-k="o6"><span class="n-t">Checkpointing cho ViT</span><span class="n-s">nếu thiếu memory</span></button>
+          </div>
+          <aside class="panel" data-panel></aside>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HÌNH 11 ============ -->
+  <section class="viz" id="s-eval">
+    <div class="viz-head">
+      <span class="fig">Hình 11</span>
+      <h2>Đánh giá và inference: đo đúng, chạy nhanh</h2>
+      <p class="sub">Ô có nhãn "bộ tối thiểu" là bộ benchmark tài liệu gợi ý theo dõi trong lúc phát triển.</p>
+      <span class="hint">Bấm từng năng lực, từng cái bẫy, từng cách tăng tốc</span>
+    </div>
+    <div class="viz-grid" id="evalx">
+      <div class="canvas">
+        <div class="colh">Năng lực cần đo</div>
+        <div class="grid-nodes">
+          <button class="node" data-k="b-doc"><span class="n-tag">bộ tối thiểu</span><span class="n-t">Tài liệu · OCR</span><span class="n-s">DocVQA, OCRBench, TextVQA</span></button>
+          <button class="node" data-k="b-chart"><span class="n-tag">bộ tối thiểu</span><span class="n-t">Biểu đồ</span><span class="n-s">ChartQA</span></button>
+          <button class="node" data-k="b-know"><span class="n-tag">bộ tối thiểu</span><span class="n-t">Kiến thức + suy luận</span><span class="n-s">MMMU</span></button>
+          <button class="node" data-k="b-math"><span class="n-tag">bộ tối thiểu</span><span class="n-t">Toán trong ảnh</span><span class="n-s">MathVista</span></button>
+          <button class="node" data-k="b-hall"><span class="n-tag">bộ tối thiểu</span><span class="n-t">Hallucination</span><span class="n-s">POPE</span></button>
+          <button class="node" data-k="b-star"><span class="n-tag">bộ tối thiểu</span><span class="n-t">Bắt buộc nhìn ảnh</span><span class="n-s">MMStar</span></button>
+          <button class="node" data-k="b-gen"><span class="n-t">Tổng hợp · sơ đồ</span><span class="n-s">MMBench, MME, AI2D</span></button>
+          <button class="node" data-k="b-space"><span class="n-t">Không gian · thị giác thuần</span><span class="n-s">RealWorldQA, BLINK</span></button>
+          <button class="node" data-k="b-video"><span class="n-t">Video</span><span class="n-s">Video-MME</span></button>
+        </div>
+        <div class="colh" style="margin-top:16px">Cái bẫy khi đo</div>
+        <div class="grid-nodes">
+          <button class="node dashed" data-k="p-blind"><span class="n-t">Không cần nhìn cũng trả lời được</span></button>
+          <button class="node dashed" data-k="p-prompt"><span class="n-t">Prompt và cách trích đáp án</span></button>
+          <button class="node dashed" data-k="p-cont"><span class="n-t">Lộ đề (contamination)</span></button>
+          <button class="node dashed" data-k="p-judge"><span class="n-t">LLM-as-judge</span></button>
+        </div>
+        <div class="colh" style="margin-top:16px">Inference: prefill phình to vì token ảnh</div>
+        <div class="grid-nodes">
+          <button class="node" data-k="i-cost"><span class="n-t">Vì sao chậm</span><span class="n-s">TTFT, KV cache</span></button>
+          <button class="node" data-k="i-design"><span class="n-t">Ít token từ thiết kế</span></button>
+          <button class="node" data-k="i-prune"><span class="n-t">Cắt token lúc chạy</span><span class="n-s">FastV, ToMe</span></button>
+          <button class="node" data-k="i-cache"><span class="n-t">Cache ảnh lặp lại</span><span class="n-s">encoder cache, prefix cache</span></button>
+          <button class="node" data-k="i-batch"><span class="n-t">Batch encoder, tách pha</span></button>
+          <button class="node" data-k="i-quant"><span class="n-t">Quantize</span><span class="n-s">LLM mạnh, encoder nhẹ tay</span></button>
+          <button class="node" data-k="i-engine"><span class="n-t">Serving engine</span><span class="n-s">lệch tiền xử lý</span></button>
+        </div>
+      </div>
+      <aside class="panel" data-panel></aside>
+    </div>
+  </section>
+
+  <!-- ============ HÌNH 12 ============ -->
+  <section class="viz" id="s-recipe">
+    <div class="viz-head">
+      <span class="fig">Hình 12</span>
+      <h2>Tự xây một VLM nhỏ: recipe, lỗi hay gặp, lộ trình học</h2>
+      <span class="hint">Chọn tab, rồi bấm từng bước</span>
+    </div>
+    <div class="canvas" id="recipe">
+      <div class="tabs"><button data-tab="rec">Recipe khởi điểm</button><button data-tab="err">Triệu chứng → lỗi</button><button data-tab="road">Lộ trình học</button></div>
+      <div data-pane="rec">
+        <div class="viz-grid" id="rec-x">
+          <div>
+            <div class="colh">Kiến trúc</div>
+            <div class="flow">
+              <button class="node" data-k="a-enc"><span class="n-t">SigLIP</span><span class="n-s">encoder</span></button><span class="arrow">+</span>
+              <button class="node" data-k="a-con"><span class="n-t">Pixel shuffle + MLP</span><span class="n-s">connector</span></button><span class="arrow">+</span>
+              <button class="node" data-k="a-llm"><span class="n-t">LLM nhỏ 0,5–3B</span><span class="n-s">nền tốt</span></button>
+            </div>
+            <div class="flow" style="margin-top:8px">
+              <button class="node" data-k="a-res"><span class="n-t">Chia ô + ảnh toàn cảnh</span><span class="n-s">độ phân giải</span></button>
+              <button class="node" data-k="a-fus"><span class="n-t">Ghép vào chuỗi</span><span class="n-s">kiểu fusion</span></button>
+            </div>
+            <div class="colh" style="margin-top:16px">Các giai đoạn</div>
+            <div class="flow">
+              <button class="node" data-k="t1"><span class="n-tag">1</span><span class="n-t">Alignment</span></button><span class="arrow">→</span>
+              <button class="node" data-k="t2"><span class="n-tag">2</span><span class="n-t">Pre-train đa phương thức</span></button><span class="arrow">→</span>
+              <button class="node" data-k="t3"><span class="n-tag">3</span><span class="n-t">Instruction SFT</span></button><span class="arrow">→</span>
+              <button class="node dashed" data-k="t4"><span class="n-tag">tuỳ chọn</span><span class="n-t">Preference / RL</span></button>
+            </div>
+          </div>
+          <aside class="panel" data-panel></aside>
+        </div>
+      </div>
+      <div data-pane="err">
+        <div class="viz-grid" id="err-x">
+          <div class="grid-nodes" id="err-nodes"></div>
+          <aside class="panel" data-panel></aside>
+        </div>
+      </div>
+      <div data-pane="road">
+        <div class="viz-grid" id="road-x">
+          <div class="flow-v">
+            <button class="node" data-k="r1"><span class="n-tag">bước 1</span><span class="n-t">Nền tảng thị giác</span><span class="n-s">CNN → ViT → CLIP, SigLIP</span></button><span class="arrow">↓</span>
+            <button class="node" data-k="r2"><span class="n-tag">bước 2</span><span class="n-t">Kiến trúc VLM theo lịch sử</span><span class="n-s">Flamingo → BLIP-2 → LLaVA</span></button><span class="arrow">↓</span>
+            <button class="node" data-k="r3"><span class="n-tag">bước 3</span><span class="n-t">Điều gì thật sự quan trọng</span><span class="n-s">Idefics2, Cambrian-1</span></button><span class="arrow">↓</span>
+            <button class="node" data-k="r4"><span class="n-tag">bước 4</span><span class="n-t">Hệ thống hiện đại</span><span class="n-s">Qwen2.5-VL, InternVL3, Molmo, SmolVLM</span></button><span class="arrow">↓</span>
+            <button class="node" data-k="r5"><span class="n-tag">bước 5</span><span class="n-t">Tự làm: nanoVLM</span><span class="n-s">đọc và chạy từng dòng</span></button>
+          </div>
+          <aside class="panel" data-panel></aside>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>Nguồn: <code>vlm-training-vi.html</code> trong cùng thư mục cha.</span>
+    <span>Số liệu lấy từ tài liệu; chỗ nào là minh hoạ đều ghi rõ.</span>
+    <a href="index.html">← Về bản đồ trực quan</a>
+  </footer>
+</div>
+
+<script src="shared.js"></script>
+<script>
+(function () {
+  const $ = (s, r) => (r || document).querySelector(s);
+  const D = (id, label) => ['vlm', id, label];
+  const fmt = TQ.fmt;
+  const L = (id, label) => TQ.docLink('vlm', id, label);
+
+  // link tài liệu chèn trực tiếp vào chỗ [data-doc]
+  document.querySelectorAll('[data-doc]').forEach((el) => (el.innerHTML = L(el.dataset.doc, 'Đọc chi tiết')));
+
+  /* ---------------- Hình 1 ---------------- */
+  const scene = (x, y) => {
+    if (y <= 2 && x >= 5 && x <= 6 && y >= 1) return 'c-sun';
+    if (y >= 6) return 'c-ground';
+    if (y >= 4 && x <= 3 + (y - 4) * 2) return 'c-hill';
+    if (y === 5) return 'c-hill';
+    return 'c-sky';
+  };
+  ['#pic1', '#pic2'].forEach((sel) => {
+    let h = '';
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) h += `<i class="${scene(x, y)}"></i>`;
+    $(sel).innerHTML = h;
+  });
+  $('#vecs').innerHTML = '<i></i>'.repeat(8);
+  $('#j-doc').innerHTML = L('v-three-blocks', 'Kiến trúc 3 khối');
+  TQ.stepper('#journey', [
+    { title: 'Ảnh vào', text: 'Ảnh là lưới pixel H×W×3 (RGB). LLM chỉ đọc được token, nên cần một "con mắt" (vision encoder) và một "người phiên dịch" (connector). ' + L('v-three-blocks', 'Kiến trúc 3 khối') },
+    { title: 'Cắt thành patch', text: 'Cắt ảnh thành ô P×P không chồng nhau. P = 14, ảnh 336px → 24×24 = <b>576 patch</b>. Mỗi patch duỗi thành vector 14·14·3 = 588 số. Số patch tăng theo <b>bình phương</b> cạnh ảnh: 448px cho gấp 4 lần 224px. ' + L('v-vit-math', 'ViT từ đầu đến cuối') },
+    { title: 'Vision encoder (ViT)', text: 'Mỗi patch nhân ma trận E (trong code là Conv2d với kernel = stride = P) thành vector D chiều, cộng position embedding, rồi qua L block Transformer <b>không có causal mask</b>: mọi patch thấy mọi patch. VLM lấy cả chuỗi patch ở <b>layer áp chót</b>, bỏ [CLS]. ' + L('v-vit-math', 'ViT') },
+    { title: 'Connector', text: 'MLP 2 lớp + GELU chiếu từng patch từ 1024 lên 4096 chiều, bằng embedding của LLM 7B. Không nén: 576 vào, 576 ra. Chỉ khoảng 21M tham số. ' + L('v-mlp-projector', 'MLP projector') },
+    { title: 'Ghép vào chuỗi', text: '576 "token ảnh" được chèn vào chuỗi cùng token chữ. Một câu hỏi chỉ vài chục token, nên ảnh chiếm phần lớn chuỗi. Attention bậc hai theo độ dài nên ảnh lớn rất đắt. ' + L('v-families', 'Bốn họ kiến trúc') },
+    { title: 'LLM sinh câu trả lời', text: 'LLM xử lý cả chuỗi như chữ bình thường rồi sinh câu trả lời. Loss chỉ tính trên token chữ cần sinh; token ảnh là vector liên tục, không có "đáp án" trong vocab. ' + L('v-vs-llm', 'Thêm ảnh thay đổi gì') },
+  ]);
+
+  /* ---------------- Hình 2 ---------------- */
+  const KV_PER_TOKEN = 2 * 32 * 8 * 128 * 2; // 131072 byte
+  function tokCalc(o) {
+    const g = Math.floor(o.S / o.P);
+    if (o.mode === 'square') {
+      const side = Math.floor(g / o.r);
+      return { np: g * g, nv: side * side, f: `(${o.S}/${o.P})² = ${g}×${g} = ${g * g} patch` + (o.r > 1 ? ` → gộp ${o.r}×${o.r} → ${side}×${side} = ${side * side} token` : ` → MLP giữ nguyên ${g * g} token`) };
+    }
+    if (o.mode === 'tile') {
+      let cols = Math.max(1, Math.ceil(o.W / o.S)), rows = Math.max(1, Math.ceil(o.H / o.S));
+      while (cols * rows > o.maxT) { if (cols >= rows) cols--; else rows--; }
+      const per = Math.floor(g / o.r) ** 2;
+      const n = cols * rows + (o.thumb ? 1 : 0);
+      return { np: n * g * g, nv: n * per, cols, rows, per, n,
+        f: `lưới ${cols}×${rows} ô ${o.S}px${o.thumb ? ' + 1 ảnh toàn cảnh' : ''} = ${n} ô · mỗi ô (${o.S}/${o.P})² = ${g * g} patch → ÷${o.r * o.r} = ${per} token\n(${cols * rows}${o.thumb ? ' + 1' : ''}) × ${per} = ${n * per} token` };
+    }
+    if (o.mode === 'native') {
+      const u = o.P * o.r;
+      const c = Math.max(1, Math.round(o.W / u)), rr = Math.max(1, Math.round(o.H / u));
+      return { np: c * rr * o.r * o.r, nv: c * rr, cols: c, rows: rr, u,
+        f: `mỗi token = vùng ${u}×${u} px (patch ${o.P}, gộp ${o.r}×${o.r})\n(${o.W}/${u}) × (${o.H}/${u}) ≈ ${c} × ${rr} = ${c * rr} token  (+2 token đánh dấu đầu/cuối ảnh ở Qwen2-VL)` };
+    }
+    return { np: g * g, nv: o.M, f: `encoder ${o.S}px: (${o.S}/${o.P})² = ${g * g} patch → ${o.M} query học được hỏi ảnh bằng cross-attention → luôn ${o.M} token` };
+  }
+  const PRESETS = [
+    { name: 'LLaVA-1.5', o: { mode: 'square', P: 14, S: 336, r: 1 } },
+    { name: 'InternVL (ô 448, r=2)', o: { mode: 'tile', P: 14, S: 448, r: 2, thumb: true, maxT: 12 } },
+    { name: 'Qwen2-VL (gốc)', o: { mode: 'native', P: 14, r: 2 } },
+    { name: 'SmolVLM (ô 512, r=4)', o: { mode: 'tile', P: 16, S: 512, r: 4, thumb: true, maxT: 12 } },
+    { name: 'Resampler 64', o: { mode: 'resampler', P: 14, S: 384, M: 64 } },
+  ];
+  const el = (id) => document.getElementById(id);
+  const readTk = () => ({
+    W: Math.max(56, +el('tk-w').value || 1344), H: Math.max(56, +el('tk-h').value || 896),
+    mode: el('tk-mode').value, P: +el('tk-p').value, S: +el('tk-s').value, r: +el('tk-r').value,
+    thumb: el('tk-thumb').checked, maxT: +el('tk-max').value, M: +el('tk-m').value,
+    n: +el('tk-n').value, ctx: +el('tk-ctx').value,
+  });
+  el('tk-presets').innerHTML = PRESETS.map((p, i) => `<button class="btn" data-p="${i}">${p.name}</button>`).join('');
+  el('tk-presets').querySelectorAll('button').forEach((b) => (b.onclick = () => {
+    const o = PRESETS[+b.dataset.p].o;
+    el('tk-mode').value = o.mode; el('tk-p').value = o.P;
+    if (o.S) el('tk-s').value = o.S;
+    if (o.r) el('tk-r').value = o.r;
+    if (o.thumb !== undefined) el('tk-thumb').checked = o.thumb;
+    if (o.maxT) el('tk-max').value = o.maxT;
+    if (o.M) el('tk-m').value = o.M;
+    el('tk-presets').querySelectorAll('button').forEach((x) => x.classList.toggle('is-on', x === b));
+    renderTk();
+  }));
+  function drawTk(o, res) {
+    const W = 300, Hh = 190;
+    let s = '';
+    const box = (x, y, w, h, cls, extra) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="${cls}" ${extra || ''}/>`;
+    if (o.mode === 'square' || o.mode === 'resampler') {
+      const k = Math.min(200 / o.W, 170 / o.H);
+      s += box(10, 10, o.W * k, o.H * k, 'line', 'stroke-dasharray="4 3"');
+      s += `<text x="12" y="${Math.min(10 + o.H * k + 14, 205)}" class="t-muted" font-size="11">ảnh gốc ${o.W}×${o.H}</text>`;
+      s += box(225, 40, 80, 80, 'box');
+      s += `<text x="265" y="84" text-anchor="middle" font-size="11">${o.S}×${o.S}</text>`;
+      s += `<text x="265" y="138" text-anchor="middle" class="t-muted" font-size="11">${o.mode === 'square' ? 'bị ép vuông' : '→ ' + o.M + ' query'}</text>`;
+      return `<svg viewBox="0 0 320 210" width="320" height="210">${s}</svg>`;
+    }
+    if (o.mode === 'tile') {
+      const gw = res.cols * o.S, gh = res.rows * o.S;
+      const k = Math.min(220 / gw, 180 / gh);
+      for (let r = 0; r < res.rows; r++) for (let c = 0; c < res.cols; c++)
+        s += box(8 + c * o.S * k, 10 + r * o.S * k, o.S * k - 2, o.S * k - 2, 'box');
+      s += `<text x="8" y="${Math.min(10 + gh * k + 14, 205)}" class="t-muted" font-size="11">${res.cols}×${res.rows} ô ${o.S}px</text>`;
+      if (o.thumb) {
+        s += box(250, 30, 56, 56, 'box', 'stroke-dasharray="3 2"');
+        s += `<text x="278" y="104" text-anchor="middle" class="t-muted" font-size="10.5">toàn cảnh</text>`;
+      }
+      return `<svg viewBox="0 0 320 210" width="320" height="210">${s}</svg>`;
+    }
+    const k = Math.min(290 / o.W, 180 / o.H);
+    s += box(10, 10, o.W * k, o.H * k, 'box');
+    const cw = (o.W * k) / res.cols, ch = (o.H * k) / res.rows;
+    if (res.cols <= 160) for (let c = 1; c < res.cols; c++) s += `<line x1="${10 + c * cw}" y1="10" x2="${10 + c * cw}" y2="${10 + o.H * k}" stroke="var(--border)" stroke-width=".7"/>`;
+    if (res.rows <= 160) for (let r = 1; r < res.rows; r++) s += `<line x1="10" y1="${10 + r * ch}" x2="${10 + o.W * k}" y2="${10 + r * ch}" stroke="var(--border)" stroke-width=".7"/>`;
+    s += `<text x="10" y="${Math.min(10 + o.H * k + 14, 205)}" class="t-muted" font-size="11">mỗi ô lưới = 1 token (${res.u}×${res.u} px)</text>`;
+    return `<svg viewBox="0 0 320 210" width="320" height="210">${s}</svg>`;
+  }
+  function renderTk() {
+    const o = readTk();
+    const show = (id, on) => (el(id).hidden = !on);
+    show('tk-s-wrap', o.mode !== 'native');
+    show('tk-r-wrap', o.mode !== 'resampler');
+    show('tk-max-wrap', o.mode === 'tile');
+    show('tk-thumb-wrap', o.mode === 'tile');
+    show('tk-m-wrap', o.mode === 'resampler');
+    el('tk-max-o').textContent = o.maxT; el('tk-m-o').textContent = o.M; el('tk-n-o').textContent = o.n;
+    const res = tokCalc(o);
+    const total = res.nv * o.n;
+    el('tk-out-v').innerHTML = fmt(res.nv, 0) + (o.n > 1 ? ` <small>× ${o.n} ảnh = ${fmt(total, 0)}</small>` : '');
+    el('tk-out-p').textContent = fmt(res.np, 0);
+    el('tk-out-kv').textContent = TQ.bytes(total * KV_PER_TOKEN);
+    el('tk-formula').textContent = res.f;
+    const pct = Math.min(100, (total / o.ctx) * 100);
+    el('tk-ctxbar').innerHTML = `<span style="flex-basis:${pct}%;background:var(--note)">${pct >= 12 ? fmt(pct, 0) + '%' : ''}</span>`;
+    el('tk-ctxnote').innerHTML = total > o.ctx ? `<b style="color:var(--bad)">Vượt context ${fmt(o.ctx, 0)} token!</b>` : `ảnh chiếm ${fmt(pct, 1)}% của ${fmt(o.ctx, 0)} token`;
+    el('tk-svg').innerHTML = drawTk(o, res);
+    const rows = PRESETS.map((p) => ({ name: p.name, v: tokCalc(Object.assign({ W: o.W, H: o.H, thumb: true, maxT: 12 }, p.o)).nv }));
+    const mx = Math.max(...rows.map((r) => r.v), res.nv);
+    el('tk-cmp').innerHTML = rows.map((r) => `<div class="r"><span>${r.name}</span><div class="track"><div class="fill" style="width:${(r.v / mx) * 100}%"></div></div><span class="num">${fmt(r.v, 0)}</span></div>`).join('') +
+      `<div class="r cur"><span><b>Cấu hình của bạn</b></span><div class="track"><div class="fill" style="width:${(res.nv / mx) * 100}%"></div></div><span class="num">${fmt(res.nv, 0)}</span></div>` +
+      `<p class="sm" style="margin-top:4px">Chênh nhau ${fmt(Math.max(...rows.map((r) => r.v)) / Math.min(...rows.map((r) => r.v)), 0)} lần giữa cách nhiều nhất và ít nhất.</p>`;
+  }
+  ['tk-w', 'tk-h', 'tk-mode', 'tk-p', 'tk-s', 'tk-r', 'tk-thumb', 'tk-max', 'tk-m', 'tk-n', 'tk-ctx'].forEach((id) => el(id).addEventListener('input', renderTk));
+  el('tk-doc').innerHTML = L('v-high-res', 'Bảng ngân sách token') + ' ' + L('v3-inference-cost', 'KV cache của visual token');
+  el('tk-presets').querySelector('button[data-p="1"]').click();
+
+  // nút chọn 2–3 phương án (không dùng data-tab để khỏi đụng TQ.tabs của khối cha)
+  function seg(id, cb) {
+    const bs = [...el(id).querySelectorAll('[data-opt]')];
+    const show = (v) => { bs.forEach((b) => { const on = b.dataset.opt === v; b.classList.toggle('is-active', on); b.setAttribute('aria-pressed', on); }); cb(v); };
+    bs.forEach((b) => (b.onclick = () => show(b.dataset.opt)));
+    show(bs[0].dataset.opt);
+  }
+
+  /* ---------------- Hình 3 ---------------- */
+  TQ.explorer('#fam', {
+    seq: { eyebrow: 'Họ 1 · adapter / late fusion', title: 'Ghép ảnh vào chuỗi token', chips: [['LLaVA', 'note'], ['Qwen2.5-VL', 'note'], ['InternVL', 'note'], ['SmolVLM', 'note'], ['Idefics3', 'note']],
+      html: '<p>Ảnh → encoder → connector → chèn thẳng vào chuỗi input của LLM như token bình thường. LLM xử lý tất cả bằng self-attention.</p><ul><li><span class="k">Ưu:</span> đơn giản, không đổi kiến trúc LLM; FlashAttention, KV cache, RL… dùng được ngay; ảnh và chữ tương tác ở mọi layer.</li><li><span class="k">Nhược:</span> token ảnh chiếm context. Ảnh nét hoặc video có thể sinh hàng nghìn tới hàng chục nghìn token.</li><li><span class="k">Khi nào chọn:</span> mặc định cho hầu hết dự án.</li></ul>',
+      doc: [D('v-families', 'Bốn họ kiến trúc'), D('v-three-blocks', 'Kiến trúc 3 khối')] },
+    xattn: { eyebrow: 'Họ 2', title: 'Cross-attention', chips: [['Flamingo', 'ex'], ['Llama 3-V', 'ex']],
+      html: '<p>Ảnh không vào chuỗi. Chèn thêm lớp cross-attention giữa các layer LLM: query từ hidden state của chữ, key/value từ đặc trưng ảnh. LLM gốc có thể đóng băng.</p><ul><li><span class="k">Ưu:</span> chuỗi chữ không dài thêm; giữ trọn năng lực chữ.</li><li><span class="k">Nhược:</span> thêm nhiều tham số mới; khó dùng tooling chuẩn của LLM.</li><li><span class="k">Khi nào chọn:</span> muốn giữ nguyên tuyệt đối LLM chữ, hoặc input rất nhiều ảnh.</li></ul>',
+      doc: [D('v-families', 'Bốn họ kiến trúc'), D('v-xattn', 'Cross-attention layers')] },
+    early: { eyebrow: 'Họ 3 · native multimodal', title: 'Early fusion', chips: [['Chameleon', 'warn']],
+      html: '<p>Image tokenizer (VQ-VAE/VQGAN) biến mỗi patch thành một "từ" trong codebook, trộn chung vocab với chữ. Một Transformer duy nhất train từ đầu.</p><ul><li><span class="k">Ưu:</span> một model thống nhất; sinh được cả ảnh.</li><li><span class="k">Nhược:</span> train từ đầu rất đắt; Chameleon phải xử lý bất ổn (QK-norm, đổi vị trí norm); token rời rạc làm mất chi tiết như chữ nhỏ.</li><li><span class="k">Khi nào chọn:</span> cần cả hiểu và sinh ảnh, có ngân sách train từ đầu.</li></ul>',
+      doc: [D('v-families', 'Bốn họ kiến trúc')] },
+    free: { eyebrow: 'Họ 4', title: 'Encoder-free', chips: [['Fuyu-8B', 'khaki'], ['EVE', 'khaki']],
+      html: '<p>Bỏ hẳn vision encoder: patch pixel được chiếu tuyến tính (một ma trận) vào không gian embedding của decoder.</p><ul><li><span class="k">Ưu:</span> đơn giản, nhận ảnh ở mọi độ phân giải.</li><li><span class="k">Nhược:</span> LLM phải tự học thị giác từ đầu, cần rất nhiều dữ liệu; nhìn chung vẫn thua model có encoder pre-train cùng quy mô.</li><li><span class="k">Khi nào chọn:</span> nghiên cứu, muốn kiến trúc tối giản.</li></ul>',
+      doc: [D('v-families', 'Bốn họ kiến trúc')] },
+  });
+
+  /* ---------------- Hình 4 ---------------- */
+  const COS = [[0.30, 0.10, 0.05], [0.08, 0.27, 0.12], [0.02, 0.15, 0.25]];
+  let selRow = 0, cmode = 'clip';
+  const sig = (u) => 1 / (1 + Math.exp(-u));
+  const heat = (p) => `background:color-mix(in srgb,var(--accent) ${Math.round(p * 70)}%,var(--surface))`;
+  function renderMx() {
+    const tau = +el('c-tau').value, t = +el('s-t').value, b = +el('s-b').value;
+    el('c-tau-o').textContent = tau.toFixed(2); el('s-t-o').textContent = t; el('s-b-o').textContent = b;
+    let h = '<tr><th></th><th>caption 1</th><th>caption 2</th><th>caption 3</th></tr>';
+    const read = [];
+    if (cmode === 'clip') {
+      let rowLoss = 0, colLoss = 0;
+      const P = COS.map((row) => { const e = row.map((c) => Math.exp(c / tau)); const s = e.reduce((a, x) => a + x, 0); return e.map((x) => x / s); });
+      for (let j = 0; j < 3; j++) { const e = COS.map((row) => Math.exp(row[j] / tau)); const s = e.reduce((a, x) => a + x, 0); colLoss += -Math.log(e[j] / s); }
+      P.forEach((r, i) => (rowLoss += -Math.log(r[i])));
+      COS.forEach((row, i) => {
+        h += `<tr><th>ảnh ${i + 1}</th>` + row.map((c, j) => `<td class="${i === j ? 'diag' : ''} ${i === selRow ? 'rowsel' : ''}" data-row="${i}" style="${heat(P[i][j])}">${(c / tau).toFixed(1)}<small>p = ${P[i][j].toFixed(2)}</small></td>`).join('') + '</tr>';
+      });
+      const r = COS[selRow];
+      read.push(`<b>Hàng ảnh ${selRow + 1}</b>: logit = cosine / τ = ${r.map((c) => (c / tau).toFixed(2)).join(' · ')}`);
+      read.push(`Softmax theo hàng: xác suất chọn đúng caption ${selRow + 1} = <b>${P[selRow][selRow].toFixed(2)}</b> → loss hàng = −log = <b>${(-Math.log(P[selRow][selRow])).toFixed(2)}</b>`);
+      read.push(`Loss CLIP (trung bình hàng + cột của cả batch) = <b>${((rowLoss + colLoss) / 6).toFixed(3)}</b>`);
+      read.push(`<span class="sm">Tài liệu: τ = 0,1 cho p ≈ 0,82, loss ≈ 0,20; τ = 1 cho p ≈ 0,38, loss ≈ 0,97. Kéo τ để thấy. Mỗi hàng phải cộng lại bằng 1, nên cần cả ma trận B×B (all-gather qua mọi GPU, tốn theo B²).</span>`);
+      read.push(L('v-clip', 'CLIP — contrastive loss'));
+    } else {
+      let tot = 0;
+      COS.forEach((row, i) => {
+        h += `<tr><th>ảnh ${i + 1}</th>` + row.map((c, j) => {
+          const p = sig(t * c + b); const z = i === j ? 1 : -1; const l = -Math.log(sig(z * (t * c + b))); tot += l;
+          return `<td class="${i === j ? 'diag' : ''} ${i === selRow ? 'rowsel' : ''}" data-row="${i}" style="${heat(p)}">${p < 0.01 ? p.toExponential(1) : p.toFixed(2)}<small>${i === j ? 'nhãn +1' : 'nhãn −1'} · loss ${l.toFixed(2)}</small></td>`;
+        }).join('') + '</tr>';
+      });
+      const r = COS[selRow];
+      read.push(`<b>Hàng ảnh ${selRow + 1}</b>: mỗi ô là một câu hỏi có/không độc lập: σ(t·cos + b) = ${r.map((c) => sig(t * c + b).toFixed(3)).join(' · ')}`);
+      read.push(`Loss SigLIP = (1/B)·ΣΣ −log σ(z·(t·cos + b)) = <b>${(tot / 3).toFixed(3)}</b>`);
+      read.push(`<span class="sm">Khởi tạo t = 10, b = −10: σ(−10) ≈ 4,5·10⁻⁵, model mặc định coi mọi cặp là "không khớp" (đúng với thực tế: B cặp dương, B²−B cặp âm), chỉ cần học nâng điểm cặp đúng lên. Không cần chuẩn hoá cả hàng nên tính theo từng khối được, không all-gather.</span>`);
+      read.push(L('v-siglip', 'SigLIP — sigmoid loss'));
+    }
+    el('mx').innerHTML = h;
+    el('mx-read').innerHTML = read.map((x) => `<div>${x}</div>`).join('');
+    el('mx').querySelectorAll('td').forEach((td) => (td.onclick = () => { selRow = +td.dataset.row; renderMx(); }));
+  }
+  ['c-tau', 's-t', 's-b'].forEach((id) => el(id).addEventListener('input', renderMx));
+  TQ.tabs('#contra', (t) => { cmode = t; renderMx(); });
+
+  /* ---------------- Hình 5 ---------------- */
+  const PAL = ['k-n', 'k-t', 'k-w', 'k-e'];
+  const pcol = (x, y) => PAL[((x >> 1) + (y >> 1)) % 4];
+  el('cx-in').innerHTML = Array.from({ length: 64 }, (_, i) => `<i class="${pcol(i % 8, i >> 3)}"></i>`).join('');
+  function outShuffle(r, label) {
+    const n = 8 / r, sz = r === 2 ? 34 : 70;
+    let h = `<div class="pg" style="grid-template-columns:repeat(${n},${sz}px);gap:4px">`;
+    for (let by = 0; by < n; by++) for (let bx = 0; bx < n; bx++) {
+      let stripes = '';
+      for (let y = 0; y < r; y++) for (let x = 0; x < r; x++) stripes += `<i class="${pcol(bx * r + x, by * r + y)}"></i>`;
+      h += `<div class="cell-out" style="height:${sz}px">${stripes}</div>`;
+    }
+    return h + `</div><div class="cxlabel">${label}</div>`;
+  }
+  const OUT = {
+    mlp: () => `<div class="pg" style="grid-template-columns:repeat(8,16px)">${'<i class="k-l" style="height:16px"></i>'.repeat(64)}</div><div class="cxlabel">64 token · d_LLM chiều (đổi "ngôn ngữ", không bớt)</div>`,
+    ps2: () => outShuffle(2, '16 token · mỗi token 4d chiều → MLP về d_LLM'),
+    ps4: () => outShuffle(4, '4 token · mỗi token 16d chiều → MLP về d_LLM'),
+    merge: () => outShuffle(2, '16 token · MLP gộp 2×2 patch kề nhau (mỗi token = 28×28 px)'),
+    resampler: () => `<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">${[1, 2, 3, 4].map((i) => `<span class="qchip">q${i}</span>`).join('')}</div><div class="cxlabel">M query học được hỏi cả ảnh (minh hoạ 4; Flamingo, Idefics2 dùng 64)<br>ảnh 10 patch hay 1000 patch đều ra M token</div>`,
+    qformer: () => `<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">${[1, 2, 3, 4].map((i) => `<span class="qchip">q${i}</span>`).join('')}<span class="qchip">… q32</span></div><div class="cxlabel">32 query, có self-attention với chữ, pre-train 3 mục tiêu trước khi nối LLM</div>`,
+    xattn: () => `<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center"><span class="tok">Ảnh</span><span class="tok">có</span><span class="tok">gì?</span></div><div class="cxlabel">Chuỗi LLM chỉ có chữ. Ảnh vào qua K/V của lớp cross-attention chèn giữa các layer.</div>`,
+  };
+  const CONN = {
+    mlp: { title: 'MLP 2 lớp (LLaVA-1.5)', chips: [['N → N', 'note'], ['giữ cấu trúc không gian', 'tip']],
+      html: '<div class="formula">H = GELU(Z·W₁ + b₁)·W₂ + b₂</div><p>Áp dụng riêng cho từng patch, không nén, giữ thứ tự. Với d_v = 1024, d_LLM = 4096: 4,2M + 16,8M ≈ <b>21M tham số</b>, nhỏ xíu so với LLM 7B.</p><p>Vì sao thắng connector "xịn" hơn: không vứt thông tin nào, phần "hiểu" để LLM lo. MM1 kết luận số token ảnh và độ phân giải mới là yếu tố chính, kiểu connector ảnh hưởng không đáng kể.</p>',
+      doc: [D('v-mlp-projector', 'MLP projector')] },
+    ps2: { title: 'Pixel shuffle r = 2', chips: [['N → N/4', 'note'], ['không mất số nào', 'tip']],
+      html: '<div class="formula">h × w × d  →  (h/r) × (w/r) × (d·r²)</div><p>Gộp mỗi khối 2×2 patch kề nhau thành 1 token bằng cách <b>nối</b> vector theo chiều kênh. Số token giảm 4 lần nhưng không vứt số nào, chỉ xếp lại. Sau đó MLP chiếu 4d về d_LLM.</p><p><span class="k">InternVL 1.5:</span> ô 448, patch 14 → 32×32 = 1024 patch → 16×16 = <b>256 token</b>/ô. <span class="k">Idefics3:</span> ô 364 → 26×26 = 676 → 13×13 = 169 token/ô.</p>',
+      doc: [D('v-pixel-shuffle', 'Pixel shuffle')] },
+    ps4: { title: 'Pixel shuffle r = 4 (SmolVLM)', chips: [['N → N/16', 'note'], ['model nhỏ cần nén mạnh', 'warn']],
+      html: '<p>Model nhỏ hưởng lợi từ nén mạnh hơn. Lưới 32×32 = 1024 patch → 8×8 = <b>64 token</b>.</p><p>Đánh đổi: nén càng mạnh càng dễ mất chi tiết nhỏ như chữ.</p>',
+      doc: [D('v-pixel-shuffle', 'Pixel shuffle'), D('v-token-reduction', 'Giảm số visual token')] },
+    merge: { title: 'Merge 2×2 + MLP (Qwen2-VL)', chips: [['N → N/4', 'note'], ['độ phân giải gốc', 'tip']],
+      html: '<p>Sau ViT (patch 14), một MLP gộp mỗi 2×2 patch kề nhau → mỗi token ứng với vùng <b>28×28 pixel</b>. Ảnh 224×224 thành 64 token (+2 token đánh dấu = 66).</p><p>Kết hợp với ViT dùng 2D RoPE nên nhận ảnh ở kích thước gốc (làm tròn bội số 28), không cần cắt ô.</p>',
+      doc: [D('v-high-res', 'Native resolution'), D('v-2d-rope', '2D RoPE và M-RoPE')] },
+    resampler: { title: 'Perceiver resampler', chips: [['→ M cố định', 'ex'], ['chi phí O(M·N)', 'note']],
+      html: '<div class="formula">CrossAttn(Q₀, Z) = softmax((Q₀W_Q)(ZW_K)ᵀ/√d_k)·(ZW_V) ∈ ℝ^(M×d)</div><p>M query học được "hỏi" ảnh. Bất kể bao nhiêu patch, output luôn M token. Flamingo dùng 64 latent; Idefics2 dùng 64 token/ảnh.</p><p><span class="k">Ví dụ:</span> SigLIP 384px → 729 patch → 64 token, nén ~11,4 lần. 10 ảnh: 640 token thay vì 7.290. Đổi lại, 64 vector phải gói cả ảnh: với trang tài liệu dày chữ đó là nút cổ chai thật. Idefics2 bù bằng 4 ô + 1 ảnh gốc = 320 token.</p>',
+      doc: [D('v-resampler', 'Q-Former và Perceiver resampler')] },
+    qformer: { title: 'Q-Former (BLIP-2)', chips: [['→ 32 query', 'ex'], ['~188M tham số', 'warn']],
+      html: '<p>Transformer nhỏ khởi tạo từ BERT-base với 32 query. Ngoài cross-attention với ảnh, query còn tương tác với chữ qua self-attention, và được pre-train bằng 3 mục tiêu (contrastive, matching, sinh caption) trước khi nối vào LLM.</p>',
+      doc: [D('v-resampler', 'Q-Former')] },
+    xattn: { title: 'Lớp cross-attention có cổng (Flamingo, Llama 3-V)', chips: [['không thêm token', 'tip'], ['zero-init', 'accent']],
+      html: '<div class="formula">y  = x + tanh(α_attn)·CrossAttn(x, V)\ny\' = y + tanh(α_ff)·FFN(y)</div><p>α khởi tạo bằng 0 → tanh(0) = 0 → lúc đầu block mới là hàm đồng nhất, model y hệt LLM gốc. Cổng mở dần khi model học dùng ảnh. Kéo thanh α bên trái để thấy.</p><p>Mẫu thiết kế đáng nhớ: thêm module vào model đã train thì làm sao để lúc khởi tạo nó không đổi output.</p>',
+      doc: [D('v-xattn', 'Cross-attention layers')] },
+  };
+  function gateUI() {
+    el('cx-extra').innerHTML = '<div class="controls" style="max-width:420px"><div class="ctl"><label for="gate-a">Cổng α <output id="gate-o"></output></label><input type="range" id="gate-a" min="-3" max="3" step="0.1" value="0"></div></div><div class="bar" id="gate-bar"></div><p class="sm" id="gate-t"></p>';
+    const upd = () => {
+      const a = +el('gate-a').value, g = Math.tanh(a);
+      el('gate-o').textContent = a.toFixed(1);
+      el('gate-bar').innerHTML = `<span style="flex-basis:${Math.abs(g) * 100}%;background:var(--ex)">${Math.abs(g) > 0.15 ? 'tanh(α) = ' + g.toFixed(2) : ''}</span>`;
+      el('gate-t').textContent = a === 0 ? 'α = 0: phần ảnh bị nhân 0, output đúng bằng LLM gốc.' : `Phần thông tin từ ảnh được nhân với ${g.toFixed(2)} trước khi cộng vào residual.`;
+    };
+    el('gate-a').addEventListener('input', upd); upd();
+  }
+  TQ.explorer('#conn', CONN, { onShow: (k) => { el('cx-out').innerHTML = OUT[k](); if (k === 'xattn') gateUI(); else el('cx-extra').innerHTML = ''; } });
+
+  /* ---------------- Hình 6 ---------------- */
+  const ST = [
+    { vit: ['frozen', 'Đóng băng'], proj: ['train', 'Train (khởi tạo ngẫu nhiên)'], llm: ['frozen', 'Đóng băng'], data: ['cặp ảnh–caption ngắn', 'vài trăm nghìn → vài triệu mẫu'] },
+    { vit: ['part', 'Đôi khi mở, LR nhỏ'], proj: ['train', 'Train'], llm: ['part', 'Một phần / toàn bộ / LoRA'], data: ['caption recaption', 'interleaved web docs', 'OCR, tài liệu', 'grounding', 'text-only', 'hàng chục → hàng trăm triệu mẫu'] },
+    { vit: ['part', 'Tuỳ model'], proj: ['train', 'Train'], llm: ['train', 'Thường mở toàn bộ'], data: ['VQA', 'document / chart QA', 'grounding', 'hội thoại nhiều lượt', 'text-only SFT'] },
+    { vit: ['train', 'Toàn bộ, context dài hơn'], proj: ['train', 'Train'], llm: ['train', 'Toàn bộ, context dài hơn'], data: ['video caption / QA', 'multi-image', 'PDF dài'] },
+    { vit: ['frozen', 'Thường đóng băng'], proj: ['part', 'Tài liệu không nêu riêng'], llm: ['train', 'Toàn bộ LLM'], data: ['preference pairs', 'bài có đáp án kiểm chứng'] },
+  ];
+  const setBlk = (id, st) => { const b = el(id); b.className = 'blk st-' + st[0]; b.querySelector('.bs').textContent = st[1]; };
+  TQ.stepper('#stages', [
+    { title: 'Stage 1 · Alignment', text: 'Projector khởi tạo ngẫu nhiên. Nếu mở LLM ngay, gradient qua projector đang xuất "rác" có thể làm hỏng LLM. Nên đóng băng ViT và LLM, chỉ train projector trên cặp ảnh–caption. LLaVA-1.5: ~558K cặp, projector ~31M tham số (&lt; 0,3% của LLM 13B). Prismatic thấy bỏ hẳn bước này vẫn tương đương với connector MLP: đây là "bảo hiểm rẻ", không bắt buộc. ' + L('v2-stage1', 'Stage 1') },
+    { title: 'Stage 2 · Multimodal pre-training', text: 'Stage tốn compute nhất (Qwen2.5-VL ~4,1T token). Mở LLM (toàn bộ hoặc LoRA như Idefics2 để tránh loss phân kỳ), có thể mở ViT với LR nhỏ. MM1 trộn caption : interleaved : text-only ≈ 45 : 45 : 10. ' + L('v2-stage2', 'Stage 2') },
+    { title: 'Stage 3 · Instruction SFT', text: 'Biến model "nói tiếp caption" thành assistant. Đa dạng tác vụ là sống còn. Data đáp án ngắn làm model trả lời cụt, nên thêm prompt định dạng như "Answer the question using a single word or phrase." Loss chỉ trên câu trả lời (Hình 7). ' + L('v2-stage3', 'Stage 3') + ' ' + L('v2-freeze', 'Freeze hay unfreeze') },
+    { title: 'Stage 3.5 · Long context, nhiều ảnh, video', text: 'Ảnh chia ô tốn vài nghìn token, video vài phút tốn hàng chục nghìn. LLaVA-OneVision trộn ảnh đơn, nhiều ảnh và video; Qwen2-VL/2.5-VL dùng M-RoPE (thời gian, cao, rộng). ' + L('v2-longctx-video', 'Stage long-context') },
+    { title: 'Post-training · DPO / RL', text: 'Giảm hallucination, tăng suy luận, căn chỉnh hành vi. ViT thường đóng băng để ổn định và tiết kiệm memory. Chi tiết ở Hình 9. ' + L('v-post-h', 'Post-training VLM') },
+  ], { onStep: (i) => {
+    const s = ST[i - 1];
+    setBlk('b-vit', s.vit); setBlk('b-proj', s.proj); setBlk('b-llm', s.llm);
+    el('st-data').innerHTML = s.data.map((d) => `<span class="chip chip--khaki">${d}</span>`).join('');
+  } });
+
+  const CASES = {
+    llava15: { title: 'LLaVA-1.5 (2023)', chips: [['CLIP ViT-L/14 @336', 'note'], ['MLP 2 lớp · 576 token', 'accent']], html: '<p>Stage 1: chỉ projector (~558K caption). Stage 2: projector + LLM (~665K instruction, có VQA học thuật + prompt định dạng). <b>ViT đóng băng suốt.</b> Bản 13B train xong khoảng 1 ngày trên 8×A100.</p>', doc: [D('v2-case-studies', 'Case studies'), D('v2-stage1', 'Ví dụ số LLaVA-1.5')] },
+    ov: { title: 'LLaVA-OneVision (2024)', chips: [['SigLIP SO400M', 'note'], ['MLP · AnyRes', 'accent']], html: '<p>Alignment → "high-quality knowledge" (recaption, OCR, data tổng hợp) → SFT ảnh đơn → stage OneVision (nhiều ảnh + video). LLM Qwen2. LR vision tower 2e-6 so với 1e-5 cho phần còn lại.</p>', doc: [D('v2-case-studies', 'Case studies')] },
+    idefics2: { title: 'Idefics2 (2024)', chips: [['SigLIP SO400M', 'note'], ['Resampler 64 token', 'accent']], html: '<p>Ghép chuỗi; <b>LoRA</b> trên backbone để ổn định; pre-train trên OBELICS + caption + OCR; SFT trên The Cauldron (50 dataset). LLM Mistral-7B.</p>', doc: [D('v2-case-studies', 'Case studies'), D('v2-stage2', 'Bài học Idefics2')] },
+    idefics3: { title: 'Idefics3 (2024)', chips: [['SigLIP SO400M', 'note'], ['Pixel shuffle + MLP', 'accent']], html: '<p>LLM Llama 3.1 8B; chia ảnh thành ô; giới thiệu Docmatix (dataset document QA lớn).</p>', doc: [D('v2-case-studies', 'Case studies')] },
+    smol: { title: 'SmolVLM (2025)', chips: [['SigLIP bản nhỏ', 'note'], ['Pixel shuffle mạnh', 'accent']], html: '<p>Model 256M–2.2B; cân đối encoder với LLM cho model nhỏ; mở rộng context; token vị trí học được cho các ô; <b>ít tái dùng text SFT</b>.</p>', doc: [D('v2-case-studies', 'Case studies'), D('v2-text-retention', 'Cạm bẫy text SFT')] },
+    qwen2: { title: 'Qwen2-VL (2024)', chips: [['ViT ~675M · native res', 'note'], ['MLP gộp 2×2', 'accent']], html: '<p>Stage 1: train ViT (+ connector) trên caption/OCR. Stage 2: mở toàn bộ, data đa dạng. Stage 3: <b>đóng băng ViT</b>, SFT LLM. M-RoPE.</p>', doc: [D('v2-case-studies', 'Case studies'), D('v2-freeze', 'Vì sao ViT dễ hỏng')] },
+    qwen25: { title: 'Qwen2.5-VL (2025)', chips: [['ViT window attention', 'note'], ['MLP gộp token', 'accent']], html: '<p>Pre-train mở rộng lên ~4,1T token; grounding bằng toạ độ tuyệt đối; video FPS động + căn thời gian tuyệt đối; post-training SFT + DPO.</p>', doc: [D('v2-case-studies', 'Case studies')] },
+    internvl: { title: 'InternVL 2.5 / 3', chips: [['InternViT 300M / 6B', 'note'], ['Pixel shuffle · 256 token/ô 448', 'accent']], html: '<p>"ViT-MLP-LLM"; dynamic tiling. 2.5: MLP warm-up → (tuỳ chọn) ViT incremental → full SFT, lọc mạnh dữ liệu lặp. 3: native multimodal pre-training, V2PE, post-training với MPO.</p>', doc: [D('v2-case-studies', 'Case studies')] },
+    molmo: { title: 'Molmo (Ai2, 2024)', chips: [['CLIP ViT-L/14 @336', 'note'], ['Pooling + MLP · multi-crop', 'accent']], html: '<p>Không distill từ VLM đóng; data PixMo do người tạo (caption bằng giọng nói, pointing). Caption pre-training → SFT; LR riêng cho từng khối.</p>', doc: [D('v2-case-studies', 'Case studies'), D('v2-caption-data', 'PixMo')] },
+    llama32: { title: 'Llama 3.2 Vision (2024)', chips: [['ViT riêng', 'note'], ['Cross-attention layers', 'ex']], html: '<p>LLM chữ <b>đóng băng</b> để giữ nguyên năng lực chữ, chỉ train encoder + adapter cross-attention.</p>', doc: [D('v2-case-studies', 'Case studies'), D('v-xattn', 'Cross-attention')] },
+  };
+  el('case-nodes').innerHTML = Object.entries(CASES).map(([k, v]) => `<button class="node" data-k="${k}"><span class="n-t">${v.title}</span><span class="n-s">${v.chips[1][0]}</span></button>`).join('');
+  TQ.explorer('#cases', CASES);
+
+  /* ---------------- Hình 7 ---------------- */
+  const SEQ = {
+    sft: [['<|user|>', 'sp'], ['<image>', 'sp'], ['[576 token ảnh]', 'img'], ['</image>', 'sp'], ['Biểu', 'u'], ['đồ', 'u'], ['này', 'u'], ['cho', 'u'], ['thấy', 'u'], ['gì?', 'u'], ['<|assistant|>', 'sp'], ['Doanh', 'a'], ['thu', 'a'], ['tăng', 'a'], ['20%...', 'a'], ['<|end|>', 'a']],
+    cap: [['<image>', 'sp'], ['[576 token ảnh]', 'img'], ['</image>', 'sp'], ['Biểu', 'a'], ['đồ', 'a'], ['cột', 'a'], ['doanh', 'a'], ['thu', 'a'], ['theo', 'a'], ['quý', 'a']],
+  };
+  const WHY = {
+    sp: 'Token đặc biệt của chat template / đánh dấu ảnh: không phải thứ model cần sinh → nhãn −100.',
+    img: 'Token ảnh là vector liên tục (output của projector), không phải token trong vocab nên không có "nhãn" để dự đoán. Vị trí ảnh được gán −100 (ignore_index của cross-entropy trong PyTorch).',
+    u: 'Prompt của user: thường bị mask giống SFT của LLM → −100.',
+    a: 'Thuộc phần model phải sinh → có loss (m_t = 1).',
+  };
+  let mmode = 'sft', msel = -1;
+  function renderMask() {
+    const seq = SEQ[mmode];
+    const loss = (k) => k === 'a';
+    el('tokline').innerHTML = seq.map(([t, k], i) => `<button class="${loss(k) ? 'loss' : ''} ${k === 'img' ? 'img' : ''} ${i === msel ? 'sel' : ''}" data-i="${i}">${TQ.esc(t)}</button>`).join('');
+    el('maskrow').innerHTML = 'mask m_t: ' + seq.map(([, k]) => (loss(k) ? '1' : '0')).join(' ');
+    el('tokline').querySelectorAll('button').forEach((b) => (b.onclick = () => { msel = +b.dataset.i; renderMask(); }));
+    const nLoss = seq.filter(([, k]) => loss(k)).length;
+    if (msel >= 0) {
+      const [t, k] = seq[msel];
+      el('tokinfo').innerHTML = `<b>${TQ.esc(t)}</b> → nhãn ${loss(k) ? 'là chính token đó (có loss)' : '<code>-100</code> (bỏ qua)'}. ${WHY[k]}${mmode === 'cap' && k === 'a' ? ' Ở stage 1/2 với caption, caption chính là thứ cần sinh nên toàn bộ chữ có loss.' : ''}`;
+    } else {
+      el('tokinfo').innerHTML = `Chỉ <b>${nLoss}</b> token (tô cam) đóng góp vào loss. Bấm một token để xem vì sao. ${L('v2-loss-masking', 'Loss masking')}`;
+    }
+  }
+  seg('masktabs', (t) => { mmode = t; msel = -1; renderMask(); });
+  function renderNorm(t) {
+    const A = 2, B = 500;
+    let a, b, txt;
+    if (t === 'sample') {
+      a = 0.5; b = 0.5;
+      txt = `Mỗi mẫu được 1/2 trọng số. Một token của A nặng (1/2)/2 = 0,25, một token của B chỉ (1/2)/500 = 0,001: token ngắn nặng gấp <b>250 lần</b>. Model bị kéo về trả lời ngắn.`;
+    } else {
+      a = A / (A + B); b = B / (A + B);
+      txt = `Mọi token nặng như nhau (1/502). Mẫu dài chi phối: A chỉ góp ${fmt(a * 100, 1)}%. Với gradient accumulation và data parallel, phải chia theo <b>tổng token có loss trên cả global batch</b> để kết quả không phụ thuộc cách chia micro-batch. ${L('v2-loss-masking', 'Cạm bẫy chuẩn hoá loss')}`;
+    }
+    el('normbar').innerHTML = `<span style="flex-basis:${a * 100}%;background:var(--accent)">${a > 0.08 ? 'A ' + fmt(a * 100, 1) + '%' : ''}</span><span style="flex-basis:${b * 100}%;background:var(--note)">B ${fmt(b * 100, 1)}%</span>`;
+    el('normtext').innerHTML = txt;
+  }
+  seg('normtabs', renderNorm);
+
+  /* ---------------- Hình 8 ---------------- */
+  const DATA = {
+    cap: { eyebrow: 'Dữ liệu', title: 'Caption: từ alt-text nhiễu tới recaption', chips: [['LAION-5B ~5,85 tỉ cặp', 'khaki'], ['COYO-700M', 'khaki']],
+      html: '<p>Alt-text viết cho SEO / accessibility, không để mô tả ảnh: ảnh Corgi chạy trên biển lúc hoàng hôn có thể mang alt-text "IMG_2031.jpg". Ngay cả alt-text "tốt" cũng chỉ vài từ.</p><p><span class="k">Recaption:</span> cho model mạnh viết lại caption chi tiết. ShareGPT4V: ~100K caption từ GPT-4V → train captioner → ~1,2M caption.</p><p><span class="k">Bẫy:</span> thừa hưởng hallucination của captioner; văn phong đơn điệu, mất tên riêng; ràng buộc license.</p><p><span class="k">PixMo:</span> người mô tả ảnh bằng giọng nói 60–90 giây, chuyển thành chữ, LLM chỉnh lại. ~712K ảnh, không distill VLM đóng.</p>',
+      doc: [D('v2-caption-data', 'Caption data')] },
+    inter: { eyebrow: 'Dữ liệu', title: 'Interleaved: ảnh xen giữa văn bản', chips: [['OBELICS', 'khaki'], ['MMC4', 'khaki'], ['MINT-1T', 'khaki']],
+      html: '<p>Dạy điều mà cặp ảnh–caption không dạy được: nhiều ảnh trong một context và quan hệ giữa chúng, few-shot đa phương thức, văn bản dài tự nhiên giúp giữ năng lực ngôn ngữ.</p><table class="tbl"><tr><th>Dataset</th><th>Quy mô</th></tr><tr><td>OBELICS</td><td>~141M trang, ~353M ảnh, ~115B token</td></tr><tr><td>MMC4</td><td>~101M tài liệu, ~571M ảnh</td></tr><tr><td>MINT-1T</td><td>~1T token, ~3,4B ảnh (thêm PDF, ArXiv)</td></tr></table><p>Decoder causal: chữ chỉ thấy ảnh đứng trước, nên sắp ảnh trước đoạn văn mô tả nó.</p>',
+      doc: [D('v2-interleaved', 'Interleaved web documents')] },
+    ocr: { eyebrow: 'Dữ liệu', title: 'OCR, tài liệu, biểu đồ, bảng', chips: [['Docmatix', 'khaki'], ['render tổng hợp', 'tip']],
+      html: '<p>Năng lực thương mại giá trị nhất (hoá đơn, hợp đồng, slide, screenshot), nhưng CLIP/SigLIP yếu ở chữ nhỏ.</p><ul><li>PDF có text layer: chữ "miễn phí", đúng tuyệt đối. Docmatix: ~2,4M ảnh, ~9,5M cặp hỏi–đáp từ ~1,3M PDF.</li><li>Render tổng hợp: text/HTML/LaTeX/code → ảnh, nhãn đúng 100% (vẽ biểu đồ từ bảng số bằng matplotlib…).</li><li>DocVQA, ChartQA, InfographicVQA, TextVQA: dùng cả làm SFT lẫn benchmark, cẩn thận lộ đề.</li></ul><div class="callout callout--tip">Đọc chữ cần đủ 3 thứ cùng lúc: độ phân giải, số visual token, dữ liệu đọc chữ. Thiếu một thì hai cái kia không cứu được.</div>',
+      doc: [D('v2-ocr-doc', 'OCR, document, chart')] },
+    ground: { eyebrow: 'Dữ liệu', title: 'Grounding và pointing', chips: [['toạ độ dạng chữ', 'note']],
+      html: '<table class="tbl"><tr><th>Model</th><th>Cách biểu diễn</th></tr><tr><td>Qwen-VL / Qwen2-VL</td><td>(x1,y1),(x2,y2) chuẩn hoá về [0, 1000)</td></tr><tr><td>Qwen2.5-VL</td><td>toạ độ pixel tuyệt đối, dạng JSON</td></tr><tr><td>Kosmos-2, PaliGemma</td><td>location token rời rạc (PaliGemma: 1024 token, mỗi box 4 token)</td></tr><tr><td>Molmo</td><td>điểm &lt;point x y&gt;: rẻ (một cú click), dùng được để đếm</td></tr></table>',
+      doc: [D('v2-grounding', 'Grounding và pointing')] },
+    video: { eyebrow: 'Dữ liệu', title: 'Video', chips: [['HowTo100M', 'khaki'], ['WebVid', 'khaki']],
+      html: '<p>Nguồn thô có ASR transcript hoặc mô tả ngắn, nhưng lời nói thường không mô tả hình. Recaption theo từng đoạn thời gian (ShareGPT4Video, LLaVA-Video-178K). Câu hỏi "sự kiện X ở giây thứ mấy" cần mã hoá thời gian tuyệt đối.</p><p><span class="k">Ngân sách:</span> 2 fps, gộp 2 frame, 448px → 256 token/giây → 10 phút = 153.600 token. Hạ về 224px → 64 token/giây → 38.400 token.</p>',
+      doc: [D('v2-video-data', 'Video data'), D('v-video', 'Ngân sách token video')] },
+    instr: { eyebrow: 'Dữ liệu', title: 'Instruction data', chips: [['LLaVA-Instruct-158K', 'khaki'], ['The Cauldron', 'khaki']],
+      html: '<ul><li><span class="k">LLaVA-Instruct-158K:</span> GPT-4 chỉ đọc caption + bounding box COCO (không nhìn ảnh) rồi sinh hội thoại. Mẹo hay, nhưng dễ có câu hỏi về chi tiết không có trong caption.</li><li><span class="k">The Cauldron:</span> gộp 50 dataset học thuật về cùng định dạng hỏi–đáp.</li><li>Bộ tổng hợp lớn (LLaVA-OneVision, Cambrian-7M, InternVL): hàng triệu mẫu phủ VQA, OCR, chart, toán, video, grounding, text-only.</li></ul>',
+      doc: [D('v2-instruction-data', 'Instruction data')] },
+    text: { eyebrow: 'Dữ liệu', title: 'Text-only: giữ năng lực chữ', chips: [['MM1 ~10%', 'tip']],
+      html: '<p>Sau khi train đa phương thức, điểm text-only (MMLU, GSM8K, code) thường giảm. Biện pháp: trộn text-only ở mọi giai đoạn mở LLM; đóng băng LLM (Llama 3.2 Vision); LoRA (Idefics2); LR nhỏ + ít epoch.</p><p><span class="k">Bẫy ngược:</span> SmolVLM thấy tái dùng quá nhiều text SFT làm VLM nhỏ kém đi. Lượng text-only phải ablate theo cỡ model.</p>',
+      doc: [D('v2-text-retention', 'Giữ năng lực text'), D('v2-mixture', 'Data mixture')] },
+    'f-clip': { eyebrow: 'Lọc · bước 1', title: 'CLIP score', chips: [['cosine ảnh–chữ', 'note']],
+      html: '<div class="formula">s(I, t) = f_I(I)ᵀ f_T(t) / (‖f_I(I)‖·‖f_T(t)‖)</div><p>Giữ cặp có s trên ngưỡng (LAION dùng ~0,28 với CLIP ViT-B/32 cho phần tiếng Anh) hoặc top-k%.</p><p><span class="k">Hạn chế:</span> ưu tiên ảnh chứa đúng dòng chữ trong alt-text, thiên vị khái niệm phổ biến. DataComp: kết hợp CLIP score với tiêu chí khác tốt hơn chỉ dùng CLIP score.</p>',
+      doc: [D('v2-filtering', 'Lọc dữ liệu'), D('v2-caption-data', 'LAION, DataComp')] },
+    'f-dedup': { eyebrow: 'Lọc · bước 2', title: 'Khử trùng lặp ảnh', chips: [['pHash / dHash', 'note'], ['embedding', 'note']],
+      html: '<ul><li><span class="k">Perceptual hash:</span> bền với resize/nén nhẹ; khoảng cách Hamming nhỏ = trùng.</li><li><span class="k">Embedding (CLIP/SSCD):</span> bắt được bản crop, thêm watermark, đổi màu.</li></ul><p>Web có rất nhiều ảnh lặp (stock, logo, meme); ảnh lặp hàng nghìn lần làm model ghi nhớ và phí compute.</p>',
+      doc: [D('v2-filtering', 'Dedup ảnh')] },
+    'f-safe': { eyebrow: 'Lọc · bước 3', title: 'An toàn: NSFW, PII, CSAM', chips: [['bắt buộc', 'bad']],
+      html: '<p>Classifier NSFW, làm mờ / loại khuôn mặt và thông tin cá nhân khi cần, đối chiếu cơ sở dữ liệu hash CSAM của tổ chức chuyên trách.</p><div class="callout callout--bad">2023: Stanford Internet Observatory phát hiện LAION-5B chứa liên kết tới CSAM đã xác minh → LAION gỡ dataset, phát hành lại Re-LAION-5B (2024). Lọc an toàn không phải bước tuỳ chọn.</div>',
+      doc: [D('v2-filtering', 'An toàn')] },
+    'f-decon': { eyebrow: 'Lọc · bước 4', title: 'Chống lộ đề với benchmark', chips: [['dedup ảnh train ↔ test', 'warn'], ['kiểm tra "mù"', 'warn']],
+      html: '<ul><li>Ảnh test lọt vào train qua crawl → dedup <b>ảnh</b> (hash/embedding), không chỉ n-gram chữ.</li><li>Overfit định dạng benchmark: train nhiều trên split train của DocVQA làm điểm DocVQA tăng hơn năng lực thật.</li><li>Chạy model với ảnh trắng / không ảnh: điểm còn cao thì benchmark đang đo kiến thức ngôn ngữ.</li></ul>',
+      doc: [D('v2-contamination', 'Contamination')] },
+  };
+  TQ.explorer('#data', DATA);
+  function renderMix(t) {
+    const tl = +el('mix-t').value; el('mix-t-o').textContent = fmt(tl, 0) + ' token';
+    let a = 45, b = 45, c = 10, txt;
+    if (t === 'token') { a = 45 * 600; b = 45 * 4000; c = 10 * tl; }
+    const s = a + b + c, p = (x) => (x / s) * 100;
+    el('mixbar').innerHTML = `<span style="flex-basis:${p(a)}%;background:var(--note)">caption ${fmt(p(a), 0)}%</span><span style="flex-basis:${p(b)}%;background:var(--ex)">interleaved ${fmt(p(b), 0)}%</span><span style="flex-basis:${p(c)}%;background:var(--tip)">${p(c) > 6 ? 'text ' + fmt(p(c), 0) + '%' : ''}</span>`;
+    txt = t === 'token'
+      ? `Theo tài liệu: 1 mẫu caption ~600 token, 1 tài liệu interleaved ~4.000 token (5 ảnh). Cùng tỉ lệ 45:45:10 theo mẫu, tính theo token thì interleaved chiếm áp đảo. Token ảnh lại không có loss, nên "số token có loss" là thước đo thứ ba. Luôn ghi rõ đơn vị. ${L('v2-mixture', 'Data mixture')}`
+      : `Tỉ lệ MM1 dùng ở pre-training. Đổi sang tab "Theo tổng token" để thấy cùng con số này mang nghĩa rất khác. ${L('v2-mixture', 'Data mixture')}`;
+    el('mixtext').innerHTML = txt;
+  }
+  let mixT = 'sample';
+  seg('mixtabs', (t) => { mixT = t; renderMix(t); });
+  el('mix-t').addEventListener('input', () => renderMix(mixT));
+
+  /* ---------------- Hình 9 ---------------- */
+  const POST = {
+    'c-prior': { eyebrow: 'Nguyên nhân', title: 'Language prior quá mạnh', html: '<p>LLM đã học trên hàng nghìn tỉ token rằng "bàn ăn" thường đi với "dao, dĩa". Khi tín hiệu ảnh yếu hoặc mơ hồ, xác suất theo ngôn ngữ áp đảo tín hiệu từ ảnh → model nói "bên cạnh đĩa có dao và dĩa" dù ảnh không có dĩa.</p>', doc: [D('v2-hallucination', 'Object hallucination')] },
+    'c-cooc': { eyebrow: 'Nguyên nhân', title: 'Đồng xuất hiện trong dữ liệu', html: '<p>Vật thể hay xuất hiện cùng nhau trong caption → model học "đi kèm" thay vì "nhìn thấy". POPE adversarial đo đúng thiên lệch này.</p>', doc: [D('v2-hallucination', 'Object hallucination')] },
+    'c-cap': { eyebrow: 'Nguyên nhân', title: 'Caption train có chi tiết bịa', html: '<p>Alt-text hoặc caption tổng hợp bị lỗi dạy model rằng nói thêm chi tiết là được thưởng.</p>', doc: [D('v2-hallucination', 'Object hallucination'), D('v2-caption-data', 'Bẫy recaption')] },
+    'c-long': { eyebrow: 'Nguyên nhân', title: 'Câu trả lời dài', html: '<p>Càng về cuối câu mô tả dài, model càng dựa vào chữ đã sinh và ít "nhìn lại" ảnh → hallucination tăng theo độ dài.</p>', doc: [D('v2-hallucination', 'Object hallucination')] },
+    'c-res': { eyebrow: 'Nguyên nhân', title: 'Độ phân giải thấp / token bị nén', html: '<p>Vật nhỏ không còn thấy rõ, model đoán. Xem Hình 2 và 5 về số token.</p>', doc: [D('v2-hallucination', 'Object hallucination'), D('v-token-reduction', 'Giảm visual token')] },
+    'm-chair': { eyebrow: 'Đo', title: 'CHAIR', chips: [['caption tự do', 'note']], html: '<div class="formula">CHAIRᵢ = #vật thể bịa / #vật thể được nhắc\nCHAIRₛ = #câu có ≥1 vật thể bịa / #câu</div><p>Dựa trên nhãn vật thể COCO. Hạn chế: phụ thuộc khớp từ với danh sách COCO, chỉ dùng cho caption tự do.</p>', doc: [D('v2-hallucination', 'CHAIR và POPE')] },
+    'm-pope': { eyebrow: 'Đo', title: 'POPE', chips: [['random', 'note'], ['popular', 'warn'], ['adversarial (khó nhất)', 'bad']], html: '<p>Hỏi "Trong ảnh có &lt;vật&gt; không?". Câu "không" lấy vật không có theo 3 cách: ngẫu nhiên, phổ biến nhất, hay đi kèm vật có trong ảnh.</p><p>Báo cáo thêm <b>tỉ lệ trả lời "yes"</b>: model hay bịa thường nói "yes" quá nhiều; model tốt gần 50% trên tập cân bằng.</p><div class="callout callout--warn">POPE chỉ đo khi được hỏi trực tiếp. POPE cao vẫn có thể CHAIR cao.</div>', doc: [D('v2-hallucination', 'POPE')] },
+    'm-more': { eyebrow: 'Đo', title: 'Benchmark bổ sung', html: '<p>AMBER, HallusionBench, MMHal-Bench thêm khía cạnh thuộc tính, quan hệ, câu hỏi đánh lừa. Nên dùng nhiều benchmark cùng lúc.</p>', doc: [D('v2-hallucination', 'Đo hallucination')] },
+    'f-dpo': { eyebrow: 'Sửa', title: 'DPO với cặp (trung thực, bịa)', chips: [['LLaVA-RLHF', 'ex'], ['RLHF-V', 'ex'], ['RLAIF-V', 'ex']], html: '<p>Cặp (x, y_w, y_l): x = (ảnh, câu hỏi), y_w trung thực, y_l có chi tiết bịa. Công thức DPO giống hệt LLM. Điểm hay nằm ở cách tạo cặp:</p><ul><li><span class="k">LLaVA-RLHF:</span> reward model ưu ái câu dài (kể cả bịa) → cho RM thêm thông tin thật về ảnh (Factually Augmented).</li><li><span class="k">RLHF-V:</span> người chấm <b>sửa trực tiếp</b> đoạn bịa. Câu gốc = y_l, câu đã sửa = y_w, chỉ khác đúng chỗ sai. Dense DPO tăng trọng số đoạn được sửa.</li><li><span class="k">RLAIF-V:</span> tách câu dài thành khẳng định nguyên tử → câu hỏi có/không → model mở chấm từng câu.</li></ul><p><span class="tok ans">Bàn có đĩa cơm</span> <span class="tok" style="text-decoration:line-through">và dao, dĩa</span> → y_w chỉ bỏ phần bịa.</p>', doc: [D('v2-vlm-po', 'Preference optimization cho VLM')] },
+    'f-mpo': { eyebrow: 'Sửa', title: 'MPO (InternVL)', chips: [['DPO', 'ex'], ['BCO', 'note'], ['SFT', 'tip']], html: '<div class="formula">L_MPO = w_p·L_preference + w_q·L_quality + w_g·L_generation</div><p>DPO thuần có thể hạ xác suất <b>cả hai</b> câu (likelihood displacement) → văn bản "lạ". Loss SFT trên câu tốt kéo xác suất câu tốt lên tuyệt đối, chặn hiện tượng này. Dữ liệu MMPR tạo tự động: bài có đáp án lấy đúng/sai; bài không đáp án thì cắt câu trả lời giữa chừng, để model viết tiếp <b>không có ảnh</b> để tạo câu bịa.</p>', doc: [D('v2-vlm-po', 'MPO')] },
+    'f-rlvr': { eyebrow: 'Sửa', title: 'RL với reward kiểm chứng được', chips: [['GRPO', 'ex']], html: '<table class="tbl"><tr><th>Tác vụ</th><th>Reward</th></tr><tr><td>Toán có hình</td><td>đáp án cuối khớp → 1/0</td></tr><tr><td>Đếm vật thể</td><td>số đếm khớp</td></tr><tr><td>Grounding</td><td>IoU (liên tục) hoặc IoU &gt; 0,5 — kéo hộp ở dưới</td></tr><tr><td>OCR / doc QA</td><td>exact match hoặc ANLS</td></tr><tr><td>Định dạng</td><td>thưởng nhỏ cho &lt;think&gt;…&lt;answer&gt;</td></tr></table><div class="callout callout--warn"><b>Bẫy:</b> "suy luận mà không nhìn" (lọc bài giải được với ảnh trống); CoT mô tả ảnh sai nhưng đáp án đúng vẫn được thưởng; rollout đắt vì nhiều visual token (dùng prefix caching). ViT thường đóng băng.</div>', doc: [D('v2-vlm-rl', 'RL cho VLM')] },
+    'f-think': { eyebrow: 'Sửa', title: 'Thinking with images', html: '<p>Ảnh chỉ được encode một lần ở độ phân giải cố định; chi tiết nhỏ (biển số ở góc ảnh) không "nhìn lại" được. Cho model công cụ: xuất toạ độ → hệ thống crop/zoom vùng đó ở độ phân giải cao → đưa lại vào context. Train bằng RL nhiều lượt, reward vẫn là đáp án cuối, model tự học khi nào nên zoom.</p>', doc: [D('v2-thinking-images', 'Thinking with images')] },
+    'f-gui': { eyebrow: 'Sửa', title: 'GUI agent và screen grounding', html: '<p>Nhận screenshot, xuất click(x, y), type("..."), scroll. Cốt lõi là biết nút "Đăng nhập" nằm ở toạ độ nào. Data: screenshot + cây accessibility/HTML; benchmark ScreenSpot. Cần độ phân giải cao. RL môi trường: chạy trong máy ảo / trình duyệt thật, reward = hoàn thành tác vụ.</p>', doc: [D('v2-gui-agent', 'GUI agent')] },
+  };
+  TQ.explorer('#post', POST, { initial: 'c-prior' });
+  function renderIoU() {
+    const dx = +el('iou-x').value, s = +el('iou-s').value;
+    el('iou-x-o').textContent = dx + ' px'; el('iou-s-o').textContent = '×' + s.toFixed(2);
+    const g = { x: 100, y: 50, w: 120, h: 100 };
+    const pw = g.w * s, ph = g.h * s;
+    const p = { x: g.x + g.w / 2 - pw / 2 + dx, y: g.y + g.h / 2 - ph / 2 + dx * 0.25, w: pw, h: ph };
+    const ix = Math.max(0, Math.min(g.x + g.w, p.x + p.w) - Math.max(g.x, p.x));
+    const iy = Math.max(0, Math.min(g.y + g.h, p.y + p.h) - Math.max(g.y, p.y));
+    const inter = ix * iy, uni = g.w * g.h + p.w * p.h - inter, iou = inter / uni;
+    const ixr = Math.max(g.x, p.x), iyr = Math.max(g.y, p.y);
+    el('iou-svg').innerHTML =
+      `<rect x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" fill="var(--tip-bg)" stroke="var(--tip)" stroke-width="2"/>` +
+      (inter > 0 ? `<rect x="${ixr}" y="${iyr}" width="${ix}" height="${iy}" fill="var(--accent)" fill-opacity=".35"/>` : '') +
+      `<rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 3"/>` +
+      `<text x="${g.x}" y="${g.y - 6}" font-size="11" style="fill:var(--tip)">hộp thật</text>` +
+      `<text x="${Math.max(4, Math.min(250, p.x))}" y="${Math.min(205, p.y + p.h + 14)}" font-size="11" style="fill:var(--accent)">hộp dự đoán</text>`;
+    el('iou-v').textContent = fmt(iou, 2);
+    el('iou-r1').textContent = fmt(iou, 2);
+    el('iou-r2').textContent = iou > 0.5 ? '1' : '0';
+  }
+  ['iou-x', 'iou-s'].forEach((id) => el(id).addEventListener('input', renderIoU));
+  renderIoU();
+
+  /* ---------------- Hình 10 ---------------- */
+  TQ.tabs('#sys');
+  const FLP = [
+    { name: 'A · LLM 7B, không nén', v: { np: 1024, r: 1, llm: 7, nt: 512, tr: true } },
+    { name: 'B · LLM 7B, r = 4', v: { np: 1024, r: 4, llm: 7, nt: 512, tr: true } },
+    { name: 'C · LLM 1,7B, r = 4', v: { np: 1024, r: 4, llm: 1.7, nt: 512, tr: true } },
+  ];
+  el('fl-presets').innerHTML = FLP.map((p, i) => `<button class="btn" data-p="${i}">${p.name}</button>`).join('');
+  el('fl-presets').querySelectorAll('button').forEach((b) => (b.onclick = () => {
+    const v = FLP[+b.dataset.p].v;
+    el('fl-np').value = v.np; el('fl-r').value = v.r; el('fl-llm').value = v.llm; el('fl-nt').value = v.nt; el('fl-train').checked = v.tr;
+    el('fl-presets').querySelectorAll('button').forEach((x) => x.classList.toggle('is-on', x === b));
+    renderFl();
+  }));
+  const sci = (x) => { const e = Math.floor(Math.log10(x)); return (x / 10 ** e).toFixed(2).replace('.', ',') + '·10^' + e; };
+  function renderFl() {
+    const np = +el('fl-np').value, r = +el('fl-r').value, N = +el('fl-llm').value * 1e9, nt = +el('fl-nt').value, k = el('fl-train').checked ? 3 : 1;
+    el('fl-np-o').textContent = fmt(np, 0); el('fl-llm-o').textContent = fmt(N / 1e9, 1) + 'B'; el('fl-nt-o').textContent = fmt(nt, 0);
+    const Nenc = 4e8, d = 1152, Ly = 27;
+    const enc = k * (2 * Nenc * np + 4 * np * np * d * Ly);
+    const nv = np / (r * r);
+    const cv = 6 * N * nv, ct = 6 * N * nt, tot = enc + cv + ct;
+    const p = (x) => (x / tot) * 100;
+    el('fl-bar').innerHTML = `<span style="flex-basis:${p(enc)}%;background:var(--note)">${p(enc) > 7 ? 'enc ' + fmt(p(enc), 0) + '%' : ''}</span><span style="flex-basis:${p(cv)}%;background:var(--accent)">${p(cv) > 9 ? 'LLM·ảnh ' + fmt(p(cv), 0) + '%' : ''}</span><span style="flex-basis:${p(ct)}%;background:var(--ex)">${p(ct) > 9 ? 'LLM·chữ ' + fmt(p(ct), 0) + '%' : ''}</span>`;
+    el('fl-formula').textContent = `C_enc  ≈ ${sci(enc)} FLOPs (${k === 3 ? 'train' : 'freeze'})\nn_v    = ${fmt(np, 0)} / ${r * r} = ${fmt(nv, 0)} token ảnh vào LLM\nC_LLM  ≈ 6 × ${fmt(N / 1e9, 1)}e9 × (${fmt(nv, 0)} + ${fmt(nt, 0)}) ≈ ${sci(cv + ct)}\nTổng   ≈ ${sci(tot)} · encoder chiếm ${fmt(p(enc), 1)}%`;
+  }
+  ['fl-np', 'fl-r', 'fl-llm', 'fl-nt', 'fl-train'].forEach((id) => el(id).addEventListener('input', renderFl));
+  el('fl-presets').querySelector('button').click();
+
+  const MEMB = [{ id: 'enc', name: 'Encoder ~400M', n: 4e8, tr: false }, { id: 'con', name: 'Connector ~92M', n: 92e6, tr: true }, { id: 'llm', name: 'LLM 7B', n: 7e9, tr: true }];
+  function renderMem() {
+    el('mem-blocks').innerHTML = MEMB.map((b) => `<button class="node blk st-${b.tr ? 'train' : 'frozen'}" data-m="${b.id}" style="text-align:left"><span class="bn">${b.name}</span><span class="bs">${b.tr ? 'Train · 16 byte/tham số' : 'Đóng băng · 2 byte/tham số'}</span><span class="lr">${fmt((b.n * (b.tr ? 16 : 2)) / 1e9, 1)} GB</span></button>`).join('');
+    el('mem-blocks').querySelectorAll('button').forEach((x) => (x.onclick = () => { const b = MEMB.find((m) => m.id === x.dataset.m); b.tr = !b.tr; renderMem(); }));
+    const v = MEMB.map((b) => b.n * (b.tr ? 16 : 2)), tot = v.reduce((a, x) => a + x, 0);
+    el('mem-total').textContent = fmt(tot / 1e9, 1) + ' GB';
+    const cols = ['var(--note)', 'var(--accent)', 'var(--ex)'];
+    el('mem-bar').innerHTML = v.map((x, i) => `<span style="flex-basis:${(x / tot) * 100}%;background:${cols[i]}">${x / tot > 0.12 ? MEMB[i].name.split(' ')[0] : ''}</span>`).join('');
+  }
+  renderMem();
+
+  const IMB = { sample: [100, 32, 48, 20], budget: [62, 58, 64, 60] };
+  function renderImb(t) {
+    const w = IMB[t], mx = Math.max(...w);
+    el('gpus').innerHTML = w.map((x, i) => `<div class="gpu"><span>GPU ${i}</span><div class="tr"><span class="work" style="flex-basis:${x}%"></span><span class="wait" style="flex-basis:${mx - x}%"></span></div></div>`).join('');
+    el('imbtext').innerHTML = t === 'sample'
+      ? 'Cùng số mẫu, nhưng GPU 0 nhận micro-batch có 12 tile ảnh, GPU 3 toàn chữ. Rank nặng nhất quyết định thời gian cả step (straggler). Pipeline parallel còn tệ hơn vì encoder dồn ở stage đầu. ' + L('v3-imbalance', 'Load imbalance')
+      : 'Coi chi phí mỗi mẫu ≈ a·(token LLM) + b·(patch encoder), rồi chia sao cho tổng mỗi rank xấp xỉ bằng nhau (bin packing). Thêm: bucket theo số tile trong cửa sổ vài nghìn mẫu, giới hạn tile/pixel mỗi ảnh. ' + L('v3-imbalance', 'Cách giảm imbalance');
+  }
+  seg('imbtabs', renderImb);
+
+  TQ.explorer('#order', {
+    o1: { eyebrow: 'Ưu tiên 1', title: 'Giảm số visual token vào LLM', html: '<p>Phần lớn compute nằm ở LLM, và số token ảnh quyết định nó. Pixel shuffle r = 4 ở ví dụ B giảm tổng compute ~2,5 lần so với A (tab Compute).</p>', doc: [D('v3-accounting', 'FLOPs và memory'), D('v-token-reduction', 'Giảm visual token')] },
+    o2: { eyebrow: 'Ưu tiên 2', title: 'Dataloader không nghẽn', html: '<p>Đo thời gian chờ data mỗi step; thử thay batch thật bằng tensor ngẫu nhiên: throughput tăng mạnh = nghẽn ở data. Núm vặn: num_workers, pin_memory, persistent_workers, prefetch_factor; resize offline; decode trên GPU (nvJPEG, DALI); shard tar tuần tự (WebDataset).</p><p><span class="k">Ví dụ:</span> 64 ảnh/step, step 0,5 s, 20 ms/ảnh/lõi → cần ≥ 2,6 lõi chỉ để decode mỗi GPU.</p>', doc: [D('v3-dataloader-debug', 'Chẩn đoán dataloader'), D('v3-preprocess', 'CPU hay GPU'), D('v2-data-pipeline-opt', 'Data pipeline cho ảnh')] },
+    o3: { eyebrow: 'Ưu tiên 3', title: 'Cân bằng compute giữa các rank', html: '<p>Xem tab "GPU chờ nhau". Llama 3 (vision) còn nhân bản image encoder trên mọi pipeline stage và chuyển gradient accumulation sang FP32 vì bất ổn số học.</p>', doc: [D('v3-imbalance', 'Load imbalance')] },
+    o4: { eyebrow: 'Ưu tiên 4', title: 'Packing bằng varlen attention', html: '<p>Đủ 3 thứ: (1) varlen attention (cu_seqlens) để mẫu không nhìn nhau, (2) reset position id (M-RoPE reset cả 3 thành phần), (3) loss mask đúng. Thiếu một thì chất lượng giảm âm thầm.</p><div class="formula">cu_seqlens = [0, 900, 3000, 4096]   # 3 mẫu ghép thành 4096</div><p>Phía encoder cũng packing được kiểu NaViT ("Patch n\' Pack").</p>', doc: [D('v3-packing', 'Sequence packing')] },
+    o5: { eyebrow: 'Ưu tiên 5', title: 'Freeze hoặc cache encoder', html: '<p>Encoder freeze + không augmentation → chạy encoder 1 lần, lưu feature. 1024 token × 1152 × 2 byte ≈ <b>2,36 MB/ảnh</b>; 1 triệu ảnh ≈ 2,4 TB (JPEG gốc chỉ vài chục–vài trăm KB). Ví dụ C bỏ được ~14% compute mỗi step. Không cache khi sẽ mở encoder, dùng augmentation, hoặc IO đắt hơn compute.</p>', doc: [D('v3-feature-cache', 'Cache feature'), D('v3-freezing', 'Freeze từng phần')] },
+    o6: { eyebrow: 'Ưu tiên 6', title: 'Checkpointing cho ViT', html: '<p>Activation mỗi layer ≈ 34·s·h byte. ViT ~400M, 1024 patch: ~40 MB/layer/ảnh, 27 layer ≈ 1,08 GB/ảnh; 16 tile ≈ 17 GB. Full checkpointing chỉ còn ~64 MB/ảnh, đổi lại compute encoder +33%. Encoder freeze thì không cần.</p>', doc: [D('v3-recompute', 'Activation checkpointing trong ViT'), D('v3-precision', 'Mixed precision cho encoder')] },
+  });
+
+  /* ---------------- Hình 11 ---------------- */
+  TQ.explorer('#evalx', {
+    'b-doc': { eyebrow: 'Benchmark', title: 'Tài liệu và OCR', chips: [['DocVQA · ANLS', 'note'], ['OCRBench · 1000 câu', 'note'], ['TextVQA', 'note']], html: '<p>DocVQA: hỏi đáp trên ảnh scan (form, thư, báo cáo), metric ANLS cho phép sai lệch nhỏ. OCRBench: nhiều loại tác vụ OCR, kể cả chữ viết tay biểu thức toán. TextVQA: chữ trong ảnh tự nhiên (biển hiệu, nhãn).</p><p>Đây là nhóm nhạy nhất với cắt token và quantize.</p>', doc: [D('v3-bench-families', 'Các nhóm benchmark')] },
+    'b-chart': { eyebrow: 'Benchmark', title: 'Biểu đồ: ChartQA', html: '<p>Hỏi giá trị và so sánh trên biểu đồ, có câu cần tính. Metric "relaxed accuracy" chấp nhận sai số 5%.</p>', doc: [D('v3-bench-families', 'Các nhóm benchmark')] },
+    'b-know': { eyebrow: 'Benchmark', title: 'Kiến thức + suy luận: MMMU', html: '<p>~11,5K câu trình độ đại học, 30 môn, 6 lĩnh vực. Ảnh là biểu đồ, sơ đồ, bản nhạc, ảnh y khoa… chủ yếu trắc nghiệm.</p>', doc: [D('v3-bench-families', 'Các nhóm benchmark')] },
+    'b-math': { eyebrow: 'Benchmark', title: 'Toán trong ảnh: MathVista', html: '<p>Bài toán cần đọc hình học, đồ thị, bảng, hình minh hoạ.</p>', doc: [D('v3-bench-families', 'Các nhóm benchmark')] },
+    'b-hall': { eyebrow: 'Benchmark', title: 'Hallucination: POPE', html: '<p>"Trong ảnh có X không?" với 3 cách chọn vật âm: random, popular, adversarial. Model bịa nói "có" quá nhiều. Xem thêm Hình 9.</p>', doc: [D('v3-bench-families', 'Các nhóm benchmark'), D('v2-hallucination', 'POPE')] },
+    'b-star': { eyebrow: 'Benchmark', title: 'Bắt buộc nhìn ảnh: MMStar', html: '<p>1.500 mẫu lọc thủ công: phải nhìn ảnh mới trả lời được, ít khả năng lộ vào data train.</p>', doc: [D('v3-bench-families', 'Các nhóm benchmark'), D('v3-eval-pitfalls', 'Câu hỏi không cần nhìn ảnh')] },
+    'b-gen': { eyebrow: 'Benchmark', title: 'Tổng hợp và sơ đồ', chips: [['MMBench · CircularEval', 'note'], ['MME · 14 subtask', 'note'], ['AI2D', 'note']], html: '<p><span class="k">CircularEval:</span> hoán vị vòng các đáp án, chỉ tính đúng nếu đúng ở <b>mọi</b> hoán vị → loại đoán mò và bias vị trí. MME: câu có/không ở 14 subtask. AI2D: sơ đồ khoa học phổ thông.</p>', doc: [D('v3-bench-families', 'Các nhóm benchmark')] },
+    'b-space': { eyebrow: 'Benchmark', title: 'Không gian và thị giác thuần', html: '<p>RealWorldQA (xAI): ảnh thực tế, hỏi vị trí, khoảng cách, hướng. BLINK: 14 tác vụ người giải "trong chớp mắt" (độ sâu tương đối, tương ứng điểm, phản chiếu…), VLM thường kém xa người.</p>', doc: [D('v3-bench-families', 'Các nhóm benchmark')] },
+    'b-video': { eyebrow: 'Benchmark', title: 'Video-MME', html: '<p>Trắc nghiệm trên video ngắn, trung bình, dài; có thể kèm phụ đề và âm thanh.</p>', doc: [D('v3-bench-families', 'Các nhóm benchmark')] },
+    'p-blind': { eyebrow: 'Cái bẫy', title: 'Không cần nhìn cũng trả lời được', html: '<p>(a) đáp án suy ra được từ câu hỏi hoặc kiến thức chung; (b) LLM nền đã thấy câu hỏi lúc train. Kiểm tra rẻ nhất: chạy model (và LLM nền) <b>không đưa ảnh</b>. Điểm bản mù càng gần điểm thật thì benchmark càng ít đo thị giác.</p>', doc: [D('v3-eval-pitfalls', 'Những cái bẫy')] },
+    'p-prompt': { eyebrow: 'Cái bẫy', title: 'Prompt và cách trích đáp án', html: '<p>Cùng model có thể chênh vài điểm chỉ vì thêm câu "Answer with the option\'s letter from the given choices directly." Regex yếu chấm sai câu đúng nhưng định dạng lạ. Metric khác nhau giữa benchmark (exact match, ANLS, relaxed accuracy, CircularEval). Dùng chung một framework: lmms-eval hoặc VLMEvalKit, lưu output thô.</p>', doc: [D('v3-eval-pitfalls', 'Prompt và trích đáp án'), D('v3-eval-tooling', 'Công cụ đánh giá')] },
+    'p-cont': { eyebrow: 'Cái bẫy', title: 'Lộ đề', html: '<p>Bộ instruction tổng hợp lớn hay chứa split train (đôi khi cả test) của benchmark. Dedup ảnh (perceptual hash) và câu hỏi (n-gram) giữa train và eval.</p>', doc: [D('v3-eval-pitfalls', 'Contamination'), D('v2-contamination', 'Contamination với benchmark ảnh')] },
+    'p-judge': { eyebrow: 'Cái bẫy', title: 'LLM-as-judge', html: '<p>Judge thiên vị độ dài và văn phong; đổi phiên bản judge thì điểm đổi; judge chỉ đọc chữ nên không tự kiểm chứng nội dung ảnh trừ khi có đáp án tham chiếu. Cố định model judge, ghi phiên bản, dùng rubric cụ thể.</p>', doc: [D('v3-eval-pitfalls', 'LLM-as-judge')] },
+    'i-cost': { eyebrow: 'Inference', title: 'Vì sao VLM chậm hơn', chips: [['prefill phình', 'warn'], ['KV cache', 'warn']], html: '<p>Ảnh AnyRes kiểu LLaVA-NeXT (ảnh gốc + 4 tile 336px) = 2.880 token, nhiều hơn hầu hết prompt chữ → prefill chiếm phần lớn TTFT. Cộng thêm thời gian chạy encoder và tiền xử lý ảnh.</p><div class="formula">KV/token = 2 × 32 layer × 8 KV head × 128 × 2 byte = 128 KB\n2.880 token × 128 KB ≈ 360 MB   ·   64 token ≈ 8 MB</div><p>Thử ở Hình 2.</p>', doc: [D('v3-inference-cost', 'Visual token làm prefill phình to')] },
+    'i-design': { eyebrow: 'Inference', title: 'Ít token từ lúc thiết kế', html: '<p>Pixel shuffle, merge 2×2, giới hạn số tile / tổng pixel. Phải chọn từ lúc train vì model chỉ quen số token đã thấy khi train.</p>', doc: [D('v3-infer-opt', 'Tăng tốc inference')] },
+    'i-prune': { eyebrow: 'Inference', title: 'Cắt token lúc chạy: FastV, ToMe', html: '<p><span class="k">FastV:</span> sau layer K (vd 2), xếp hạng token ảnh theo attention nhận được, bỏ R% (vd 50%). Báo cáo giảm ~45% FLOPs trên LLaVA-1.5-13B, gần như giữ điểm. <span class="k">ToMe:</span> gộp token giống nhau trong ViT.</p><div class="callout callout--warn">OCR, tài liệu, biểu đồ, đếm, định vị giảm điểm rõ hơn. FastV cần ma trận attention mà FlashAttention không trả ra. Luôn đo DocVQA/ChartQA trước khi bật.</div>', doc: [D('v3-infer-opt', 'Tăng tốc inference'), D('v-token-reduction', 'ToMe, FastV')] },
+    'i-cache': { eyebrow: 'Inference', title: 'Cache cho ảnh lặp lại', html: '<p><span class="k">Encoder cache:</span> hội thoại nhiều lượt, cùng ảnh lặp lại → lưu output encoder theo hash ảnh. <span class="k">Prefix caching:</span> tái dùng KV của (system prompt + ảnh); khoá cache phải có <b>hash nội dung ảnh</b>, vì hai ảnh khác nhau có cùng chuỗi placeholder.</p>', doc: [D('v3-infer-opt', 'Cache ảnh lặp lại')] },
+    'i-batch': { eyebrow: 'Inference', title: 'Batch encoder và tách pha', html: '<p>Gom ảnh của nhiều request chạy encoder theo batch. Chunked prefill chia prefill dài để xen với decode, giữ latency ổn. Hệ thống lớn có thể tách encoder ra GPU riêng (encoder disaggregation).</p>', doc: [D('v3-infer-opt', 'Batching và tách pha')] },
+    'i-quant': { eyebrow: 'Inference', title: 'Quantize: LLM khác encoder', html: '<p>LLM chiếm phần lớn weights và bandwidth khi decode → quantize LLM (INT4/INT8 weight-only, FP8) lợi nhất. Encoder nhỏ, chủ yếu ảnh hưởng prefill, quantize ít lợi mà rủi ro OCR cao → thường giữ bf16 hoặc FP8. Luôn đo lại OCR/document sau khi quantize.</p>', doc: [D('v3-infer-opt', 'Quantization')] },
+    'i-engine': { eyebrow: 'Inference', title: 'Serving engine và lệch tiền xử lý', html: '<p>vLLM, SGLang hỗ trợ nhiều họ VLM với PagedAttention, continuous batching, prefix caching cho cả visual token. Kiểm tra: giới hạn số ảnh/prompt, giới hạn pixel, và <b>processor của engine có khớp lúc train không</b>.</p><div class="callout callout--bad">Train với chính sách tile A, serve với mặc định B: model vẫn trả lời "nghe có lý" nhưng DocVQA tụt mạnh. Lưu processor config cùng checkpoint, test end-to-end sau deploy.</div>', doc: [D('v3-infer-opt', 'Serving engine')] },
+  });
+
+  /* ---------------- Hình 12 ---------------- */
+  TQ.tabs('#recipe');
+  TQ.explorer('#rec-x', {
+    'a-enc': { eyebrow: 'Kiến trúc', title: 'Vision encoder: SigLIP', html: '<p>SigLIP base patch16 cho model rất nhỏ, SO400M cho model lớn hơn. SigLIP thường tốt hơn CLIP ở cùng kích thước khi làm encoder cho VLM. Độ phân giải quan trọng hơn kích thước encoder.</p>', doc: [D('v3-recipe', 'Recipe thực hành'), D('v-choose-encoder', 'Chọn vision encoder')] },
+    'a-con': { eyebrow: 'Kiến trúc', title: 'Connector: pixel shuffle + MLP 2 lớp (GELU)', html: '<p>Đơn giản, hiệu quả. Model nhỏ hưởng lợi từ pixel shuffle mạnh hơn (SmolVLM). Xem Hình 5.</p>', doc: [D('v3-recipe', 'Recipe thực hành')] },
+    'a-llm': { eyebrow: 'Kiến trúc', title: 'LLM nhỏ, nền tốt', html: '<p>SmolLM2, Qwen2.5 cỡ 0,5–3B. Idefics2: cùng ngân sách tham số, LLM nền tốt lợi hơn encoder tốt.</p>', doc: [D('v3-recipe', 'Recipe thực hành')] },
+    'a-res': { eyebrow: 'Kiến trúc', title: 'Chia ô + ảnh toàn cảnh', html: '<p>Rất quan trọng cho OCR/tài liệu; đổi lại số token tăng. Xem Hình 2.</p>', doc: [D('v3-recipe', 'Recipe thực hành'), D('v-high-res', 'Tiling')] },
+    'a-fus': { eyebrow: 'Kiến trúc', title: 'Ghép vào chuỗi (fully autoregressive)', html: '<p>Idefics2 thấy kiểu này tốt hơn cross-attention khi các backbone được mở. Xem Hình 3.</p>', doc: [D('v3-recipe', 'Recipe thực hành')] },
+    t1: { eyebrow: 'Giai đoạn 1', title: 'Alignment', html: '<p>Đóng băng encoder và LLM, chỉ train connector trên cặp ảnh–caption chất lượng cao (ShareGPT4V, PixMo). Rẻ về optimizer state, nhưng activation của LLM vẫn phải lưu (Hình 10).</p>', doc: [D('v3-recipe', 'Các giai đoạn train')] },
+    t2: { eyebrow: 'Giai đoạn 2', title: 'Pre-train đa phương thức', html: '<p>Mở LLM (full hoặc LoRA), thường mở cả encoder với LR nhỏ. Trộn caption, interleaved (OBELICS), OCR/tài liệu (Docmatix), biểu đồ, và một phần text thuần.</p>', doc: [D('v3-recipe', 'Các giai đoạn train')] },
+    t3: { eyebrow: 'Giai đoạn 3', title: 'Instruction SFT', html: '<p>Hội thoại hỏi–đáp về ảnh: The Cauldron, data LLaVA-OneVision, Cambrian-10M… Chỉ tính loss trên câu trả lời (Hình 7).</p>', doc: [D('v3-recipe', 'Các giai đoạn train')] },
+    t4: { eyebrow: 'Tuỳ chọn', title: 'Preference / RL', html: '<p>DPO hoặc RL với reward kiểm chứng (toán trong ảnh, grounding) để giảm hallucination và tăng suy luận (Hình 9).</p>', doc: [D('v3-recipe', 'Các giai đoạn train')] },
+  });
+  const ERR = [
+    ['Trả lời trôi chảy nhưng điểm OCR/doc tụt mạnh', 'Lệch tiền xử lý ảnh giữa train và inference', 'Lưu processor config cùng checkpoint; test end-to-end sau deploy'],
+    ['Loss thấp bất thường, model hay lặp lại câu hỏi', 'Loss mask sai (tính loss trên prompt hoặc visual placeholder)', 'In ra và kiểm tra mask của vài mẫu trước khi train'],
+    ['Chất lượng giảm nhẹ, khó phát hiện', 'Packing không có varlen attention', 'Dùng cu_seqlens, reset position id'],
+    ['Train chậm, OOM thất thường, context bị lấp đầy', 'Quá nhiều visual token', 'Pixel shuffle, giới hạn tile/pixel'],
+    ['Loss dao động, mất năng lực thị giác tổng quát', 'Mở encoder với LR quá lớn', 'LR riêng nhỏ hơn cho encoder; warmup'],
+    ['Điểm tăng nhưng năng lực thị giác không tăng', 'Đánh giá bằng benchmark không cần nhìn ảnh', 'Chạy bản "mù"; theo dõi MMStar/BLINK'],
+    ['Điểm cao bất thường trên một benchmark riêng lẻ', 'Lộ đề với benchmark', 'Dedup ảnh (perceptual hash) và câu hỏi giữa train và eval'],
+    ['GPU utilization thấp, step time dao động', 'Dataloader nghẽn', 'Đo thời gian chờ data, dùng shard, decode trên GPU'],
+  ];
+  const ERRI = {};
+  ERR.forEach(([sym, cause, fix], i) => (ERRI['e' + i] = { eyebrow: 'Triệu chứng', title: sym, chips: [['Nguyên nhân', 'bad']], html: `<p><span class="k">Nguyên nhân:</span> ${cause}</p><div class="callout callout--tip"><span class="k">Cách phòng:</span> ${fix}</div>`, doc: [D('v3-mistakes', 'Những lỗi hay gặp')] }));
+  el('err-nodes').innerHTML = ERR.map(([sym], i) => `<button class="node" data-k="e${i}"><span class="n-t">${sym}</span></button>`).join('');
+  TQ.explorer('#err-x', ERRI);
+  TQ.explorer('#road-x', {
+    r1: { eyebrow: 'Lộ trình · 1', title: 'Nền tảng thị giác', html: '<p>CNN → ViT (ảnh là chuỗi patch) → contrastive learning (CLIP, SigLIP). Bắt đầu với Stanford CS231n và Hugging Face Computer Vision Course. Trên trang này: Hình 1, 4.</p>', doc: [D('v3-roadmap', 'Lộ trình học'), D('v-encoders-h', 'Vision encoder')] },
+    r2: { eyebrow: 'Lộ trình · 2', title: 'Kiến trúc VLM theo đúng thứ tự lịch sử', html: '<p>Flamingo (cross-attention) → BLIP-2 (Q-Former) → LLaVA (MLP đơn giản), để hiểu vì sao kiến trúc đơn giản lại thắng. Trên trang này: Hình 3, 5.</p>', doc: [D('v3-roadmap', 'Lộ trình học')] },
+    r3: { eyebrow: 'Lộ trình · 3', title: 'Điều gì thật sự quan trọng', html: '<p>Idefics2 ("What matters…") và Cambrian-1: hai bài ablation có hệ thống. Trên trang này: Hình 6.</p>', doc: [D('v3-roadmap', 'Lộ trình học'), D('v2-stage2', 'Bài học MM1, Idefics2, Cambrian-1')] },
+    r4: { eyebrow: 'Lộ trình · 4', title: 'Hệ thống hiện đại', html: '<p>Qwen2.5-VL, InternVL3, Molmo, SmolVLM: dynamic resolution, data pipeline, recipe đầy đủ. Trên trang này: Hình 2, 8, 10.</p>', doc: [D('v3-roadmap', 'Lộ trình học'), D('v3-reading-list', 'Danh sách tài liệu')] },
+    r5: { eyebrow: 'Lộ trình · 5', title: 'Tự làm: nanoVLM', html: '<p>Đọc và chạy nanoVLM của Hugging Face (VLM tối giản bằng PyTorch thuần) để hiểu từng dòng code của encoder, connector và training loop.</p>', doc: [D('v3-roadmap', 'Lộ trình học'), D('v3-reading-list', 'Danh sách tài liệu')] },
+  });
+})();
+</script>
+</body>
+</html>
